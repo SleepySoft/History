@@ -1,0 +1,30 @@
+time: 20190910, 20250201.090000
+location: Shanghai, Beijing
+people: qyf
+organization: SleepySoft
+
+tags: example
+author: Sleepy
+成语: 开宗明义
+
+
+title:"""
+Hi-Story Example
+"""
+
+brief:"""
+I'm interested in history these days. But I figured out that I cannot remember too much details. Sometimes I want a memo to bring my memory back.
+So I looked for history memo and time-line software, but I didn't find the one that is satisfied for me. I just do it myself.
+"""
+
+event:"""
+What's my goal.
+Q1. This software should easy for edit and nice for display.
+Q2. It can combine different history together and also can view specified history event.
+Q3. Everyone can contribute their knowledge and this record should be easy for review and merge.
+
+A1. The data format should support kinds of platform. Everyone and write his editor and viewer.
+A2. The data can device into different time line and it should be easy for combination. It should also support tags that easy to index them.
+A3. Github is a good place who provide a contribute mechanism, so the data format is text and it can stored on github, it should be perfect.
+"""
+
