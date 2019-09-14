@@ -228,12 +228,12 @@ class LabelTagParser(TokenParser):
         while not parser.reaches_end():
             token = parser.next_token()
 
-            if token == '\n':
-                next_step = 'label'
+            print('-> Read token: ' + token)
 
             if until != '':
                 if token == until:
                     until = ''
+                continue
             elif len(expect) > 0:
                 if token not in expect:
                     ret = False
@@ -242,9 +242,11 @@ class LabelTagParser(TokenParser):
 
             if token == '#':
                 until = '\n'
-            elif token in [',']:
+            elif token in [':', ',', '"""']:
                 print('Drop token: ' + token)
 
+            elif token == '\n':
+                next_step = 'label'
             elif next_step == 'label':
                 expect = [':']
                 next_step = 'tag'
@@ -364,6 +366,18 @@ class History:
                     return expected_tags in history_event_tags
             return True
 
+        # ---------------------------------------- print ---------------------------------------
+
+        def __str__(self):
+            return '********************************** Event **********************************' + '\n' + \
+                    'UUID  : ' + str(self.__uuid) + '\n' + \
+                    'TIME  : ' + str(self.__time) + '\n' + \
+                    'LTAGS : ' + str(self.__label_tags) + '\n' + \
+                    'TITLE : ' + str(self.__title) + '\n' + \
+                    'BRIEF : ' + str(self.__brief) + '\n' + \
+                    'EVENT : ' + str(self.__event) + '\n' + \
+                    '***************************************************************************'
+
     def __init__(self):
         self.__events = []
 
@@ -421,11 +435,13 @@ class History:
                 if event is not None:
                     self.__events.append(event)
                 event = History.Event()
-                event.set_label_tags(label, tags)
-            else:
-                pass
+            event.set_label_tags(label, tags)
         if event is not None:
             self.__events.append(event)
+
+    def print_events(self):
+        for event in self.__events:
+            print(event)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -475,6 +491,7 @@ def test_history_basic():
     history = History()
     count = history.load_local_depot('example')
     print(count)
+    history.print_events()
 
 
 def main():
