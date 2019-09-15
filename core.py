@@ -305,6 +305,12 @@ class History:
 
         # -------------------------------------------
 
+        def uuid(self) -> str:
+            return self.__uuid
+
+        def time(self) -> [float]:
+            return self.__time
+
         def since(self) -> float:
             return min(self.__time)
 
