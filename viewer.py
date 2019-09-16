@@ -52,9 +52,11 @@ class TimeAxis(QWidget):
 
         self.__offset = 0.0
         self.__scroll = 0.0
+        self.__scale_pixel = 0.0
 
         self.__l_pressing = False
         self.__l_down_point = None
+        self.__move_prev_point = None
 
         self.__era = ''
         self.__since = 0.0
@@ -100,16 +102,18 @@ class TimeAxis(QWidget):
             self.__l_pressing = False
             self.__l_down_point = event.pos()
             self.__scroll += self.__offset
+            self.__offset = 0
+            self.repaint()
 
     def mouseDoubleClickEvent(self,  event):
         pass
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
-        if self.__l_pressing and self.__l_down_point is not None:
-            self.__offset = self.__l_down_point.y() - now_pos.y()
+        if self.__l_pressing and self.__move_prev_point is not None:
+            self.__offset += self.__move_prev_point.y() - now_pos.y()
             self.repaint()
-            print('offset = ' + str(self.__offset))
+        self.__move_prev_point = now_pos
 
     def wheelEvent(self, event):
         angle = event.angleDelta() / 8
@@ -125,7 +129,7 @@ class TimeAxis(QWidget):
         #
         # print('delta_step_pct = ' + str(delta_step_pct) + ', new_main_step = ' + str(new_main_step))
 
-        self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y > 0 else -1, 1)
+        self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y < 0 else -1, 1)
 
         # if self.__main_step >= 100:
         #     self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y > 0 else -1, 2)
@@ -149,8 +153,10 @@ class TimeAxis(QWidget):
         self.paint_background(qp)
 
         if self.__horizon:
+            self.calc_paint_parameters(self.__width)
             self.paint_horizon(qp)
         else:
+            self.calc_paint_parameters(self.__height)
             self.paint_vertical(qp)
         qp.end()
 
@@ -170,25 +176,29 @@ class TimeAxis(QWidget):
         sub_scale_start = int(axis_mid - 5)
         sub_scale_end = int(axis_mid + 5)
 
-        scale_pixels = int(self.__height - TimeAxis.DEFAULT_MARGIN_PIXEL) / 10
-        scale_pixels = max(scale_pixels, TimeAxis.MAIN_SCALE_MIN_PIXEL)
-
-        pixel_offset = self.__scroll + self.__offset
-        scale_offset = math.floor(pixel_offset / scale_pixels)
-        paint_offset = pixel_offset % scale_pixels
-
-        print('scale_offset = ' + str(scale_offset) + ', paint_offset = ' + str(paint_offset))
-
         for i in range(0, 11):
-            y_main = int(scale_pixels * i) + TimeAxis.DEFAULT_MARGIN_PIXEL / 2 - paint_offset
-            time_main = self.__since + (scale_offset + i) * self.__main_step
+            y_main = int(self.__scale_pixel * i) + TimeAxis.DEFAULT_MARGIN_PIXEL / 2 - self.__scroll
+            time_main = self.__since + i * self.__main_step
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, str(time_main))
             for j in range(0, 10):
-                y_sub = (y_main + scale_pixels * j / 10)
+                y_sub = (y_main + self.__scale_pixel * j / 10)
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
+
+    def calc_paint_parameters(self, total_len: int):
+        self.__scale_pixel = int(total_len - TimeAxis.DEFAULT_MARGIN_PIXEL) / 10
+        self.__scale_pixel = max(self.__scale_pixel, TimeAxis.MAIN_SCALE_MIN_PIXEL)
+
+        pixel_offset = self.__scroll + self.__offset
+
+        scale_offset = math.floor(pixel_offset / self.__scale_pixel)
+        paint_offset = pixel_offset % self.__scale_pixel
+
+        self.__offset = 0
+        self.__since -= scale_offset
+        self.__scroll = paint_offset
 
     def auto_scale(self):
         since_rough = lower_rough(self.__since)
@@ -204,15 +214,22 @@ class TimeAxis(QWidget):
         """
         Increase the number by 10% of its index.
         :param num: The number you want to increase.
-        sign: 1 or -1.
+        :param sign: 1 or -1.
         :param ratio: The ratio to multiple 10% of its index.
         :return:
         """
         abs_num = abs(num)
-        index_10 = math.log(abs_num, 10)
-        round_index_10 = math.ceil(index_10)
-        scale = math.pow(10, round_index_10)
-        delta = scale / 10
+        if abs_num >= 100:
+            index_10 = math.log(abs_num, 10)
+            round_index_10 = math.floor(index_10)
+            scale = math.pow(10, round_index_10)
+            delta = scale / 10
+        elif 10 < abs_num < 100:
+            delta = 10
+        elif 1 < abs_num <= 10:
+            delta = 1
+        else:
+            delta = 0
         return num + sign * delta * ratio
 
 
