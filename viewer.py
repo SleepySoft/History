@@ -7,6 +7,34 @@ from core import *
 from Utility.ui_utility import *
 
 
+def upper_rough(num):
+    abs_num = abs(num)
+    index_10 = math.log(abs_num, 10)
+    round_index_10 = math.floor(index_10)
+    scale = math.pow(10, round_index_10)
+    if num >= 0:
+        integer = math.ceil(abs_num / scale)
+    else:
+        integer = math.floor(abs_num / scale)
+    rough = integer * scale
+    result = rough if num >= 0 else -rough
+    return result
+
+
+def lower_rough(num):
+    abs_num = abs(num)
+    index_10 = math.log(abs_num, 10)
+    round_index_10 = math.floor(index_10)
+    scale = math.pow(10, round_index_10)
+    if num >= 0:
+        integer = math.floor(abs_num / scale)
+    else:
+        integer = math.ceil(abs_num / scale)
+    rough = integer * scale
+    result = rough if num >= 0 else -rough
+    return result
+
+
 def scale_round(num: float, scale: float):
     return (round(num / scale) + 1) * scale
 
@@ -25,7 +53,6 @@ class TimeAxis(QWidget):
         self.__offset = 0.0
         self.__scroll = 0.0
 
-        self.__prev_pos = None
         self.__l_pressing = False
         self.__l_down_point = None
 
@@ -37,6 +64,9 @@ class TimeAxis(QWidget):
         self.__scale_start = 0.0
         self.__main_step = 200.0
         self.__sub_step = 20.0
+
+        self.setMinimumWidth(400)
+        self.setMinimumHeight(500)
 
     # ----------------------------------------------------- Method -----------------------------------------------------
 
@@ -69,16 +99,41 @@ class TimeAxis(QWidget):
         if event.button() == QtCore.Qt.LeftButton:
             self.__l_pressing = False
             self.__l_down_point = event.pos()
+            self.__scroll += self.__offset
 
     def mouseDoubleClickEvent(self,  event):
         pass
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
-        if self.__l_pressing and self.__prev_pos is not None:
-            self.__offset = self.__prev_pos.y() - now_pos.y()
+        if self.__l_pressing and self.__l_down_point is not None:
+            self.__offset = self.__l_down_point.y() - now_pos.y()
             self.repaint()
-        self.__prev_pos = now_pos
+            print('offset = ' + str(self.__offset))
+
+    def wheelEvent(self, event):
+        angle = event.angleDelta() / 8
+        angle_x = angle.x()
+        angle_y = angle.y()
+
+        # delta_step_pct = angle_y / 1.5 / 100
+
+        # if delta_step_pct > 0:
+        #     new_main_step = self.__main_step * (1 + delta_step_pct)
+        # else:
+        #     new_main_step = self.__main_step / (1 - delta_step_pct)
+        #
+        # print('delta_step_pct = ' + str(delta_step_pct) + ', new_main_step = ' + str(new_main_step))
+
+        self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y > 0 else -1, 1)
+
+        # if self.__main_step >= 100:
+        #     self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y > 0 else -1, 2)
+        # else:
+        #     self.__main_step += 10 if angle_y > 0 else -10
+
+        self.__sub_step = self.__main_step / 10
+        self.repaint()
 
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
@@ -118,15 +173,17 @@ class TimeAxis(QWidget):
         scale_pixels = int(self.__height - TimeAxis.DEFAULT_MARGIN_PIXEL) / 10
         scale_pixels = max(scale_pixels, TimeAxis.MAIN_SCALE_MIN_PIXEL)
 
-        offset_scale = self.__offset / scale_pixels
-        offset_scale = int(offset_scale) + 1
+        pixel_offset = self.__scroll + self.__offset
+        scale_offset = math.floor(pixel_offset / scale_pixels)
+        paint_offset = pixel_offset % scale_pixels
 
-        # TODO: Paint offset
-        paint_offset = offset_scale * scale_pixels
+        print('scale_offset = ' + str(scale_offset) + ', paint_offset = ' + str(paint_offset))
 
         for i in range(0, 11):
-            y_main = int(scale_pixels * i) + TimeAxis.DEFAULT_MARGIN_PIXEL / 2
+            y_main = int(scale_pixels * i) + TimeAxis.DEFAULT_MARGIN_PIXEL / 2 - paint_offset
+            time_main = self.__since + (scale_offset + i) * self.__main_step
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
+            qp.drawText(main_scale_end - 100, y_main, str(time_main))
             for j in range(0, 10):
                 y_sub = (y_main + scale_pixels * j / 10)
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
@@ -134,14 +191,29 @@ class TimeAxis(QWidget):
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
     def auto_scale(self):
-        delta = self.__until - self.__since
-        index_10 = math.log(delta, 10)
-        rount_index_10 = round(index_10 + 0.5)
-        scale = math.pow(10, rount_index_10)
+        since_rough = lower_rough(self.__since)
+        until_rough = upper_rough(self.__until)
+        delta = until_rough - since_rough
+        delta_rough = upper_rough(delta)
 
-        self.__scale_start = (round(self.__since / scale) + 1) * scale
-        self.__main_step = scale / 10
+        self.__scale_start = since_rough
+        self.__main_step = delta_rough / 10
         self.__sub_step = self.__main_step / 10
+
+    def auto_increase(self, num, sign, ratio):
+        """
+        Increase the number by 10% of its index.
+        :param num: The number you want to increase.
+        sign: 1 or -1.
+        :param ratio: The ratio to multiple 10% of its index.
+        :return:
+        """
+        abs_num = abs(num)
+        index_10 = math.log(abs_num, 10)
+        round_index_10 = math.ceil(index_10)
+        scale = math.pow(10, round_index_10)
+        delta = scale / 10
+        return num + sign * delta * ratio
 
 
 class HistoryViewer(QWidget):
@@ -161,7 +233,48 @@ class HistoryViewer(QWidget):
         qp.end()
 
 
+# ---------------------------------------------------- Test ------------------------------------------------------------
+
+
+def test_upper_rough():
+    assert math.isclose(upper_rough(10001), 20000)
+    assert math.isclose(upper_rough(10000), 10000)
+    assert math.isclose(upper_rough(9999), 10000)
+    assert math.isclose(upper_rough(9001), 10000)
+    assert math.isclose(upper_rough(8999),  9000)
+    assert math.isclose(upper_rough(1.1), 2)
+    # assert math.isclose(upper_rough(0.07), 0.07)
+
+    assert math.isclose(upper_rough(-10001), -10000)
+    assert math.isclose(upper_rough(-10000), -10000)
+    assert math.isclose(upper_rough(-9999), -9000)
+    assert math.isclose(upper_rough(-9001), -9000)
+    assert math.isclose(upper_rough(-8999), -8000)
+    assert math.isclose(upper_rough(-1.1), -1.0)
+    # assert math.isclose(upper_rough(-0.07), 0.07)
+
+
+def test_lower_rough():
+    assert math.isclose(lower_rough(10001), 10000)
+    assert math.isclose(lower_rough(10000), 10000)
+    assert math.isclose(lower_rough(9999), 9000)
+    assert math.isclose(lower_rough(9001), 9000)
+    assert math.isclose(lower_rough(8999),  8000)
+    assert math.isclose(lower_rough(1.1), 1.0)
+    # assert math.isclose(lower_rough(0.07), 0.07)
+
+    assert math.isclose(lower_rough(-10001), -20000)
+    assert math.isclose(lower_rough(-10000), -10000)
+    assert math.isclose(lower_rough(-9999), -10000)
+    assert math.isclose(lower_rough(-9001), -10000)
+    assert math.isclose(lower_rough(-8999), -9000)
+    assert math.isclose(lower_rough(-1.1), -2.0)
+    # assert math.isclose(upper_rough(-0.07), 0.07)
+
+
 def main():
+    test_upper_rough()
+    test_lower_rough()
     app = QApplication(sys.argv)
 
     layout = QVBoxLayout()
