@@ -49,21 +49,23 @@ class TimeAxis(QWidget):
 
         self.__width = 0
         self.__height = 0
+        self.__axis_length = 0
 
         self.__offset = 0.0
         self.__scroll = 0.0
-        self.__scale_pixel = 0.0
+
+        self.__scale_per_page = 10
+        self.__pixel_per_scale = 0
+
+        self.__paint_start_scale = 0
+        self.__paint_start_offset = 0
 
         self.__l_pressing = False
         self.__l_down_point = None
-        self.__move_prev_point = None
 
         self.__era = ''
-        self.__since = 0.0
-        self.__until = 2000.0
         self.__horizon = False
 
-        self.__scale_start = 0.0
         self.__main_step = 200.0
         self.__sub_step = 20.0
 
@@ -82,12 +84,7 @@ class TimeAxis(QWidget):
         self.__horizon = False
 
     def set_time_range(self, since: float, until: float):
-        self.__since = min(since, until)
-        self.__until = max(since, until)
-        if self.__until == self.__since:
-            self.__since -= 1
-            self.__until += 1
-        self.auto_scale()
+        self.auto_scale(min(since, until), max(since, until))
         self.repaint()
 
     # --------------------------------------------------- UI Action ----------------------------------------------------
@@ -100,7 +97,6 @@ class TimeAxis(QWidget):
     def mouseReleaseEvent(self,  event):
         if event.button() == QtCore.Qt.LeftButton:
             self.__l_pressing = False
-            self.__l_down_point = event.pos()
             self.__scroll += self.__offset
             self.__offset = 0
             self.repaint()
@@ -110,36 +106,35 @@ class TimeAxis(QWidget):
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
-        if self.__l_pressing and self.__move_prev_point is not None:
-            self.__offset += self.__move_prev_point.y() - now_pos.y()
+        if self.__l_pressing and self.__l_down_point is not None:
+            if self.__horizon:
+                self.__offset = self.__l_down_point.x() - now_pos.x()
+            else:
+                self.__offset = self.__l_down_point.y() - now_pos.y()
             self.repaint()
-        self.__move_prev_point = now_pos
+        pixel_scale_value = self.pixel_offset_to_scale_value(now_pos.y() - TimeAxis.DEFAULT_MARGIN_PIXEL / 2)
+        print('Time : ' + str(pixel_scale_value))
 
     def wheelEvent(self, event):
         angle = event.angleDelta() / 8
         angle_x = angle.x()
         angle_y = angle.y()
 
-        # delta_step_pct = angle_y / 1.5 / 100
+        # Get the value before step update
+        current_pos = event.pos()
+        current_pos_offset = self.calc_point_to_paint_start_offset(current_pos)
+        current_pos_scale_value = self.pixel_offset_to_scale_value(current_pos_offset)
 
-        # if delta_step_pct > 0:
-        #     new_main_step = self.__main_step * (1 + delta_step_pct)
-        # else:
-        #     new_main_step = self.__main_step / (1 - delta_step_pct)
-        #
-        # print('delta_step_pct = ' + str(delta_step_pct) + ', new_main_step = ' + str(new_main_step))
-
-        self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y < 0 else -1, 1)
-
-        # if self.__main_step >= 100:
-        #     self.__main_step = self.auto_increase(self.__main_step, 1 if angle_y > 0 else -1, 2)
-        # else:
-        #     self.__main_step += 10 if angle_y > 0 else -10
-
+        step_increment = self.calc_step_increment(self.__main_step, 1 if angle_y < 0 else -1, 1)
+        self.__main_step += step_increment
         self.__sub_step = self.__main_step / 10
-        self.repaint()
 
-    # ----------------------------------------------------- Paint ------------------------------------------------------
+        # Make the value under mouse keep the same place on the screen
+        total_pixel_offset = self.__pixel_per_scale * current_pos_scale_value / self.__main_step
+        total_pixel_offset -= current_pos_offset
+        self.__scroll = total_pixel_offset - self.__offset
+
+        self.repaint()
 
     def paintEvent(self, event):
         qp = QPainter()
@@ -148,17 +143,21 @@ class TimeAxis(QWidget):
         wnd_size = self.size()
         self.__width = wnd_size.width()
         self.__height = wnd_size.height()
-        print(wnd_size)
 
+        self.update_pixel_per_scale()
         self.paint_background(qp)
 
         if self.__horizon:
-            self.calc_paint_parameters(self.__width)
+            self.__axis_length = self.__width - self.DEFAULT_MARGIN_PIXEL * 2
+            self.calc_paint_parameters()
             self.paint_horizon(qp)
         else:
-            self.calc_paint_parameters(self.__height)
+            self.__axis_length = self.__height - self.DEFAULT_MARGIN_PIXEL * 2
+            self.calc_paint_parameters()
             self.paint_vertical(qp)
         qp.end()
+
+    # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paint_background(self, qp: QPainter):
         qp.setBrush(QColor(100, 0, 0))
@@ -176,41 +175,50 @@ class TimeAxis(QWidget):
         sub_scale_start = int(axis_mid - 5)
         sub_scale_end = int(axis_mid + 5)
 
-        for i in range(0, 11):
-            y_main = int(self.__scale_pixel * i) + TimeAxis.DEFAULT_MARGIN_PIXEL / 2 - self.__scroll
-            time_main = self.__since + i * self.__main_step
+        for i in range(0, 12):
+            y_main = int(self.__pixel_per_scale * i) - self.__paint_start_offset + TimeAxis.DEFAULT_MARGIN_PIXEL
+            time_main = (self.__paint_start_scale + i) * self.__main_step
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, str(time_main))
             for j in range(0, 10):
-                y_sub = (y_main + self.__scale_pixel * j / 10)
+                y_sub = (y_main + self.__pixel_per_scale * j / 10)
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
-    def calc_paint_parameters(self, total_len: int):
-        self.__scale_pixel = int(total_len - TimeAxis.DEFAULT_MARGIN_PIXEL) / 10
-        self.__scale_pixel = max(self.__scale_pixel, TimeAxis.MAIN_SCALE_MIN_PIXEL)
+    def calc_point_to_paint_start_offset(self, point):
+        if self.__horizon:
+            return point.x() - TimeAxis.DEFAULT_MARGIN_PIXEL
+        else:
+            return point.y() - TimeAxis.DEFAULT_MARGIN_PIXEL
 
-        pixel_offset = self.__scroll + self.__offset
+    def update_pixel_per_scale(self):
+        self.__pixel_per_scale = self.__axis_length / self.__scale_per_page
+        self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
 
-        scale_offset = math.floor(pixel_offset / self.__scale_pixel)
-        paint_offset = pixel_offset % self.__scale_pixel
+    def calc_paint_parameters(self):
+        total_pixel_offset = self.__scroll + self.__offset
+        self.__paint_start_scale = math.floor(total_pixel_offset / self.__pixel_per_scale)
+        self.__paint_start_offset = total_pixel_offset - self.__paint_start_scale * self.__pixel_per_scale
 
-        self.__offset = 0
-        self.__since -= scale_offset
-        self.__scroll = paint_offset
+    def pixel_offset_to_scale_value(self, display_pixel_offset: int) -> float:
+        delta_pixel_offset = display_pixel_offset + self.__paint_start_offset
+        delta_scale_offset = delta_pixel_offset / self.__pixel_per_scale
+        return (self.__paint_start_scale + delta_scale_offset) * self.__main_step
 
-    def auto_scale(self):
-        since_rough = lower_rough(self.__since)
-        until_rough = upper_rough(self.__until)
+    def auto_scale(self, since: float, until: float):
+        since_rough = lower_rough(since)
+        until_rough = upper_rough(until)
         delta = until_rough - since_rough
         delta_rough = upper_rough(delta)
 
-        self.__scale_start = since_rough
+        self.update_pixel_per_scale()
+
         self.__main_step = delta_rough / 10
         self.__sub_step = self.__main_step / 10
+        self.__scroll = since_rough * self.__pixel_per_scale
 
-    def auto_increase(self, num, sign, ratio):
+    def calc_step_increment(self, num, sign, ratio):
         """
         Increase the number by 10% of its index.
         :param num: The number you want to increase.
@@ -229,8 +237,11 @@ class TimeAxis(QWidget):
         elif 1 < abs_num <= 10:
             delta = 1
         else:
-            delta = 0
-        return num + sign * delta * ratio
+            if sign > 0:
+                delta = 1
+            else:
+                delta = 0
+        return sign * delta * ratio
 
 
 class HistoryViewer(QWidget):
