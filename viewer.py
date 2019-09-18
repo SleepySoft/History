@@ -63,6 +63,8 @@ class TimeAxis(QWidget):
         self.__scale_per_page = 10
         self.__pixel_per_scale = 0
 
+        self.__paint_since = 0
+        self.__paint_until = 0
         self.__paint_start_scale = 0
         self.__paint_start_offset = 0
 
@@ -156,16 +158,18 @@ class TimeAxis(QWidget):
         self.__width = wnd_size.width()
         self.__height = wnd_size.height()
 
+        self.__axis_length = self.__width if self.__horizon else self.__height
+        self.__axis_length -= self.DEFAULT_MARGIN_PIXEL * 2
+
         self.update_pixel_per_scale()
+        self.calc_paint_parameters()
+        self.update_paint_content()
+
         self.paint_background(qp)
 
         if self.__horizon:
-            self.__axis_length = self.__width - self.DEFAULT_MARGIN_PIXEL * 2
-            self.calc_paint_parameters()
             self.paint_horizon(qp)
         else:
-            self.__axis_length = self.__height - self.DEFAULT_MARGIN_PIXEL * 2
-            self.calc_paint_parameters()
             self.paint_vertical(qp)
         qp.end()
 
@@ -210,8 +214,15 @@ class TimeAxis(QWidget):
 
     def calc_paint_parameters(self):
         total_pixel_offset = self.__scroll + self.__offset
-        self.__paint_start_scale = math.floor(total_pixel_offset / self.__pixel_per_scale)
+
+        self.__paint_since = total_pixel_offset / self.__pixel_per_scale
+        self.__paint_until = self.__paint_since + self.__axis_length / self.__pixel_per_scale
+
+        self.__paint_start_scale = math.floor(self.__paint_start_value)
         self.__paint_start_offset = total_pixel_offset - self.__paint_start_scale * self.__pixel_per_scale
+
+    def update_paint_content(self):
+        pass
 
     def pixel_offset_to_scale_value(self, display_pixel_offset: int) -> float:
         delta_pixel_offset = display_pixel_offset + self.__paint_start_offset
@@ -231,9 +242,6 @@ class TimeAxis(QWidget):
                 break
             step_index += 1
         self.select_step_scale(step_index - 1)
-
-        # self.__main_step = delta_rough / 10
-        # self.__sub_step = self.__main_step / 10
 
         self.update_pixel_per_scale()
         self.__scroll = since_rough * self.__pixel_per_scale

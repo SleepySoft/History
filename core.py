@@ -384,66 +384,80 @@ class History:
                     'EVENT : ' + str(self.__event) + '\n' + \
                     '***************************************************************************'
 
+    class Loader:
+        def __init__(self):
+            pass
+
+        def enumerate_local_depot(self) -> list:
+            pass
+
+        def __traverse_path(self, dir: str):
+                root_path = path.dirname(dir)
+
+        def load_local_depot(self, depot: str) -> int:
+            try:
+                root_path = path.dirname(path.abspath(__file__))
+                depot_path = path.join(root_path, 'depot', depot)
+                return self.load_directory(depot_path)
+            except Exception as e:
+                print(e)
+                print(traceback.format_exc())
+                return 0
+            finally:
+                pass
+
+        def load_directory(self, directory: str) -> int:
+            try:
+                ls = listdir(directory)
+                ls = [path.join(directory, f) for f in ls]
+                files = [f for f in ls if path.isfile(f)]
+
+                count = 0
+                for file in files:
+                    if self.load_file(file):
+                        count += 1
+                return count
+            except Exception as e:
+                print(e)
+                print(traceback.format_exc())
+                return 0
+            finally:
+                pass
+
+        def load_file(self, file: str) -> bool:
+            try:
+                with open(file, 'rt', encoding='utf-8') as f:
+                    self.load_text(f.read())
+                return True
+            except Exception as e:
+                print(e)
+                print(traceback.format_exc())
+                return False
+            finally:
+                pass
+
+        def load_text(self, text: str):
+            parser = LabelTagParser()
+            parser.parse(text)
+
+            event = None
+            label_tags = parser.get_label_tags()
+
+            for label, tags in label_tags:
+                if label == 'time':
+                    if event is not None:
+                        self.__events.append(event)
+                    event = History.Event()
+                event.set_label_tags(label, tags)
+            if event is not None:
+                self.__events.append(event)
+
     def __init__(self):
         self.__events = []
+        self.__indexes = []
 
-    def load_local_depot(self, depot: str) -> int:
-        try:
-            root_path = path.dirname(path.abspath(__file__))
-            depot_path = path.join(root_path, 'depot', depot)
-            return self.load_directory(depot_path)
-        except Exception as e:
-            print(e)
-            print(traceback.format_exc())
-            return 0
-        finally:
-            pass
+    # -------------------------------------------------- Load Events ---------------------------------------------------
 
-    def load_directory(self, directory: str) -> int:
-        try:
-            ls = listdir(directory)
-            ls = [path.join(directory, f) for f in ls]
-            files = [f for f in ls if path.isfile(f)]
-
-            count = 0
-            for file in files:
-                if self.load_file(file):
-                    count += 1
-            return count
-        except Exception as e:
-            print(e)
-            print(traceback.format_exc())
-            return 0
-        finally:
-            pass
-
-    def load_file(self, file: str) -> bool:
-        try:
-            with open(file, 'rt', encoding='utf-8') as f:
-                self.load_text(f.read())
-            return True
-        except Exception as e:
-            print(e)
-            print(traceback.format_exc())
-            return False
-        finally:
-            pass
-
-    def load_text(self, text: str):
-        parser = LabelTagParser()
-        parser.parse(text)
-
-        event = None
-        label_tags = parser.get_label_tags()
-
-        for label, tags in label_tags:
-            if label == 'time':
-                if event is not None:
-                    self.__events.append(event)
-                event = History.Event()
-            event.set_label_tags(label, tags)
-        if event is not None:
-            self.__events.append(event)
 
     def print_events(self):
         for event in self.__events:
