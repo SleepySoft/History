@@ -23,6 +23,8 @@ def upper_rough(num):
 
 def lower_rough(num):
     abs_num = abs(num)
+    if abs_num == 0:
+        return 0
     index_10 = math.log(abs_num, 10)
     round_index_10 = math.floor(index_10)
     scale = math.pow(10, round_index_10)
@@ -40,6 +42,10 @@ def scale_round(num: float, scale: float):
 
 
 class TimeAxis(QWidget):
+
+    STEP_LIST = [
+        10000, 5000, 2500, 2000, 1000, 500, 250, 200, 100, 50, 25, 20, 10, 5, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01
+    ]
 
     DEFAULT_MARGIN_PIXEL = 10
     MAIN_SCALE_MIN_PIXEL = 50
@@ -66,11 +72,14 @@ class TimeAxis(QWidget):
         self.__era = ''
         self.__horizon = False
 
-        self.__main_step = 200.0
-        self.__sub_step = 20.0
+        self.__step_selection = 0
+        self.__main_step = 0
+        self.__sub_step = 0
 
         self.setMinimumWidth(400)
         self.setMinimumHeight(500)
+
+        self.set_time_range(0, 2000)
 
     # ----------------------------------------------------- Method -----------------------------------------------------
 
@@ -120,19 +129,22 @@ class TimeAxis(QWidget):
         angle_x = angle.x()
         angle_y = angle.y()
 
-        # Get the value before step update
-        current_pos = event.pos()
-        current_pos_offset = self.calc_point_to_paint_start_offset(current_pos)
-        current_pos_scale_value = self.pixel_offset_to_scale_value(current_pos_offset)
+        modifiers = QApplication.keyboardModifiers()
 
-        step_increment = self.calc_step_increment(self.__main_step, 1 if angle_y < 0 else -1, 1)
-        self.__main_step += step_increment
-        self.__sub_step = self.__main_step / 10
+        if modifiers == QtCore.Qt.ControlModifier:
+            # Get the value before step update
+            current_pos = event.pos()
+            current_pos_offset = self.calc_point_to_paint_start_offset(current_pos)
+            current_pos_scale_value = self.pixel_offset_to_scale_value(current_pos_offset)
 
-        # Make the value under mouse keep the same place on the screen
-        total_pixel_offset = self.__pixel_per_scale * current_pos_scale_value / self.__main_step
-        total_pixel_offset -= current_pos_offset
-        self.__scroll = total_pixel_offset - self.__offset
+            self.select_step_scale(self.__step_selection + (1 if angle_y < 0 else -1))
+
+            # Make the value under mouse keep the same place on the screen
+            total_pixel_offset = self.__pixel_per_scale * current_pos_scale_value / self.__main_step
+            total_pixel_offset -= current_pos_offset
+            self.__scroll = total_pixel_offset - self.__offset
+        else:
+            self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
 
         self.repaint()
 
@@ -211,37 +223,45 @@ class TimeAxis(QWidget):
         until_rough = upper_rough(until)
         delta = until_rough - since_rough
         delta_rough = upper_rough(delta)
+        step_rough = delta_rough / 10
+
+        step_index = 1
+        while step_index < len(TimeAxis.STEP_LIST):
+            if TimeAxis.STEP_LIST[step_index] < step_rough:
+                break
+            step_index += 1
+        self.select_step_scale(step_index - 1)
+
+        # self.__main_step = delta_rough / 10
+        # self.__sub_step = self.__main_step / 10
 
         self.update_pixel_per_scale()
-
-        self.__main_step = delta_rough / 10
-        self.__sub_step = self.__main_step / 10
         self.__scroll = since_rough * self.__pixel_per_scale
 
-    def calc_step_increment(self, num, sign, ratio):
-        """
-        Increase the number by 10% of its index.
-        :param num: The number you want to increase.
-        :param sign: 1 or -1.
-        :param ratio: The ratio to multiple 10% of its index.
-        :return:
-        """
-        abs_num = abs(num)
-        if abs_num >= 100:
-            index_10 = math.log(abs_num, 10)
-            round_index_10 = math.floor(index_10)
-            scale = math.pow(10, round_index_10)
-            delta = scale / 10
-        elif 10 < abs_num < 100:
-            delta = 10
-        elif 1 < abs_num <= 10:
-            delta = 1
-        else:
-            if sign > 0:
-                delta = 1
-            else:
-                delta = 0
-        return sign * delta * ratio
+    def select_step_scale(self, step_index: int):
+        self.__step_selection = step_index
+        self.__step_selection = max(self.__step_selection, 0)
+        self.__step_selection = min(self.__step_selection, len(TimeAxis.STEP_LIST) - 1)
+
+        self.__main_step = TimeAxis.STEP_LIST[self.__step_selection]
+        self.__sub_step = self.__main_step / 10
+
+        # abs_num = abs(num)
+        # if abs_num >= 100:
+        #     index_10 = math.log(abs_num, 10)
+        #     round_index_10 = math.floor(index_10)
+        #     scale = math.pow(10, round_index_10)
+        #     delta = scale / 10
+        # elif 10 < abs_num < 100:
+        #     delta = 10
+        # elif 1 < abs_num <= 10:
+        #     delta = 1
+        # else:
+        #     if sign > 0:
+        #         delta = 1
+        #     else:
+        #         delta = 0
+        # return sign * delta * ratio
 
 
 class HistoryViewer(QWidget):
