@@ -1,3 +1,5 @@
+[START]: event
+
 time: 20190910, 20250201.090000
 location: Shanghai, Beijing
 people: qyf
@@ -27,6 +29,9 @@ A1. The data format should support kinds of platform. Everyone and write his edi
 A2. The data can device into different time line and it should be easy for combination. It should also support tags that easy to index them.
 A3. Github is a good place who provide a contribute mechanism, so the data format is text and it can stored on github, it should be perfect.
 """
+
+
+[START]:event
 
 time: 20190914
 

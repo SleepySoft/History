@@ -1,3 +1,4 @@
+import os
 from os import sys, path, listdir
 
 
@@ -252,7 +253,7 @@ class LabelTagParser(TokenParser):
                 next_step = 'tag'
                 self.switch_label(token)
             elif next_step == 'tag':
-                expect = [',', '\n']
+                expect = [',', '\n', '"""']
                 self.append_tag(token)
             else:
                 print('Should not reach here.')
@@ -271,17 +272,20 @@ class LabelTagParser(TokenParser):
 
 class History:
 
+    # ----------------------------------------------------  Event  -----------------------------------------------------
+
     class Event:
         # Five key labels of an event: time, location, people, organization, event
         # Optional common labels: title, brief, uuid, author, tags, 成语
 
-        def __init__(self):
+        def __init__(self, source: str = ''):
             self.__uuid = ''
             self.__time = []
             self.__title = ''
             self.__brief = ''
             self.__event = ''
             self.__label_tags = {}
+            self.__event_source = source
 
         # -------------------------------------------
 
@@ -325,6 +329,9 @@ class History:
 
         def event(self) -> str:
             return self.__event
+
+        def source(self) -> str:
+            return self.__event_source
 
         # -------------------------------------------
 
@@ -372,33 +379,36 @@ class History:
                     return expected_tags in history_event_tags
             return True
 
-        # ---------------------------------------- print ---------------------------------------
+        # ----------------------------------- print -----------------------------------
 
         def __str__(self):
-            return '********************************** Event **********************************' + '\n' + \
-                    'UUID  : ' + str(self.__uuid) + '\n' + \
-                    'TIME  : ' + str(self.__time) + '\n' + \
-                    'LTAGS : ' + str(self.__label_tags) + '\n' + \
-                    'TITLE : ' + str(self.__title) + '\n' + \
-                    'BRIEF : ' + str(self.__brief) + '\n' + \
-                    'EVENT : ' + str(self.__event) + '\n' + \
-                    '***************************************************************************'
+            return '---------------------------------------------------------------------------' + '\n' + \
+                    '|UUID   : ' + str(self.__uuid) + '\n' + \
+                    '|TIME   : ' + str(self.__time) + '\n' + \
+                    '|LTAGS  : ' + str(self.__label_tags) + '\n' + \
+                    '|TITLE  : ' + str(self.__title) + '\n' + \
+                    '|BRIEF  : ' + str(self.__brief) + '\n' + \
+                    '|EVENT  : ' + str(self.__event) + '\n' + \
+                    '|SOURCE : ' + str(self.__event_source) + '\n' + \
+                    '---------------------------------------------------------------------------'
+
+    # -------------------------------------------------  Events Loader -------------------------------------------------
 
     class Loader:
         def __init__(self):
-            pass
+            self.__events = []
 
-        def enumerate_local_depot(self) -> list:
-            pass
+        def restore(self):
+            self.__events.clear()
 
-        def __traverse_path(self, dir: str):
-                root_path = path.dirname(dir)
+        def get_loaded_events(self) -> list:
+            return self.__events
 
-        def load_local_depot(self, depot: str) -> int:
+        def from_local_depot(self, depot: str) -> int:
             try:
                 root_path = path.dirname(path.abspath(__file__))
                 depot_path = path.join(root_path, 'depot', depot)
-                return self.load_directory(depot_path)
+                return self.from_directory(depot_path)
             except Exception as e:
                 print(e)
                 print(traceback.format_exc())
@@ -406,17 +416,10 @@ class History:
             finally:
                 pass
 
-        def load_directory(self, directory: str) -> int:
+        def from_directory(self, directory: str) -> int:
             try:
-                ls = listdir(directory)
-                ls = [path.join(directory, f) for f in ls]
-                files = [f for f in ls if path.isfile(f)]
-
-                count = 0
-                for file in files:
-                    if self.load_file(file):
-                        count += 1
-                return count
+                files = self.enumerate_local_path(directory)
+                return self.from_files(files)
             except Exception as e:
                 print(e)
                 print(traceback.format_exc())
@@ -424,10 +427,17 @@ class History:
             finally:
                 pass
 
-        def load_file(self, file: str) -> bool:
+        def from_files(self, files: [str]):
+            count = 0
+            for file in files:
+                if self.from_file(file):
+                    count += 1
+            return count
+
+        def from_file(self, file: str) -> bool:
             try:
                 with open(file, 'rt', encoding='utf-8') as f:
-                    self.load_text(f.read())
+                    self.from_text(f.read(), file)
                 return True
             except Exception as e:
                 print(e)
@@ -436,28 +446,63 @@ class History:
             finally:
                 pass
 
-        def load_text(self, text: str):
+        def from_text(self, text: str, source: str = ''):
+            error_list = []
+
             parser = LabelTagParser()
             parser.parse(text)
 
+            section = ''
             event = None
             label_tags = parser.get_label_tags()
 
             for label, tags in label_tags:
-                if label == 'time':
-                    if event is not None:
-                        self.__events.append(event)
-                    event = History.Event()
+                if label == '[START]':
+                    self.yield_section(section, event)
+                    event = None
+                    if len(tags) == 0:
+                        error_list.append('Missing start section.')
+                    else:
+                        section = 'tags[0]'
+                    continue
+
+                if event is None:
+                    event = History.Event(source)
                 event.set_label_tags(label, tags)
+
+                if section != '' and label == section:
+                    self.yield_section(section, event)
+                    event = None
+
+            self.yield_section(section, event)
+            event = None
+
+        def yield_section(self, section, event):
+            # TODO: different section, different class
             if event is not None:
                 self.__events.append(event)
+
+        def enumerate_local_path(self, root_path: str, suffix: [str] = None) -> list:
+            files = []
+            for parent, dirnames, filenames in os.walk(root_path):
+                for filename in filenames:
+                    if suffix is None:
+                        files.append(path.join(parent, filename))
+                    else:
+                        for sfx in suffix:
+                            if filename.endswith(sfx):
+                                files.append(filename)
+                                break
+            return files
+
+    # ---------------------------------------------------- History -----------------------------------------------------
 
     def __init__(self):
         self.__events = []
         self.__indexes = []
 
-    # -------------------------------------------------- Load Events ---------------------------------------------------
-
+    def attach(self, loader):
+        self.__events = loader.get_loaded_events()
 
     def print_events(self):
         for event in self.__events:
@@ -508,9 +553,14 @@ def test_token_parser_case_escape_symbol():
 
 
 def test_history_basic():
+    loader = History.Loader()
+    count = loader.from_local_depot('example')
+
+    print('Load successful: ' + str(count))
+
     history = History()
-    count = history.load_local_depot('example')
-    print(count)
+    history.attach(loader)
+
     history.print_events()
 
 
