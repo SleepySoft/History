@@ -11,8 +11,12 @@ class HistoryEditor(QWidget):
     def __init__(self):
         super(HistoryEditor, self).__init__()
 
+        self.__events = []
+        self.__source = ''
+        self.__new_event = None
+
         self.__tab_main = QTabWidget()
-        self.__combo_stories = QComboBox()
+        self.__combo_events = QComboBox()
 
         self.__label_uuid = QLabel()
         self.__line_time = QLineEdit()
@@ -31,6 +35,7 @@ class HistoryEditor(QWidget):
 
         self.__table_tags = EasyQTableWidget()
 
+        self.__button_new = QPushButton('New')
         self.__button_apply = QPushButton('Apply')
         self.__button_cancel = QPushButton('Cancel')
 
@@ -39,7 +44,12 @@ class HistoryEditor(QWidget):
 
     def init_ui(self):
         root_layout = QVBoxLayout()
-        root_layout.addWidget(self.__combo_stories)
+
+        line = QHBoxLayout()
+        line.addWidget(self.__combo_events, 1)
+        line.addWidget(self.__button_new, 0)
+
+        root_layout.addLayout(line)
         root_layout.addWidget(self.__tab_main)
         root_layout.addLayout(horizon_layout([self.__button_apply, self.__button_cancel]))
         self.setLayout(root_layout)
@@ -87,11 +97,15 @@ class HistoryEditor(QWidget):
         self.__button_auto_people.clicked.connect(self.on_button_auto_people)
         self.__button_auto_organization.clicked.connect(self.on_button_auto_organization)
 
+        self.__button_new.clicked.connect(self.on_button_new)
+        self.__button_apply.clicked.connect(self.on_button_apply)
+        self.__button_cancel.clicked.connect(self.on_button_cancel)
+
     # ---------------------------------------------------- Features ----------------------------------------------------
 
     def load_event(self, event: History.Event):
-        self.__label_uuid.setText(event.uuid())
-        self.__line_time.setText(event.time())
+        self.__label_uuid.setText(str(event.uuid()))
+        self.__line_time.setText(str(event.time()))
 
         self.__line_location.setText(event.tags('location'))
         self.__line_people.setText(event.tags('people'))
@@ -100,6 +114,14 @@ class HistoryEditor(QWidget):
         self.__line_title.setText(event.title())
         self.__text_brief.setText(event.brief())
         self.__text_event.setText(event.event())
+
+    def set_events(self, events: History.Event or [History.Event], source: str):
+        self.__events = events if isinstance(events, list) else [events]
+        self.__source = source
+
+        self.__combo_events.clear()
+        for event in self.__events:
+            self.__combo_events.addItem(event.uuid())
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
@@ -113,6 +135,19 @@ class HistoryEditor(QWidget):
         pass
 
     def on_button_auto_organization(self):
+        pass
+
+    def on_button_new(self):
+        if self.__new_event is not None:
+            pass
+        self.__new_event = History.Event()
+        self.load_event(self.__new_event)
+        self.__combo_events.setEditText(self.__new_event.uuid())
+
+    def on_button_apply(self):
+        pass
+
+    def on_button_cancel(self):
         pass
 
 

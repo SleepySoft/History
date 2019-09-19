@@ -1,4 +1,5 @@
 import os
+import uuid
 from os import sys, path, listdir
 
 
@@ -279,7 +280,7 @@ class History:
         # Optional common labels: title, brief, uuid, author, tags, 成语
 
         def __init__(self, source: str = ''):
-            self.__uuid = ''
+            self.__uuid = uuid.uuid1()
             self.__time = []
             self.__title = ''
             self.__brief = ''
@@ -475,7 +476,6 @@ class History:
                     event = None
 
             self.yield_section(section, event)
-            event = None
 
         def yield_section(self, section, event):
             # TODO: different section, different class
