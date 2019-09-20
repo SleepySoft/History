@@ -40,6 +40,23 @@ class EventIndex:
 
         self.source = event.source()
 
+    def to_string(self) -> str:
+        self.uuid = ''
+        self.since = 0.0
+        self.until = 0.0
+        self.event = None
+        self.abstract = ''
+
+        self.source = ''
+
+        text = '[START]: index\n'
+        text += 'uuid: ' + str(self.uuid) + '\n'
+        text += 'since: ' + str(self.since) + '\n'
+        text += 'until: ' + str(self.until) + '\n'
+        text += 'abstract: """' + str(self.abstract) + '"""\n'
+        text += 'source: ' + str(self.source) + '\n'
+        text += 'index: end\n\n'
+
 
 class EventIndexer:
     def __init__(self):
@@ -64,7 +81,21 @@ class EventIndexer:
             self.__indexes.append(index)
 
     def replace_index_prefix(self, prefix_old: str, prefix_new: str):
-        pass
+        for index in self.__indexes:
+            if index.source.startswith(prefix_old):
+                index.source.replace(prefix_old, prefix_new)
+
+    def dump_to_file(self, file: str):
+        with open(file, 'wt') as f:
+            for index in self.__indexes:
+                text = index.to_string()
+                f.write(text)
+
+    def load_from_file(self, file: str):
+        parser = LabelTagParser()
+        with open(file, 'rt') as f:
+            text = f.read()
+            parser.parse(text)
 
 
 def test():
