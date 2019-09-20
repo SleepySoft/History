@@ -104,16 +104,16 @@ class HistoryEditor(QWidget):
     # ---------------------------------------------------- Features ----------------------------------------------------
 
     def load_event(self, event: History.Event):
-        self.__label_uuid.setText(str(event.uuid()))
-        self.__line_time.setText(str(event.time()))
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(event.uuid()))
+        self.__line_time.setText(LabelTagParser.tags_to_text(event.time()))
 
-        self.__line_location.setText(event.tags('location'))
-        self.__line_people.setText(event.tags('people'))
-        self.__line_organization.setText(event.tags('location'))
+        self.__line_location.setText(LabelTagParser.tags_to_text(event.tags('location')))
+        self.__line_people.setText(LabelTagParser.tags_to_text(event.tags('people')))
+        self.__line_organization.setText(LabelTagParser.tags_to_text(event.tags('location')))
 
-        self.__line_title.setText(event.title())
-        self.__text_brief.setText(event.brief())
-        self.__text_event.setText(event.event())
+        self.__line_title.setText(LabelTagParser.tags_to_text(event.title()))
+        self.__text_brief.setText(LabelTagParser.tags_to_text(event.brief()))
+        self.__text_event.setText(LabelTagParser.tags_to_text(event.event()))
 
     def set_events(self, events: History.Event or [History.Event], source: str):
         self.__events = events if isinstance(events, list) else [events]
@@ -147,6 +147,8 @@ class HistoryEditor(QWidget):
     def on_button_apply(self):
         if self.__current_event is None:
             self.__current_event = History.Event()
+        else:
+            self.__current_event.reset()
 
         input_time = self.__line_time.text()
         input_location = self.__line_location.text()
@@ -166,7 +168,6 @@ class HistoryEditor(QWidget):
         self.__current_event.set_label_tags('brief', input_brief)
         self.__current_event.set_label_tags('event', sinput_event)
 
-        source = ''
         result = False
         if len(self.__events) == 0:
             source = str(self.__current_event.uuid()) + '.his'

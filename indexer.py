@@ -1,9 +1,10 @@
-
-
-# --------------------------------------------------------------------------------------------------------------
 import sys
 import traceback
 
+from core import *
+
+
+# --------------------------------------------------------------------------------------------------------------
 
 class EventIndex:
     def __init__(self):
@@ -13,8 +14,7 @@ class EventIndex:
         self.event = None
         self.abstract = ''
 
-        self.uri_web = ''
-        self.uri_file = ''
+        self.source = ''
 
     def time(self) -> float:
         return self.since
@@ -22,9 +22,8 @@ class EventIndex:
     def adapt(self, since: float, until: float):
         return (since < self.since < until) or (since < self.until < until)
 
-    def index_for(self, event, file: str = None, url: str = None):
-        self.uri_web = url
-        self.uri_file = file
+    def index_for(self, event):
+        self.source = event.source()
 
         self.uuid = event.uuid()
         self.since = event.since()
@@ -39,20 +38,33 @@ class EventIndex:
             self.abstract = event.event()
         self.abstract = self.abstract.strip()[:50]
 
+        self.source = event.source()
+
 
 class EventIndexer:
     def __init__(self):
-        pass
+        self.__indexes = []
 
-    def index_for_events(self, events: list):
-        pass
+    def reset(self):
+        self.__indexes = []
 
-    def index_for_path(self, directory: str):
-        pass
+    def index_path(self, directory: str):
+        loader = History.Loader()
+        his_filels = History.Loader().enumerate_local_path(directory)
+        for his_file in his_filels:
+            loader.from_file(his_file)
+            events = loader.get_loaded_events()
+            self.index_events(events)
+            loader.restore()
 
-    def set_index_prefix(self, prefix: str):
-        pass
+    def index_events(self, events: list):
+        for event in events:
+            index = EventIndex()
+            index.index_for(event)
+            self.__indexes.append(index)
 
+    def replace_index_prefix(self, prefix_old: str, prefix_new: str):
+        pass
 
 
 def test():

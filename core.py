@@ -268,6 +268,38 @@ class LabelTagParser(TokenParser):
         if self.__last_tags is not None and tag not in self.__last_tags:
             self.__last_tags.append(tag)
 
+    @staticmethod
+    def label_tags_to_text(label: str, tags, whole: bool = False):
+        if label is None or len(label) == 0:
+            return ''
+        if whole:
+            if len(str(tags)) == 0:
+                return ''
+            tag_text = '"""' + str(tags) + '"""'
+        else:
+            tag_text = LabelTagParser.tags_to_text(tags)
+            if len(tag_text) == 0:
+                return ''
+        return label + ': ' + tag_text + '\n'
+
+    @staticmethod
+    def tags_to_text(tags):
+        if tags is None:
+            return ''
+        if isinstance(tags, (list, tuple)):
+            tags = [str(tag) for tag in tags]
+            if len(tags) > 0:
+                text = ', '.join(tags)
+            else:
+                return ''
+        else:
+            text = str(tags)
+        return text
+
+    @staticmethod
+    def text_to_tags(text):
+        tags = text.split(',')
+
 
 # --------------------------------------------------- class history ----------------------------------------------------
 
@@ -280,7 +312,7 @@ class History:
         # Optional common labels: title, brief, uuid, author, tags, 成语
 
         def __init__(self, source: str = ''):
-            self.__uuid = uuid.uuid1()
+            self.__uuid = str(uuid.uuid4())
             self.__time = []
             self.__title = ''
             self.__brief = ''
@@ -289,6 +321,13 @@ class History:
             self.__event_source = source
 
         # -------------------------------------------
+
+        def reset(self):
+            self.__time = []
+            self.__title = ''
+            self.__brief = ''
+            self.__event = ''
+            self.__label_tags = {}
 
         def set_source(self, source: str):
             self.__event_source = source
@@ -358,22 +397,21 @@ class History:
 
         def dump(self) -> str:
             text = '[START]:EVENT\n'
-            text += 'uuid: ' + str(self.__uuid) + '\n'
-            text += 'time: ' + ', '.join(self.__time) + '\n'
-            print('\n')
+
+            if self.__uuid is None or self.__uuid == '':
+                self.__uuid = uuid.uuid1()
+
+            text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
+            text += LabelTagParser.label_tags_to_text('time', self.__time)
+            text += '\n'
 
             for label in sorted(list(self.__label_tags.keys())):
-                tags = self.__label_tags[label]
-                if isinstance(tags, (list, tuple)):
-                    if len(tags) > 0:
-                        text += label + ': ' + ','.join(tags) + '\n'
-                elif tags is not None:
-                    text += label + ': ' + str(tags) + '\n'
-            print('\n')
+                text += LabelTagParser.label_tags_to_text(label, self.__label_tags[label])
+            text += '\n'
 
-            text += 'title: """' + self.__title + '"""\n'
-            text += 'brief: """' + self.__brief + '"""\n'
-            text += 'event: """' + self.__event + '"""\n'
+            text += LabelTagParser.label_tags_to_text('title', self.__title, True)
+            text += LabelTagParser.label_tags_to_text('brief', self.__brief, True)
+            text += LabelTagParser.label_tags_to_text('event', self.__event, True)
 
             return text
 
