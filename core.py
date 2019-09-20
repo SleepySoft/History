@@ -290,7 +290,10 @@ class History:
 
         # -------------------------------------------
 
-        def set_label_tags(self, label: str, tags: str):
+        def set_source(self, source: str):
+            self.__event_source = source
+
+        def set_label_tags(self, label: str, tags: [str]):
             if label == 'uuid':
                 self.__uuid = tags[0]
             elif label == 'time':
@@ -353,6 +356,25 @@ class History:
 
         # -------------------------------------------
 
+        def dump(self) -> str:
+            text = '[START]:EVENT\n'
+            text += 'uuid: ' + str(self.__uuid) + '\n'
+            text += 'time: ' + ', '.join(self.__time) + '\n'
+
+            for label in sorted(list(self.__label_tags.keys())):
+                tags = self.__label_tags[label]
+                if isinstance(tags, (list, tuple)):
+                    if len(tags) > 0:
+                        text += label + ': ' + ','.join(tags) + '\n'
+                elif tags is not None:
+                    text += label + ': ' + str(tags) + '\n'
+
+            text += 'title: """' + self.__title + '"""\n'
+            text += 'brief: """' + self.__brief + '"""\n'
+            text += 'event: """' + self.__event + '"""\n'
+
+            return text
+
         def adapt(self, **argv) -> bool:
             if not check_condition_range(argv, 'time', self.__time):
                 return False
@@ -405,10 +427,34 @@ class History:
         def get_loaded_events(self) -> list:
             return self.__events
 
+        def get_local_depot_path(self, depot: str) -> str:
+            root_path = path.dirname(path.abspath(__file__))
+            depot_path = path.join(root_path, 'depot', depot)
+            return depot_path
+
+        # events: History.Event or [History.Event]
+        def to_local_depot(self, events, depot: str, file: str) -> bool:
+            if not isinstance(events, (list, tuple)):
+                events = [events]
+            depot_path = self.get_local_depot_path(depot)
+            file_path = path.join(depot_path, file)
+            try:
+                with open(file_path, 'wt') as f:
+                    for event in events:
+                        event.set_source(file_path)
+                        text = event.dump()
+                        f.write(text)
+                return True
+            except Exception as e:
+                print(e)
+                print(traceback.format_exc())
+                return False
+            finally:
+                pass
+
         def from_local_depot(self, depot: str) -> int:
             try:
-                root_path = path.dirname(path.abspath(__file__))
-                depot_path = path.join(root_path, 'depot', depot)
+                depot_path = self.get_local_depot_path(depot)
                 return self.from_directory(depot_path)
             except Exception as e:
                 print(e)

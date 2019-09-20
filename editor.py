@@ -8,12 +8,12 @@ from Utility.ui_utility import *
 
 
 class HistoryEditor(QWidget):
-    def __init__(self):
-        super(HistoryEditor, self).__init__()
+    def __init__(self, parent: QWidget):
+        super(HistoryEditor, self).__init__(parent)
 
         self.__events = []
         self.__source = ''
-        self.__new_event = None
+        self.__current_event = None
 
         self.__tab_main = QTabWidget()
         self.__combo_events = QComboBox()
@@ -138,26 +138,66 @@ class HistoryEditor(QWidget):
         pass
 
     def on_button_new(self):
-        if self.__new_event is not None:
+        if self.__current_event is not None:
             pass
-        self.__new_event = History.Event()
-        self.load_event(self.__new_event)
-        self.__combo_events.setEditText(self.__new_event.uuid())
+        self.__current_event = History.Event()
+        self.load_event(self.__current_event)
+        self.__combo_events.setEditText(self.__current_event.uuid())
 
     def on_button_apply(self):
-        pass
+        if self.__current_event is None:
+            self.__current_event = History.Event()
+
+        input_time = self.__line_time.text()
+        input_location = self.__line_location.text()
+        input_people = self.__line_people.text()
+        input_organization = self.__line_organization.text()
+
+        input_title = self.__line_title.text()
+        input_brief = self.__text_brief.toPlainText()
+        sinput_event = self.__text_event.toPlainText()
+
+        self.__current_event.set_label_tags('time',         input_time.split(','))
+        self.__current_event.set_label_tags('location',     input_location.split(','))
+        self.__current_event.set_label_tags('people',       input_people.split(','))
+        self.__current_event.set_label_tags('organization', input_organization.split(','))
+
+        self.__current_event.set_label_tags('title', input_title)
+        self.__current_event.set_label_tags('brief', input_brief)
+        self.__current_event.set_label_tags('event', sinput_event)
+
+        source = ''
+        result = False
+        if len(self.__events) == 0:
+            result = History.Loader().to_local_depot(
+                self.__current_event, 'China', str(self.__current_event.uuid()) + '.his')
+        else:
+            # The whole file should be updated
+            if self.__current_event not in self.__events:
+                self.__events.append(self.__current_event)
+            source = self.__events[0].source()
+            if source is None or len(source) == 0:
+                source = str(self.__current_event.uuid()) + '.his'
+                result = History.Loader().to_local_depot(self.__events, 'China', source)
+
+        tips = 'Save Successful.' if result else 'Save Fail.'
+        if len(source) > 0:
+            tips += '\nSave File: ' + source
+        QMessageBox.information(self, 'Save', tips, QMessageBox.Ok)
 
     def on_button_cancel(self):
-        pass
+        if self.parent() is not None:
+            self.parent().close()
+        else:
+            self.close()
 
 
 def main():
     app = QApplication(sys.argv)
 
-    layout = QVBoxLayout()
-    layout.addWidget(HistoryEditor())
-
     dlg = QDialog()
+    layout = QVBoxLayout()
+    layout.addWidget(HistoryEditor(dlg))
     dlg.setLayout(layout)
     dlg.exec()
 
