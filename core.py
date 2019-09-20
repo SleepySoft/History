@@ -360,6 +360,7 @@ class History:
             text = '[START]:EVENT\n'
             text += 'uuid: ' + str(self.__uuid) + '\n'
             text += 'time: ' + ', '.join(self.__time) + '\n'
+            print('\n')
 
             for label in sorted(list(self.__label_tags.keys())):
                 tags = self.__label_tags[label]
@@ -368,6 +369,7 @@ class History:
                         text += label + ': ' + ','.join(tags) + '\n'
                 elif tags is not None:
                     text += label + ': ' + str(tags) + '\n'
+            print('\n')
 
             text += 'title: """' + self.__title + '"""\n'
             text += 'brief: """' + self.__brief + '"""\n'

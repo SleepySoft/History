@@ -65,7 +65,7 @@ class HistoryEditor(QWidget):
         property_layout.addWidget(self.__line_time, 1, 1)
         property_layout.addWidget(self.__button_auto_time, 1, 2)
 
-        property_layout.addWidget(QLabel('Event Time'), 2, 0)
+        property_layout.addWidget(QLabel('Event Location'), 2, 0)
         property_layout.addWidget(self.__line_location, 2, 1)
         property_layout.addWidget(self.__button_auto_location, 2, 2)
 
@@ -169,8 +169,9 @@ class HistoryEditor(QWidget):
         source = ''
         result = False
         if len(self.__events) == 0:
+            source = str(self.__current_event.uuid()) + '.his'
             result = History.Loader().to_local_depot(
-                self.__current_event, 'China', str(self.__current_event.uuid()) + '.his')
+                self.__current_event, 'China', source)
         else:
             # The whole file should be updated
             if self.__current_event not in self.__events:
