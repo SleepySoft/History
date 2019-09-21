@@ -34,13 +34,22 @@ class EventIndex:
             self.abstract = event.title()
         elif event.brief() is not None and event.brief().strip() != '':
             self.abstract = event.brief()
-        elif event.brief() is not None and event.brief().strip() != '':
+        elif event.event() is not None and event.event().strip() != '':
             self.abstract = event.event()
         self.abstract = self.abstract.strip()[:50]
 
-        self.source = event.source()
-
     def to_string(self) -> str:
+        text = '[START]: index\n'
+        text += 'uuid: """' + str(self.uuid) + '"""\n'
+        text += 'since: ' + str(self.since) + '\n'
+        text += 'until: ' + str(self.until) + '\n'
+        text += 'abstract: """' + str(self.abstract) + '"""\n'
+        text += 'source: """' + str(self.source) + '"""\n'
+        text += 'index: end\n\n'
+        return text
+
+    # ----------------------------------- print -----------------------------------
+
         self.uuid = ''
         self.since = 0.0
         self.until = 0.0
@@ -49,13 +58,14 @@ class EventIndex:
 
         self.source = ''
 
-        text = '[START]: index\n'
-        text += 'uuid: ' + str(self.uuid) + '\n'
-        text += 'since: ' + str(self.since) + '\n'
-        text += 'until: ' + str(self.until) + '\n'
-        text += 'abstract: """' + str(self.abstract) + '"""\n'
-        text += 'source: ' + str(self.source) + '\n'
-        text += 'index: end\n\n'
+    def __str__(self):
+        return '---------------------------------------------------------------------------' + '\n' + \
+                '|UUID     : ' + str(self.uuid) + '\n' + \
+                '|SINCE    : ' + str(self.since) + '\n' + \
+                '|UNTIL    : ' + str(self.until) + '\n' + \
+                '|EVENT    : ' + str(self.event) + '\n' + \
+                '|ABSTRACT : ' + str(self.abstract) + '\n' + \
+                '---------------------------------------------------------------------------'
 
 
 class EventIndexer:
@@ -86,40 +96,62 @@ class EventIndexer:
                 index.source.replace(prefix_old, prefix_new)
 
     def dump_to_file(self, file: str):
-        with open(file, 'wt') as f:
+        with open(file, 'wt', encoding='utf-8') as f:
             for index in self.__indexes:
                 text = index.to_string()
                 f.write(text)
 
     def load_from_file(self, file: str):
         parser = LabelTagParser()
-        with open(file, 'rt') as f:
+        with open(file, 'rt', encoding='utf-8') as f:
             text = f.read()
             parser.parse(text)
 
+        index = None
+        label_tags = parser.get_label_tags()
 
-def test():
-    import os
-    import os.path
+        for label, tags in label_tags:
+            if label == '[START]':
+                index = EventIndex()
+                continue
+            if index is None:
+                continue
+            if label == 'uuid':
+                index.uuid = tags[0]
+            elif label == 'since':
+                index.since = tags[0]
+            elif label == 'until':
+                index.until = tags[0]
+            elif label == 'abstract':
+                index.abstract = tags[0]
+            elif label == 'source':
+                index.source = tags[0]
+            elif label == 'index':
+                self.__indexes.append(index)
+                index = None
 
-    # this folder is custom
-    rootdir = "D:"
-    for parent, dirnames, filenames in os.walk(rootdir):
-        print(str(parent) + ' | ' + str(dirnames) + '|' + str(filenames))
-        # # case 1:
-        # for dirname in dirnames:
-        #     print("parent folder is:" + parent)
-        #     print("dirname is:" + dirname)
-        # # case 2
-        # for filename in filenames:
-        #     print("parent folder is:" + parent)
-        #     print("filename with full path:" + os.path.join(parent, filename))
+    def print_indexes(self):
+        for index in self.__indexes:
+            print(index)
 
 
+def test_load_index():
+    indexer = EventIndexer()
+    indexer.load_from_file('history.index')
+    indexer.print_indexes()
 
 
 def main():
-    test()
+    indexer = EventIndexer()
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            indexer.index_path(arg)
+    else:
+        depot_path = History.Loader().get_local_depot_path('China')
+        indexer.index_path(depot_path)
+    indexer.dump_to_file('history.index')
+
+    test_load_index()
 
 
 # ----------------------------------------------------------------------------------------------------------------------

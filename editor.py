@@ -16,6 +16,7 @@ class HistoryEditor(QWidget):
         self.__current_event = None
 
         self.__tab_main = QTabWidget()
+        # self.__combo_depot = QComboBox()
         self.__combo_events = QComboBox()
 
         self.__label_uuid = QLabel()
@@ -23,6 +24,7 @@ class HistoryEditor(QWidget):
         self.__line_location = QLineEdit()
         self.__line_people = QLineEdit()
         self.__line_organization = QLineEdit()
+        self.__line_default_tags = QLineEdit()
 
         self.__button_auto_time = QPushButton('Auto Detect')
         self.__button_auto_location = QPushButton('Auto Detect')
@@ -77,6 +79,9 @@ class HistoryEditor(QWidget):
         property_layout.addWidget(self.__line_organization, 4, 1)
         property_layout.addWidget(self.__button_auto_organization, 4, 2)
 
+        property_layout.addWidget(QLabel('Event Tags'), 5, 0)
+        property_layout.addWidget(self.__line_default_tags, 5, 1)
+
         event_page_layout.addLayout(property_layout)
 
         event_page_layout.addWidget(QLabel('Event Title'))
@@ -90,6 +95,8 @@ class HistoryEditor(QWidget):
 
         ltags_page_layout = create_new_tab(self.__tab_main, 'Label Tag Editor')
         ltags_page_layout.addWidget(self.__table_tags)
+
+        self.setMinimumSize(700, 500)
 
     def config_ui(self):
         self.__button_auto_time.clicked.connect(self.on_button_auto_time)
@@ -110,6 +117,7 @@ class HistoryEditor(QWidget):
         self.__line_location.setText(LabelTagParser.tags_to_text(event.tags('location')))
         self.__line_people.setText(LabelTagParser.tags_to_text(event.tags('people')))
         self.__line_organization.setText(LabelTagParser.tags_to_text(event.tags('location')))
+        self.__line_default_tags.setText(LabelTagParser.tags_to_text(event.tags('tags')))
 
         self.__line_title.setText(LabelTagParser.tags_to_text(event.title()))
         self.__text_brief.setText(LabelTagParser.tags_to_text(event.brief()))
@@ -154,6 +162,7 @@ class HistoryEditor(QWidget):
         input_location = self.__line_location.text()
         input_people = self.__line_people.text()
         input_organization = self.__line_organization.text()
+        input_default_tags = self.__line_default_tags.text()
 
         input_title = self.__line_title.text()
         input_brief = self.__text_brief.toPlainText()
@@ -163,6 +172,7 @@ class HistoryEditor(QWidget):
         self.__current_event.set_label_tags('location',     input_location.split(','))
         self.__current_event.set_label_tags('people',       input_people.split(','))
         self.__current_event.set_label_tags('organization', input_organization.split(','))
+        self.__current_event.set_label_tags('tags',         input_default_tags.split(','))
 
         self.__current_event.set_label_tags('title', input_title)
         self.__current_event.set_label_tags('brief', input_brief)

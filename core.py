@@ -338,11 +338,11 @@ class History:
             elif label == 'time':
                 self.__time = tags
             elif label == 'title':
-                self.__title = tags
+                self.__title = ', '.join(tags)
             elif label == 'brief':
-                self.__brief = tags
+                self.__brief = ', '.join(tags)
             elif label == 'event':
-                self.__event = tags
+                self.__event = ', '.join(tags)
             else:
                 if label not in self.__label_tags.keys():
                     self.__label_tags[label] = tags
@@ -479,7 +479,7 @@ class History:
             depot_path = self.get_local_depot_path(depot)
             file_path = path.join(depot_path, file)
             try:
-                with open(file_path, 'wt') as f:
+                with open(file_path, 'wt', encoding='utf-8') as f:
                     for event in events:
                         event.set_source(file_path)
                         text = event.dump()
