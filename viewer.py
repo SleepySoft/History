@@ -48,6 +48,8 @@ def scale_round(num: float, scale: float):
 class TimeAxis(QWidget):
 
     class Thread:
+        REFERENCE_TRACK_WIDTH = 50
+
         def __init__(self):
             self.__event_indexes = []
             self.__paint_indexes = []
@@ -61,6 +63,7 @@ class TimeAxis(QWidget):
             self.__thread_track_width = 50
             # self.__value_pixel_coeff = 0.0
             self.__paint_area = QRect(0, 0, 0, 0)
+            self.__pixel_per_scale = 0.0
             self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
         def set_thread_horizon(self, horizon: bool):
@@ -71,8 +74,9 @@ class TimeAxis(QWidget):
             self.__event_indexes = indexes
             self.calc_paint_parameters()
 
-        def on_paint_canvas_size_update(self, area: QRect):
+        def on_paint_canvas_size_update(self, area: QRect, pixel_per_scale: float):
             self.__paint_area = area
+            self.__pixel_per_scale = pixel_per_scale
             self.calc_paint_parameters()
 
         def on_paint_scale_range_updated(self, since: float, until: float):
@@ -87,28 +91,35 @@ class TimeAxis(QWidget):
             else:
                 self.__thread_width = self.__paint_area.width()
                 self.__thread_length = self.__paint_area.height()
-            self.__thread_track_count = int(self.__thread_width / self.__thread_track_width)
 
             self.__paint_indexes.clear()
+            if self.__thread_width < TimeAxis.Thread.REFERENCE_TRACK_WIDTH * 0.3:
+                return
+
+            # Adjust track count
+            self.__thread_track_count = self.__thread_width / TimeAxis.Thread.REFERENCE_TRACK_WIDTH
+            self.__thread_track_count = int(self.__thread_track_count + 0.5)
+            self.__thread_track_width = self.__thread_width / self.__thread_track_count
+
             for index in self.__event_indexes:
                 if index.adapt(self.__since, self.__until):
                     self.__paint_indexes.append(index)
-            sorted(self.__paint_indexes, key=lambda x: x.since())
+            sorted(self.__paint_indexes, key=lambda x: x.since)
 
             self.layout_event_to_track()
 
         def layout_event_to_track(self):
             track_list = []
             for i in range(0, self.__thread_track_count):
-                track_list.append(self.__since)
+                track_list.append(None)
 
             self.__indexes_layout.clear()
             for index in self.__paint_indexes:
                 for i in range(0, self.__thread_track_count):
                     # Default layout to the last track
-                    if index.since() > track_list[i] or (i == self.__thread_track_count - 1):
+                    if track_list[i] is None or index.since > track_list[i] or (i == self.__thread_track_count - 1):
                         self.__indexes_layout.append(i)
-                        track_list[i] = index.until()
+                        track_list[i] = index.until
                         break
 
         def value_to_pixel(self, value: float):
@@ -117,22 +128,32 @@ class TimeAxis(QWidget):
             return self.__thread_length * (value - self.__since) / (self.__until - self.__since)
 
         def repaint(self, qp: QPainter):
+
+            # For Debug
             qp.setBrush(self.__paint_color)
             qp.drawRect(self.__paint_area)
-            # if self.__horizon:
-            #     self.paint_horizon(qp)
-            # else:
-            #     self.paint_vertical(qp)
+
+            if self.__horizon:
+                self.paint_horizon(qp)
+            else:
+                self.paint_vertical(qp)
 
         def paint_horizon(self):
             pass
 
         def paint_vertical(self, qp: QPainter):
+            if len(self.__indexes_layout) != len(self.__paint_indexes):
+                print('Index and layout mismatch. Something wrong in the layout calculation.')
+                return
             for track, index in zip(self.__indexes_layout, self.__paint_indexes):
+                # TODO: Should convert scale to pixel
+
                 left = self.__paint_area.left() + track * self.__thread_track_width
                 right = left + self.__thread_track_width
-                top = self.__paint_area.top() + self.value_to_pixel(index.since())
-                bottom = self.__paint_area.top() + self.value_to_pixel(index.until())
+
+                top = self.__paint_area.top() + self.value_to_pixel(index.since)
+                bottom = self.__paint_area.top() + self.value_to_pixel(index.until)
+
                 index_rect = QRect(left, top, right - left, bottom - top)
                 qp.drawRect(index_rect)
 
@@ -345,6 +366,10 @@ class TimeAxis(QWidget):
         self.__paint_start_scale = math.floor(self.__paint_since)
         self.__paint_start_offset = total_pixel_offset - self.__paint_start_scale * self.__pixel_per_scale
 
+        for thread in self.__history_threads:
+            thread.on_paint_scale_range_updated(self.__paint_since * self.__pixel_per_scale,
+                                                self.__paint_until * self.__pixel_per_scale)
+
     def calc_paint_layout(self):
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
 
@@ -379,11 +404,13 @@ class TimeAxis(QWidget):
                 if i < left_thread_count:
                     left = i * left_thread_width
                     area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area)
+                    thread.on_paint_canvas_size_update(area, self.__pixel_per_scale / self.__main_step)
                 else:
                     left = axis_right_margin + (i - left_thread_count) * right_thread_width
                     area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area)
+                    thread.on_paint_canvas_size_update(area, self.__pixel_per_scale / self.__main_step)
+
+    # ----------------------------------------------------- Scale ------------------------------------------------------
 
     def pixel_offset_to_scale_value(self, display_pixel_offset: int) -> float:
         delta_pixel_offset = display_pixel_offset + self.__paint_start_offset - self.DEFAULT_MARGIN_PIXEL
@@ -506,12 +533,12 @@ def main():
     idxer.load_from_file('history.index')
     idxer.print_indexes()
 
-    for i in range(0, 6):
-        time_axis.add_history_thread(TimeAxis.Thread())
+    # for i in range(0, 6):
+    #     time_axis.add_history_thread(TimeAxis.Thread())
 
-    # thread = TimeAxis.Thread()
-    # thread.set_thread_event_indexes(idxer.get_indexes())
-    # time_axis.add_history_thread(thread)
+    thread = TimeAxis.Thread()
+    thread.set_thread_event_indexes(idxer.get_indexes())
+    time_axis.add_history_thread(thread)
 
     layout = QVBoxLayout()
     layout.addWidget(time_axis)
