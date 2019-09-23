@@ -25,9 +25,14 @@ class EventIndex:
     def index_for(self, event):
         self.source = event.source()
 
+        import core
+        event_time_list = event.time()
+        standard_time_list = core.TimeParser.standardize(','.join(event_time_list))
+
+        self.since = min(standard_time_list)
+        self.until = max(standard_time_list)
+
         self.uuid = event.uuid()
-        self.since = event.since()
-        self.until = event.until()
         self.event = event
 
         if event.title() is not None and event.title().strip() != '':
@@ -75,6 +80,9 @@ class EventIndexer:
     def reset(self):
         self.__indexes = []
 
+    def get_indexes(self) -> list:
+        return self.__indexes
+
     def index_path(self, directory: str):
         loader = History.Loader()
         his_filels = History.Loader().enumerate_local_path(directory)
@@ -119,9 +127,9 @@ class EventIndexer:
             if label == 'uuid':
                 index.uuid = tags[0]
             elif label == 'since':
-                index.since = tags[0]
+                index.since = float(tags[0])
             elif label == 'until':
-                index.until = tags[0]
+                index.until = float(tags[0])
             elif label == 'abstract':
                 index.abstract = tags[0]
             elif label == 'source':

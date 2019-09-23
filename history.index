@@ -1,24 +1,32 @@
 [START]: index
 uuid: """0309134f-5ce7-4cf6-9e71-a2ce79eba84f"""
-since: 公元前800000年
-until: 公元前800000年
+since: -800000.0
+until: -800000.0
 abstract: """腊玛古猿禄丰种"""
-source: """C:\D\Code\git\History\depot\China\0309134f-5ce7-4cf6-9e71-a2ce79eba84f.his"""
+source: """C:\D\Private\Code\git\History\depot\China\0309134f-5ce7-4cf6-9e71-a2ce79eba84f.his"""
+index: end
+
+[START]: index
+uuid: """61860746-0808-4d25-9c5f-fafe5465d1b3"""
+since: 0.0
+until: 300.0
+abstract: """测, 试, T, h, r, e, a, d"""
+source: """C:\D\Private\Code\git\History\depot\China\61860746-0808-4d25-9c5f-fafe5465d1b3.his"""
 index: end
 
 [START]: index
 uuid: """d96e707f-6ba9-4b68-a72d-5788385f8120"""
-since: 距今204-201万年
-until: 距今204-201万年
+since: -204.0
+until: 201.0
 abstract: """元谋人"""
-source: """C:\D\Code\git\History\depot\China\d96e707f-6ba9-4b68-a72d-5788385f8120.his"""
+source: """C:\D\Private\Code\git\History\depot\China\d96e707f-6ba9-4b68-a72d-5788385f8120.his"""
 index: end
 
 [START]: index
 uuid: """f656a103-b340-41c4-a7a3-10159cccfb4f"""
-since: 距今200万-20万年
-until: 距今200万-20万年
+since: -200.0
+until: 20.0
 abstract: """直立人"""
-source: """C:\D\Code\git\History\depot\China\f656a103-b340-41c4-a7a3-10159cccfb4f.his"""
+source: """C:\D\Private\Code\git\History\depot\China\f656a103-b340-41c4-a7a3-10159cccfb4f.his"""
 index: end
 

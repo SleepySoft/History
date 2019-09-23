@@ -1,4 +1,5 @@
 import os
+import string
 import uuid
 from os import sys, path, listdir
 
@@ -64,6 +65,67 @@ def check_condition_within(conditions: dict, key: str, expects: list) -> bool:
         return value in expects
     else:
         return compare_intersection(value, expects)
+
+
+# ---------------------------------------------------- Token Parser ----------------------------------------------------
+
+# TODO: Use NLP to process nature language
+
+class TimeParser:
+    def __init__(self):
+        print('Instance TimeParser is not necessary.')
+
+    SEPARATOR = [
+        '-',
+        ','
+    ]
+
+    PREFIX_CE = [
+        'ac',
+        'ce',
+        'common era',
+        '公元',
+        '距今',
+    ]
+
+    PREFIX_BCE = [
+        'bc',
+        'bce',
+        'before common era',
+        '公元前',
+        '距今',
+    ]
+
+    @staticmethod
+    def standardize(time_str: str) -> [float]:
+        unified_time_str = time_str
+        for i in range(1, len(TimeParser.SEPARATOR)):
+            unified_time_str = unified_time_str.replace(TimeParser.SEPARATOR[i], TimeParser.SEPARATOR[0])
+
+        time_list = []
+        sub_time_str_list = unified_time_str.split(TimeParser.SEPARATOR[0])
+        for sub_time_str in sub_time_str_list:
+            try:
+                num = TimeParser.parse_single_time_str(sub_time_str)
+                time_list.append(num)
+            except Exception as e:
+                print('Parse time error: ' + sub_time_str + ' -> ' + str(e))
+            finally:
+                pass
+        return time_list
+
+    @staticmethod
+    def parse_single_time_str(time_str: str) -> float:
+        if time_str.lower().startswith(tuple(TimeParser.PREFIX_BCE)):
+            sign = -1
+        elif time_str.lower().startswith(tuple(TimeParser.PREFIX_CE)):
+            sign = 1
+        else:
+            sign = 1
+        # non_numeric_chars = ''.join(set(string.printable) - set(string.digits))
+        number_str = int("".join(filter(str.isdigit, time_str)))
+        # number_str = time_str.translate(non_numeric_chars)
+        return sign * float(number_str)
 
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
@@ -338,11 +400,11 @@ class History:
             elif label == 'time':
                 self.__time = tags
             elif label == 'title':
-                self.__title = ', '.join(tags)
+                self.__title = tags[0]
             elif label == 'brief':
-                self.__brief = ', '.join(tags)
+                self.__brief = tags[0]
             elif label == 'event':
-                self.__event = ', '.join(tags)
+                self.__event = tags[0]
             else:
                 if label not in self.__label_tags.keys():
                     self.__label_tags[label] = tags
