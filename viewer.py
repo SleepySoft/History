@@ -2,7 +2,7 @@ import random
 import traceback, math
 
 from PyQt5.QtCore import QRect, QPoint
-from PyQt5.QtGui import QPainter, QColor
+from PyQt5.QtGui import QPainter, QColor, QFont, QPen
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
     QTabWidget, QComboBox, QGridLayout
 from core import *
@@ -43,6 +43,18 @@ def scale_round(num: float, scale: float):
     return (round(num / scale) + 1) * scale
 
 
+# ------------------------------------------------------- Colors -------------------------------------------------------
+
+# From: https://www.icoa.cn/a/512.html
+
+AXIS_BACKGROUND_COLORS = [QColor(255, 245, 247), QColor(254, 67, 101), QColor(252, 157, 154),
+                          QColor(249, 205, 173), QColor(200, 200, 169), QColor(131, 175, 155)]
+THREAD_BACKGROUND_COLORS = [QColor(182, 194, 154), QColor(138, 151, 123), QColor(244, 208, 0), QColor(229, 87, 18),
+                            QColor(178, 200, 187), QColor(69, 137, 148), QColor(117, 121, 74), QColor(114, 83, 52),
+                            QColor(130, 57, 53), QColor(137, 190, 178), QColor(201, 211, 140), QColor(222, 156, 83),
+                            QColor(160, 90, 124), QColor(101, 147, 74), QColor(64, 116, 52), QColor(222, 125, 44)]
+
+
 # --------------------------------------------------- class TimeAxis ---------------------------------------------------
 
 class TimeAxis(QWidget):
@@ -65,6 +77,9 @@ class TimeAxis(QWidget):
             self.__paint_area = QRect(0, 0, 0, 0)
             self.__pixel_per_scale = 0.0
             self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+        def set_thread_color(self, color):
+            self.__paint_color = color
 
         def set_thread_horizon(self, horizon: bool):
             self.__horizon = horizon
@@ -129,7 +144,6 @@ class TimeAxis(QWidget):
 
         def repaint(self, qp: QPainter):
 
-            # For Debug
             qp.setBrush(self.__paint_color)
             qp.drawRect(self.__paint_area)
 
@@ -157,6 +171,19 @@ class TimeAxis(QWidget):
                 index_rect = QRect(left, top, right - left, bottom - top)
                 qp.drawRect(index_rect)
 
+                self.paint_index_text(qp, index, index_rect)
+
+        def paint_index_text(self, qp: QPainter, index, rect: QRect):
+                # qp.save()
+                # qp.translate(rect.center())
+                # qp.rotate(-90)
+                # text_rect = QRect(rect)
+                # if text_rect.top() < 0:
+                #     text_rect.setTop(0)
+                qp.setPen(Qt.SolidLine)
+                qp.setPen(QPen(Qt.black, 1))
+                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, index.abstract)
+                # qp.restore()
 
     STEP_LIST = [
         10000, 5000, 2500, 2000, 1000, 500, 250, 200, 100, 50, 25, 20, 10, 5, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01
@@ -187,8 +214,8 @@ class TimeAxis(QWidget):
         self.__scale_per_page = 10
         self.__pixel_per_scale = 0
 
-        self.__paint_since = 0
-        self.__paint_until = 0
+        self.__paint_since_scale = 0
+        self.__paint_until_scale = 0
         self.__paint_start_scale = 0
         self.__paint_start_offset = 0
 
@@ -318,7 +345,7 @@ class TimeAxis(QWidget):
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paint_background(self, qp: QPainter):
-        qp.setBrush(QColor(100, 0, 0))
+        qp.setBrush(AXIS_BACKGROUND_COLORS[2])
         qp.drawRect(0, 0, self.__width, self.__height)
 
     def paint_horizon(self, qp: QPainter):
@@ -360,15 +387,15 @@ class TimeAxis(QWidget):
     def calc_paint_parameters(self):
         total_pixel_offset = self.__scroll + self.__offset
 
-        self.__paint_since = float(total_pixel_offset) / self.__pixel_per_scale
-        self.__paint_until = self.__paint_since + self.__axis_length / self.__pixel_per_scale
+        self.__paint_since_scale = float(total_pixel_offset) / self.__pixel_per_scale
+        self.__paint_until_scale = self.__paint_since_scale + self.__axis_length / self.__pixel_per_scale
 
-        self.__paint_start_scale = math.floor(self.__paint_since)
+        self.__paint_start_scale = math.floor(self.__paint_since_scale)
         self.__paint_start_offset = total_pixel_offset - self.__paint_start_scale * self.__pixel_per_scale
 
         for thread in self.__history_threads:
-            thread.on_paint_scale_range_updated(self.__paint_since * self.__pixel_per_scale,
-                                                self.__paint_until * self.__pixel_per_scale)
+            thread.on_paint_scale_range_updated(self.__paint_since_scale * self.__main_step,
+                                                self.__paint_until_scale * self.__main_step)
 
     def calc_paint_layout(self):
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
@@ -537,6 +564,7 @@ def main():
     #     time_axis.add_history_thread(TimeAxis.Thread())
 
     thread = TimeAxis.Thread()
+    thread.set_thread_color(THREAD_BACKGROUND_COLORS[0])
     thread.set_thread_event_indexes(idxer.get_indexes())
     time_axis.add_history_thread(thread)
 

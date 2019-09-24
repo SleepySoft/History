@@ -394,23 +394,32 @@ class History:
         def set_source(self, source: str):
             self.__event_source = source
 
-        def set_label_tags(self, label: str, tags: [str]):
+        def set_label_tags(self, label: str, tags: str or [str]):
             if label == 'uuid':
-                self.__uuid = tags[0]
+                self.__uuid = tags[0] if len(tags) > 0 else self.__uuid
             elif label == 'time':
                 self.__time = tags
             elif label == 'title':
-                self.__title = tags[0]
+                self.__title = History.Event.__normalize_content_tags(tags)
             elif label == 'brief':
-                self.__brief = tags[0]
+                self.__brief = History.Event.__normalize_content_tags(tags)
             elif label == 'event':
-                self.__event = tags[0]
+                self.__event = History.Event.__normalize_content_tags(tags)
             else:
                 if label not in self.__label_tags.keys():
                     self.__label_tags[label] = tags
                 else:
                     self.__label_tags[label].extend(tags)
                 self.__label_tags[label] = list_unique(self.__label_tags[label])
+
+        @staticmethod
+        def __normalize_content_tags(tags: [str]) -> str:
+            if isinstance(tags, str):
+                return tags
+            elif isinstance(tags, (list, tuple)):
+                return ', '.join(tags)
+            else:
+                return str(tags)
 
         # -------------------------------------------
 
@@ -458,7 +467,7 @@ class History:
         # -------------------------------------------
 
         def dump(self) -> str:
-            text = '[START]:EVENT\n'
+            text = '[START]:event\n'
 
             if self.__uuid is None or self.__uuid == '':
                 self.__uuid = uuid.uuid1()
