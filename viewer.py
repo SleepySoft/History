@@ -5,7 +5,10 @@ from PyQt5.QtCore import QRect, QPoint
 from PyQt5.QtGui import QPainter, QColor, QFont, QPen, QPolygon
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
     QTabWidget, QComboBox, QGridLayout
+
 from core import *
+from editor import *
+from indexer import *
 from Utility.ui_utility import *
 
 
@@ -102,7 +105,7 @@ class TimeAxis(QWidget):
 
         # ---------------------------------------------- Paint Parameters ----------------------------------------------
 
-        def on_paint_canvas_size_update(self, area: QRect, pixel_per_scale: float):
+        def on_paint_canvas_size_update(self, area: QRect):
             self.__paint_area = area
             self.calc_paint_parameters()
 
@@ -285,6 +288,7 @@ class TimeAxis(QWidget):
 
         # self.setMouseTracking(True)
 
+        self.__history_core = None
         self.__history_threads = []
 
     # ----------------------------------------------------- Method -----------------------------------------------------
@@ -301,6 +305,9 @@ class TimeAxis(QWidget):
     def set_time_range(self, since: float, until: float):
         self.auto_scale(min(since, until), max(since, until))
         self.repaint()
+
+    def set_history_core(self, history: History):
+        self.__history_core = history
 
     def get_history_threads(self) -> list:
         return self.__history_threads
@@ -333,6 +340,7 @@ class TimeAxis(QWidget):
             index = thread.index_from_point(now_pos)
             if index is not None:
                 print(index)
+                self.popup_editor_for_index(index)
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
@@ -369,6 +377,33 @@ class TimeAxis(QWidget):
 
         self.repaint()
 
+    # ----------------------------------------------------- Action -----------------------------------------------------
+
+    def popup_editor_for_index(self, index: EventIndex):
+        if index is None:
+            print('Index is empty.')
+            return
+        if index.source is None or len(index.source) == 0:
+            print('Source is empty.')
+            return
+        loader = History.Loader()
+        if not loader.from_file(index.source):
+            print('Load source error : ' + index.source)
+            return
+        events = loader.get_loaded_events()
+        if len(events) > 0:
+            dlg = HistoryEditorDialog()
+            dlg.setWindowFlags(dlg.windowFlags() |
+                               Qt.WindowMinMaxButtonsHint |
+                               QtCore.Qt.WindowSystemMenuHint)
+            dlg.get_history_editor().load_event(events[0])
+            dlg.exec()
+
+            dlg.event()
+            index.index_for()
+
+    # ----------------------------------------------------- Paint ------------------------------------------------------
+
     def paintEvent(self, event):
         qp = QPainter()
         qp.begin(self)
@@ -394,8 +429,6 @@ class TimeAxis(QWidget):
         self.paint_threads(qp)
 
         qp.end()
-
-    # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paint_background(self, qp: QPainter):
         qp.setBrush(AXIS_BACKGROUND_COLORS[2])
@@ -484,11 +517,11 @@ class TimeAxis(QWidget):
                 if i < left_thread_count:
                     left = i * left_thread_width
                     area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area, self.__pixel_per_scale / self.__main_step)
+                    thread.on_paint_canvas_size_update(area)
                 else:
                     left = axis_right_margin + (i - left_thread_count) * right_thread_width
                     area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area, self.__pixel_per_scale / self.__main_step)
+                    thread.on_paint_canvas_size_update(area)
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
 
@@ -600,32 +633,41 @@ def test_lower_rough():
     # assert math.isclose(upper_rough(-0.07), 0.07)
 
 
+# ------------------------------------------------ File Entry : main() -------------------------------------------------
+
 def main():
     test_upper_rough()
     test_lower_rough()
 
     app = QApplication(sys.argv)
 
-    time_axis = TimeAxis()
+    # Indexer
+    indexer = EventIndexer()
+    indexer.load_from_file('history.index')
+    indexer.print_indexes()
 
-    import indexer
-    idxer = indexer.EventIndexer()
-    idxer.load_from_file('history.index')
-    idxer.print_indexes()
-
-    # for i in range(0, 6):
-    #     time_axis.add_history_thread(TimeAxis.Thread())
-
+    # Threads
     thread = TimeAxis.Thread()
     thread.set_thread_color(THREAD_BACKGROUND_COLORS[0])
-    thread.set_thread_event_indexes(idxer.get_indexes())
+    thread.set_thread_event_indexes(indexer.get_indexes())
+
+    # History
+    history = History()
+
+    # TimeAxis
+    time_axis = TimeAxis()
+    time_axis.set_history_core(history)
     time_axis.add_history_thread(thread)
 
+    # UI
     layout = QVBoxLayout()
     layout.addWidget(time_axis)
 
     dlg = QDialog()
     dlg.setLayout(layout)
+    dlg.setWindowFlags(dlg.windowFlags() |
+                       Qt.WindowMinMaxButtonsHint |
+                       QtCore.Qt.WindowSystemMenuHint)
     dlg.exec()
 
 

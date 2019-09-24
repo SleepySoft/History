@@ -7,6 +7,8 @@ from core import *
 from Utility.ui_utility import *
 
 
+# ------------------------------------------------- class HistoryEditor ------------------------------------------------
+
 class HistoryEditor(QWidget):
     def __init__(self, parent: QWidget):
         super(HistoryEditor, self).__init__(parent)
@@ -131,6 +133,9 @@ class HistoryEditor(QWidget):
         for event in self.__events:
             self.__combo_events.addItem(event.uuid())
 
+    def get_event(self) -> History.Event:
+        return self.__events
+
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
     def on_button_auto_time(self):
@@ -204,14 +209,25 @@ class HistoryEditor(QWidget):
             self.close()
 
 
+# --------------------------------------------- class HistoryEditorDialog ----------------------------------------------
+
+class HistoryEditorDialog(QDialog):
+    def __init__(self):
+        super(HistoryEditorDialog, self).__init__()
+        self.history_editor = HistoryEditor(self)
+        layout = QVBoxLayout()
+        layout.addWidget(self.history_editor)
+        self.setLayout(layout)
+
+    def get_history_editor(self) -> HistoryEditor:
+        return self.history_editor
+
+
+# ------------------------------------------------ File Entry : main() -------------------------------------------------
+
 def main():
     app = QApplication(sys.argv)
-
-    dlg = QDialog()
-    layout = QVBoxLayout()
-    layout.addWidget(HistoryEditor(dlg))
-    dlg.setLayout(layout)
-    dlg.exec()
+    HistoryEditorDialog().exec()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
