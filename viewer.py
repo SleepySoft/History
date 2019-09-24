@@ -2,7 +2,7 @@ import random
 import traceback, math
 
 from PyQt5.QtCore import QRect, QPoint
-from PyQt5.QtGui import QPainter, QColor, QFont, QPen
+from PyQt5.QtGui import QPainter, QColor, QFont, QPen, QPolygon
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
     QTabWidget, QComboBox, QGridLayout
 from core import *
@@ -66,6 +66,8 @@ class TimeAxis(QWidget):
             self.__event_indexes = []
             self.__paint_indexes = []
             self.__indexes_layout = []
+            self.__indexes_adapt_rect = []
+
             self.__since = 0.0
             self.__until = 0.0
             self.__horizon = False
@@ -73,10 +75,13 @@ class TimeAxis(QWidget):
             self.__thread_length = 0
             self.__thread_track_count = 0
             self.__thread_track_width = 50
-            # self.__value_pixel_coeff = 0.0
             self.__paint_area = QRect(0, 0, 0, 0)
-            self.__pixel_per_scale = 0.0
+
+            self.__event_bk = QColor(243, 244, 246)
+            self.__story_bk = QColor(185, 227, 217)
             self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+        # -------------------------------------------------- Methods ---------------------------------------------------
 
         def set_thread_color(self, color):
             self.__paint_color = color
@@ -89,9 +94,16 @@ class TimeAxis(QWidget):
             self.__event_indexes = indexes
             self.calc_paint_parameters()
 
+        def index_from_point(self, point: QPoint):
+            for i in reversed(range(0, len(self.__indexes_adapt_rect))):
+                if self.__indexes_adapt_rect[i].contains(point):
+                    return self.__paint_indexes[i] if i < len(self.__paint_indexes) else None
+            return None
+
+        # ---------------------------------------------- Paint Parameters ----------------------------------------------
+
         def on_paint_canvas_size_update(self, area: QRect, pixel_per_scale: float):
             self.__paint_area = area
-            self.__pixel_per_scale = pixel_per_scale
             self.calc_paint_parameters()
 
         def on_paint_scale_range_updated(self, since: float, until: float):
@@ -108,6 +120,9 @@ class TimeAxis(QWidget):
                 self.__thread_length = self.__paint_area.height()
 
             self.__paint_indexes.clear()
+            self.__indexes_layout.clear()
+            self.__indexes_adapt_rect.clear()
+
             if self.__thread_width < TimeAxis.Thread.REFERENCE_TRACK_WIDTH * 0.3:
                 return
 
@@ -119,23 +134,42 @@ class TimeAxis(QWidget):
             for index in self.__event_indexes:
                 if index.adapt(self.__since, self.__until):
                     self.__paint_indexes.append(index)
+                    # Pre-allocation
+                    self.__indexes_layout.append(-1)
+                    self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
             sorted(self.__paint_indexes, key=lambda x: x.since)
 
             self.layout_event_to_track()
 
         def layout_event_to_track(self):
-            track_list = []
-            for i in range(0, self.__thread_track_count):
-                track_list.append(None)
+            # track_list = []
+            # for i in range(0, self.__thread_track_count):
+            #     track_list.append(None)
 
-            self.__indexes_layout.clear()
-            for index in self.__paint_indexes:
-                for i in range(0, self.__thread_track_count):
-                    # Default layout to the last track
-                    if track_list[i] is None or index.since > track_list[i] or (i == self.__thread_track_count - 1):
-                        self.__indexes_layout.append(i)
-                        track_list[i] = index.until
-                        break
+            # Track 1 is reserved for events
+            # Layout the low level track first
+
+            for i in range(1, self.__thread_track_count):
+                track_place = None
+                for j in range(0, len(self.__paint_indexes)):
+                    # Already layout
+                    if self.__indexes_layout[j] >= 0:
+                        continue
+                    index = self.__paint_indexes[j]
+                    if index.since == index.until:      # Event
+                        self.__indexes_layout[j] = 0
+                    else:
+                        # Default layout to the last track
+                        if track_place is None or index.since > track_place or (i == self.__thread_track_count - 1):
+                            self.__indexes_layout[j] = i
+                            track_place = index.until
+
+                # for i in range(0, self.__thread_track_count):
+                #     # Default layout to the last track
+                #     if track_list[i] is None or index.since > track_list[i] or (i == self.__thread_track_count - 1):
+                #         self.__indexes_layout.append(i)
+                #         track_list[i] = index.until
+                #         break
 
         def value_to_pixel(self, value: float):
             if self.__until - self.__since == 0:
@@ -159,18 +193,33 @@ class TimeAxis(QWidget):
             if len(self.__indexes_layout) != len(self.__paint_indexes):
                 print('Index and layout mismatch. Something wrong in the layout calculation.')
                 return
-            for track, index in zip(self.__indexes_layout, self.__paint_indexes):
-                # TODO: Should convert scale to pixel
 
+            for i in range(0, len(self.__paint_indexes)):
+                index = self.__paint_indexes[i]
+                track = self.__indexes_layout[i]
+
+                top = self.__paint_area.top() + self.value_to_pixel(index.since)
                 left = self.__paint_area.left() + track * self.__thread_track_width
                 right = left + self.__thread_track_width
 
-                top = self.__paint_area.top() + self.value_to_pixel(index.since)
-                bottom = self.__paint_area.top() + self.value_to_pixel(index.until)
+                if index.since == index.until:
+                    diagonal = right - left
+                    half_diagonal = diagonal / 2
+                    v_mid = top
+                    h_mid = left + half_diagonal
+                    index_rect = QRect(left, top - half_diagonal, diagonal, diagonal)
+                    diamond_points = [QPoint(left, v_mid), QPoint(h_mid, v_mid - half_diagonal),
+                                      QPoint(right, v_mid), QPoint(h_mid, v_mid + half_diagonal)]
+                    qp.setBrush(self.__event_bk)
+                    qp.drawPolygon(QPolygon(diamond_points))
+                else:
+                    bottom = self.__paint_area.top() + self.value_to_pixel(index.until)
 
-                index_rect = QRect(left, top, right - left, bottom - top)
-                qp.drawRect(index_rect)
+                    index_rect = QRect(left, top, right - left, bottom - top)
+                    qp.setBrush(self.__story_bk)
+                    qp.drawRect(index_rect)
 
+                self.__indexes_adapt_rect[i] = index_rect
                 self.paint_index_text(qp, index, index_rect)
 
         def paint_index_text(self, qp: QPainter, index, rect: QRect):
@@ -279,7 +328,11 @@ class TimeAxis(QWidget):
             self.repaint()
 
     def mouseDoubleClickEvent(self,  event):
-        pass
+        now_pos = event.pos()
+        for thread in self.__history_threads:
+            index = thread.index_from_point(now_pos)
+            if index is not None:
+                print(index)
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
@@ -305,7 +358,7 @@ class TimeAxis(QWidget):
             current_pos_offset = self.calc_point_to_paint_start_offset(current_pos)
             current_pos_scale_value = self.pixel_offset_to_scale_value(current_pos_offset)
 
-            self.select_step_scale(self.__step_selection + (1 if angle_y < 0 else -1))
+            self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
 
             # Make the value under mouse keep the same place on the screen
             total_pixel_offset = self.__pixel_per_scale * current_pos_scale_value / self.__main_step
