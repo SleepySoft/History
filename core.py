@@ -358,9 +358,138 @@ class LabelTagParser(TokenParser):
             text = str(tags)
         return text
 
+
+# --------------------------------------------------- class LabelTag ---------------------------------------------------
+
+class LabelTag:
+    def __init__(self):
+        self.__label_tags = {}
+
+    def reset(self):
+        self.__label_tags.clear()
+
+    def set_label_tags(self, label: str, tags: str or [str]):
+        if label not in self.__label_tags.keys():
+            self.__label_tags[label] = tags
+        else:
+            self.__label_tags[label].extend(tags)
+        self.__label_tags[label] = list_unique(self.__label_tags[label])
+
+    def dump_text(self) -> str:
+        text = ''
+        for label in self.__label_tags.keys():
+            tags = self.__label_tags.get(label)
+            tags_text = LabelTag.tags_to_text(tags)
+            if tags_text != '':
+                text += label + ': ' + tags_text + '\n'
+        # TODO
+
     @staticmethod
-    def text_to_tags(text):
-        tags = text.split(',')
+    def tags_to_text(tags: [str]) -> str:
+        if isinstance(tags, str):
+            return tags
+        elif isinstance(tags, (list, tuple)):
+            return ', '.join(tags)
+        else:
+            return str(tags)
+
+    @staticmethod
+    def text_to_tags(text: str) -> [str]:
+        pass
+
+    # -------------------------------------------
+
+    def uuid(self) -> str:
+        return self.__uuid
+
+    def time(self) -> [float]:
+        return self.__time
+
+    def since(self) -> float:
+        return min(self.__time)
+
+    def until(self) -> float:
+        return max(self.__time)
+
+    def title(self) -> str:
+        return self.__title
+
+    def brief(self) -> str:
+        return self.__brief
+
+    def event(self) -> str:
+        return self.__event
+
+    def source(self) -> str:
+        return self.__event_source
+
+    # -------------------------------------------
+
+    def tags(self, label: str):
+        return self.__label_tags.get(label, [])
+
+    def labels(self) -> [str]:
+        return list(self.__label_tags.keys())
+
+    def people(self) -> list:
+        return self.tags('people')
+
+    def location(self) -> list:
+        return self.tags('location')
+
+    def organization(self) -> list:
+        return self.tags('organization')
+
+    # -------------------------------------------
+
+    def dump(self) -> str:
+        if self.__focus_label is None or self.__focus_label == '':
+            self.__focus_label = 'event'
+        text = '[START]:' + self.__focus_label + '\n'
+
+        if self.__uuid is None or self.__uuid == '':
+            self.__uuid = uuid.uuid1()
+
+        text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
+        text += LabelTagParser.label_tags_to_text('time', self.__time)
+        text += '\n'
+
+        for label in sorted(list(self.__label_tags.keys())):
+            text += LabelTagParser.label_tags_to_text(label, self.__label_tags[label])
+        text += '\n'
+
+        text += LabelTagParser.label_tags_to_text('title', self.__title, True)
+        text += LabelTagParser.label_tags_to_text('brief', self.__brief, True)
+        text += LabelTagParser.label_tags_to_text('event', self.__event, True)
+
+        return text
+
+    def adapt(self, **argv) -> bool:
+        if not check_condition_range(argv, 'time', self.__time):
+            return False
+        if 'contains' in argv.keys():
+            looking_for = argv['contains']
+            if self.__title.find(looking_for) == -1 and \
+                    self.__brief.find(looking_for) == -1 and \
+                    self.__event.find(looking_for) == -1:
+                return False
+        if not self.__check_label_tags(argv):
+            return False
+        return True
+
+    def __check_label_tags(self, expected: dict) -> bool:
+        for key in expected:
+            if key in ['time', 'title', 'brief', 'contains']:
+                continue
+            if key not in self.__label_tags.keys():
+                return False
+            expected_tags = expected.get(key)
+            history_event_tags = self.__label_tags.get(key)
+            if isinstance(expected_tags, (list, tuple)):
+                return compare_intersection(expected_tags, history_event_tags)
+            else:
+                return expected_tags in history_event_tags
+        return True
 
 
 # --------------------------------------------------- class history ----------------------------------------------------
@@ -478,7 +607,6 @@ class History:
             if self.__uuid is None or self.__uuid == '':
                 self.__uuid = uuid.uuid1()
 
-            dump_content = []
             text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
             text += LabelTagParser.label_tags_to_text('time', self.__time)
             text += '\n'
