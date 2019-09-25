@@ -380,6 +380,7 @@ class History:
             self.__brief = ''
             self.__event = ''
             self.__label_tags = {}
+            self.__focus_label = ''
             self.__event_source = source
 
         # -------------------------------------------
@@ -393,6 +394,9 @@ class History:
 
         def set_source(self, source: str):
             self.__event_source = source
+
+        def set_focus_label(self, label: str):
+            self.__focus_label = label
 
         def set_label_tags(self, label: str, tags: str or [str]):
             if label == 'uuid':
@@ -467,11 +471,14 @@ class History:
         # -------------------------------------------
 
         def dump(self) -> str:
-            text = '[START]:event\n'
+            if self.__focus_label is None or self.__focus_label == '':
+                self.__focus_label = 'event'
+            text = '[START]:' + self.__focus_label + '\n'
 
             if self.__uuid is None or self.__uuid == '':
                 self.__uuid = uuid.uuid1()
 
+            dump_content = []
             text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
             text += LabelTagParser.label_tags_to_text('time', self.__time)
             text += '\n'

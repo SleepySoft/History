@@ -14,7 +14,7 @@ A distributed and open history memo
 
 depot的分类和选择
 五要素外其它tags的编辑功能
-统一Index及event
+统一LabelTag、Index及event
 viewer可以直接载入event而不仅仅只是index
 改变窗口大小的操作会触发mouse event的问题
 
