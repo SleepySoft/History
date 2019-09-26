@@ -135,12 +135,12 @@ class TimeAxis(QWidget):
             self.__thread_track_width = self.__thread_width / self.__thread_track_count
 
             for index in self.__event_indexes:
-                if index.adapt(self.__since, self.__until):
+                if index.period_adapt(self.__since, self.__until):
                     self.__paint_indexes.append(index)
                     # Pre-allocation
                     self.__indexes_layout.append(-1)
                     self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
-            sorted(self.__paint_indexes, key=lambda x: x.since)
+            sorted(self.__paint_indexes, key=lambda x: x.since())
 
             self.layout_event_to_track()
 
@@ -159,19 +159,19 @@ class TimeAxis(QWidget):
                     if self.__indexes_layout[j] >= 0:
                         continue
                     index = self.__paint_indexes[j]
-                    if index.since == index.until:      # Event
+                    if index.since() == index.until():      # Event
                         self.__indexes_layout[j] = 0
                     else:
                         # Default layout to the last track
-                        if track_place is None or index.since > track_place or (i == self.__thread_track_count - 1):
+                        if track_place is None or index.since() > track_place or (i == self.__thread_track_count - 1):
                             self.__indexes_layout[j] = i
-                            track_place = index.until
+                            track_place = index.until()
 
                 # for i in range(0, self.__thread_track_count):
                 #     # Default layout to the last track
-                #     if track_list[i] is None or index.since > track_list[i] or (i == self.__thread_track_count - 1):
+                #     if track_list[i] is None or index.since() > track_list[i] or (i == self.__thread_track_count - 1):
                 #         self.__indexes_layout.append(i)
-                #         track_list[i] = index.until
+                #         track_list[i] = index.until()
                 #         break
 
         def value_to_pixel(self, value: float):
@@ -201,11 +201,11 @@ class TimeAxis(QWidget):
                 index = self.__paint_indexes[i]
                 track = self.__indexes_layout[i]
 
-                top = self.__paint_area.top() + self.value_to_pixel(index.since)
+                top = self.__paint_area.top() + self.value_to_pixel(index.since())
                 left = self.__paint_area.left() + track * self.__thread_track_width
                 right = left + self.__thread_track_width
 
-                if index.since == index.until:
+                if index.since() == index.until():
                     diagonal = right - left
                     half_diagonal = diagonal / 2
                     v_mid = top
@@ -216,7 +216,7 @@ class TimeAxis(QWidget):
                     qp.setBrush(self.__event_bk)
                     qp.drawPolygon(QPolygon(diamond_points))
                 else:
-                    bottom = self.__paint_area.top() + self.value_to_pixel(index.until)
+                    bottom = self.__paint_area.top() + self.value_to_pixel(index.until())
 
                     index_rect = QRect(left, top, right - left, bottom - top)
                     qp.setBrush(self.__story_bk)
@@ -234,7 +234,7 @@ class TimeAxis(QWidget):
                 #     text_rect.setTop(0)
                 qp.setPen(Qt.SolidLine)
                 qp.setPen(QPen(Qt.black, 1))
-                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, index.abstract)
+                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, index.get_tags('abstract')[0])
                 # qp.restore()
 
     STEP_LIST = [
@@ -379,7 +379,7 @@ class TimeAxis(QWidget):
 
     # ----------------------------------------------------- Action -----------------------------------------------------
 
-    def popup_editor_for_index(self, index: EventIndex):
+    def popup_editor_for_index(self, index: HistoricalRecord):
         if index is None:
             print('Index is empty.')
             return
@@ -642,7 +642,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Indexer
-    indexer = EventIndexer()
+    indexer = RecordIndexer()
     indexer.load_from_file('history.index')
     indexer.print_indexes()
 

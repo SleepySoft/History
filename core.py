@@ -500,6 +500,12 @@ class HistoricalRecord(LabelTag):
             error_list = self.__try_parse_time_tags(tags)
             if len(error_list) > 0:
                 print('Warning: Cannot parse the time tag - ' + str(error_list))
+        elif label == 'since':
+            self.__since = float(tags[0])
+            return
+        elif label == 'until':
+            self.__until = float(tags[0])
+            return
         super(HistoricalRecord, self).add_tags(label, tags)
 
     def index_for(self, his_record):
@@ -516,7 +522,7 @@ class HistoricalRecord(LabelTag):
         self.set_label_tags('abstract', abstract.strip()[:50])
 
     def period_adapt(self, since: float, until: float):
-        return (since < self.since < until) or (since < self.until < until)
+        return (since < self.__since < until) or (since < self.__until < until)
 
     @staticmethod
     def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
@@ -558,6 +564,10 @@ class HistoricalRecord(LabelTag):
 
         # Dump common labels
         text += super(HistoricalRecord, self).dump_text(dump_list)
+
+        if self.__focus_label == 'index':
+            text += 'since:' + str(self.__since) + '\n'
+            text += 'until:' + str(self.__until) + '\n'
 
         # If the focus label missing, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):

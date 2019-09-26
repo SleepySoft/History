@@ -1,28 +1,42 @@
 [START]: index
-uuid:9b54e54b-6738-4bb4-9889-64f1cba68706
+uuid:b168a765-d26d-4291-a21c-fc01ddcb893f
 abstract: 杯酒释兵权
+since:961.0
+until:961.0
 index: end
 [START]: index
-uuid:b2cadfb5-4ed5-4fc4-bad8-85d1a0bc2f2a
+uuid:0736348a-f4bb-4df2-b62a-1d39389dee34
 abstract: 北京人
+since:-500000.0
+until:-500000.0
 index: end
 [START]: index
-uuid:b59383f3-2ac1-4f7b-b58d-03b6e0c4fd0d
+uuid:52f5e7f2-1eb8-4ef4-986c-7651a29851ea
 abstract: 蓝田人
+since:-800000.0
+until:-800000.0
 index: end
 [START]: index
-uuid:3680f36f-9859-4eb8-a38a-5f8d8d0a9b43
+uuid:83001280-7940-451c-ad4d-e42e47896cd0
 abstract: 西周
+since:-1046.0
+until:-771.0
 index: end
 [START]: index
-uuid:09ec9256-473d-4258-89fa-a24c1cc6ce70
+uuid:c305e558-abda-440b-ab83-0126ca870c5c
 abstract: 陈桥兵变
+since:960.0
+until:960.0
 index: end
 [START]: index
-uuid:7b56e84d-10dc-41a3-bf04-ce39bc349208
+uuid:81971836-0628-4a02-b772-1dc1e3c19a7c
 abstract: 元谋人
+since:-1700000.0
+until:-1700000.0
 index: end
 [START]: index
-uuid:903f7d4e-8ef9-4e8f-9193-f536745c84d5
+uuid:2e9498ce-9bb4-45e5-87da-a29a02f0986a
 abstract: 周文王
+since:-1152.0
+until:-1056.0
 index: end

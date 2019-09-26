@@ -13,13 +13,13 @@ class HistoryEditor(QWidget):
     def __init__(self, parent: QWidget):
         super(HistoryEditor, self).__init__(parent)
 
-        self.__events = []
+        self.__records = []
         self.__source = ''
-        self.__current_event = None
+        self.__current_record = None
 
         self.__tab_main = QTabWidget()
         # self.__combo_depot = QComboBox()
-        self.__combo_events = QComboBox()
+        self.__combo_records = QComboBox()
 
         self.__label_uuid = QLabel()
         self.__line_time = QLineEdit()
@@ -37,7 +37,7 @@ class HistoryEditor(QWidget):
         self.__radio_location = QRadioButton('Location')
         self.__radio_people = QRadioButton('Participant')
         self.__radio_organization = QRadioButton('Organization')
-        self.__radio_event = QRadioButton('Event')
+        self.__radio_record = QRadioButton('Event')
 
         self.__check_time = QCheckBox('Lock')
         self.__check_location = QCheckBox('Lock')
@@ -47,7 +47,7 @@ class HistoryEditor(QWidget):
 
         self.__line_title = QLineEdit()
         self.__text_brief = QTextEdit()
-        self.__text_event = QTextEdit()
+        self.__text_record = QTextEdit()
 
         self.__table_tags = EasyQTableWidget()
 
@@ -63,7 +63,7 @@ class HistoryEditor(QWidget):
         root_layout = QVBoxLayout()
 
         line = QHBoxLayout()
-        line.addWidget(self.__combo_events, 1)
+        line.addWidget(self.__combo_records, 1)
         line.addWidget(self.__button_new, 0)
         line.addWidget(self.__button_new_file, 0)
 
@@ -72,7 +72,7 @@ class HistoryEditor(QWidget):
         root_layout.addLayout(horizon_layout([self.__button_apply, self.__button_cancel]))
         self.setLayout(root_layout)
 
-        event_page_layout = create_new_tab(self.__tab_main, 'Event Editor')
+        record_page_layout = create_new_tab(self.__tab_main, 'Event Editor')
 
         property_layout = QGridLayout()
 
@@ -107,13 +107,13 @@ class HistoryEditor(QWidget):
         property_layout.addWidget(self.__button_auto_organization, 5, 2)
         property_layout.addWidget(self.__check_organization, 5, 3)
 
-        self.__radio_event.setChecked(True)
-        property_layout.addWidget(self.__radio_event, 6, 0)
+        self.__radio_record.setChecked(True)
+        property_layout.addWidget(self.__radio_record, 6, 0)
 
-        event_page_layout.addLayout(property_layout)
+        record_page_layout.addLayout(property_layout)
 
         group, layout = create_v_group_box('')
-        event_page_layout.addWidget(group)
+        record_page_layout.addWidget(group)
 
         layout.addWidget(QLabel('Event Title'))
         layout.addWidget(self.__line_title)
@@ -122,7 +122,7 @@ class HistoryEditor(QWidget):
         layout.addWidget(self.__text_brief, 2)
 
         layout.addWidget(QLabel('Event Description'))
-        layout.addWidget(self.__text_event, 5)
+        layout.addWidget(self.__text_record, 5)
 
         layout = create_new_tab(self.__tab_main, 'Label Tag Editor')
         layout.addWidget(self.__table_tags)
@@ -140,42 +140,42 @@ class HistoryEditor(QWidget):
         self.__button_apply.clicked.connect(self.on_button_apply)
         self.__button_cancel.clicked.connect(self.on_button_cancel)
 
-    def update_combo_events(self):
+    def update_combo_records(self):
         index = -1
-        self.__combo_events.clear()
-        for i in range(0, len(self.__events)):
-            event = self.__events[i]
-            self.__combo_events.addItem(event.uuid())
-            if event == self.__current_event:
+        self.__combo_records.clear()
+        for i in range(0, len(self.__records)):
+            record = self.__records[i]
+            self.__combo_records.addItem(record.uuid())
+            if record == self.__current_record:
                 index = i
         if index >= 0:
-            self.__combo_events.setCurrentIndex(index)
+            self.__combo_records.setCurrentIndex(index)
         else:
-            print('Cannot find the current event in combobox.')
+            print('Cannot find the current record in combobox.')
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 
-    def load_event(self, event: History.Event):
-        self.__label_uuid.setText(LabelTagParser.tags_to_text(event.uuid()))
-        self.__line_time.setText(LabelTagParser.tags_to_text(event.time()))
+    def load_record(self, record: HistoricalRecord):
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
+        self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
-        self.__line_location.setText(LabelTagParser.tags_to_text(event.tags('location')))
-        self.__line_people.setText(LabelTagParser.tags_to_text(event.tags('people')))
-        self.__line_organization.setText(LabelTagParser.tags_to_text(event.tags('location')))
-        self.__line_default_tags.setText(LabelTagParser.tags_to_text(event.tags('tags')))
+        self.__line_location.setText(LabelTagParser.tags_to_text(record.tags('location')))
+        self.__line_people.setText(LabelTagParser.tags_to_text(record.tags('people')))
+        self.__line_organization.setText(LabelTagParser.tags_to_text(record.tags('location')))
+        self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.tags('tags')))
 
-        self.__line_title.setText(LabelTagParser.tags_to_text(event.title()))
-        self.__text_brief.setText(LabelTagParser.tags_to_text(event.brief()))
-        self.__text_event.setText(LabelTagParser.tags_to_text(event.event()))
+        self.__line_title.setText(LabelTagParser.tags_to_text(record.title()))
+        self.__text_brief.setText(LabelTagParser.tags_to_text(record.brief()))
+        self.__text_record.setText(LabelTagParser.tags_to_text(record.event()))
 
-    def set_events(self, events: History.Event or [History.Event], source: str):
-        self.__events = events if isinstance(events, list) else [events]
-        self.__current_event = self.__events[0]
+    def set_records(self, records: HistoricalRecord or [HistoricalRecord], source: str):
+        self.__records = records if isinstance(records, list) else [records]
+        self.__current_record = self.__records[0]
         self.__source = source
-        self.update_combo_events()
+        self.update_combo_records()
 
-    def get_event(self) -> History.Event:
-        return self.__events
+    def get_record(self) -> HistoricalRecord:
+        return self.__records
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
@@ -192,32 +192,32 @@ class HistoryEditor(QWidget):
         pass
 
     def on_button_new(self):
-        self.create_new_event()
+        self.create_new_record()
 
     def on_button_file(self):
         self.create_new_file()
 
     def on_button_apply(self):
-        if self.__current_event is None:
-            self.__current_event = History.Event()
+        if self.__current_record is None:
+            self.__current_record = HistoricalRecord()
         else:
-            self.__current_event.reset()
+            self.__current_record.reset()
 
-        self.ui_to_current_event()
+        self.ui_to_current_record()
 
         result = False
-        if len(self.__events) == 0:
-            source = str(self.__current_event.uuid()) + '.his'
+        if len(self.__records) == 0:
+            source = str(self.__current_record.uuid()) + '.his'
             result = History.Loader().to_local_depot(
-                self.__current_event, 'China', source)
+                self.__current_record, 'China', source)
         else:
             # The whole file should be updated
-            if self.__current_event not in self.__events:
-                self.__events.append(self.__current_event)
-            source = self.__events[0].source()
+            if self.__current_record not in self.__records:
+                self.__records.append(self.__current_record)
+            source = self.__records[0].source()
             if source is None or len(source) == 0:
-                source = str(self.__current_event.uuid()) + '.his'
-                result = History.Loader().to_local_depot(self.__events, 'China', source)
+                source = str(self.__current_record.uuid()) + '.his'
+                result = History.Loader().to_local_depot(self.__records, 'China', source)
 
         tips = 'Save Successful.' if result else 'Save Fail.'
         if len(source) > 0:
@@ -232,9 +232,9 @@ class HistoryEditor(QWidget):
 
     # --------------------------------------------------- Operation ----------------------------------------------------
 
-    def ui_to_current_event(self, only_locked: bool = False):
+    def ui_to_current_record(self, only_locked: bool = False):
         """
-        UI data to current event.
+        UI data to current record.
         :param only_locked: Only used for keeping the locked data. Pass True to enable this feature.
         :return:
         """
@@ -252,40 +252,40 @@ class HistoryEditor(QWidget):
 
         input_title = self.__line_title.text()
         input_brief = self.__text_brief.toPlainText()
-        input_event = self.__text_event.toPlainText()
+        input_event = self.__text_record.toPlainText()
 
         if not only_locked or lock_time:
-            self.__current_event.set_label_tags('time',         input_time.split(','))
+            self.__current_record.set_label_tags('time',         input_time.split(','))
         if not only_locked or lock_location:
-            self.__current_event.set_label_tags('location',     input_location.split(','))
+            self.__current_record.set_label_tags('location',     input_location.split(','))
         if not only_locked or lock_people:
-            self.__current_event.set_label_tags('people',       input_people.split(','))
+            self.__current_record.set_label_tags('people',       input_people.split(','))
         if not only_locked or lock_organization:
-            self.__current_event.set_label_tags('organization', input_organization.split(','))
+            self.__current_record.set_label_tags('organization', input_organization.split(','))
         if not only_locked or lock_default_tags:
-            self.__current_event.set_label_tags('tags',         input_default_tags.split(','))
+            self.__current_record.set_label_tags('tags',         input_default_tags.split(','))
 
         if not only_locked:
-            self.__current_event.set_label_tags('title', input_title)
-            self.__current_event.set_label_tags('brief', input_brief)
-            self.__current_event.set_label_tags('event', input_event)
+            self.__current_record.set_label_tags('title', input_title)
+            self.__current_record.set_label_tags('brief', input_brief)
+            self.__current_record.set_label_tags('event', input_event)
 
-    def create_new_event(self):
-        if self.__current_event is not None:
+    def create_new_record(self):
+        if self.__current_record is not None:
             # TODO:
             pass
-        self.__current_event = History.Event()
-        self.__events.append(self.__current_event)
-        self.ui_to_current_event(True)
-        self.load_event(self.__current_event)
-        self.update_combo_events()
+        self.__current_record = HistoricalRecord()
+        self.__records.append(self.__current_record)
+        self.ui_to_current_record(True)
+        self.load_record(self.__current_record)
+        self.update_combo_records()
 
     def create_new_file(self):
-        self.create_new_event()
-        self.__source = str(self.__current_event.uuid()) + '.his'
+        self.create_new_record()
+        self.__source = str(self.__current_record.uuid()) + '.his'
 
-    def save_events(self):
-        result = History.Loader().to_local_depot(self.__events, 'China', self.__source)
+    def save_records(self):
+        result = History.Loader().to_local_depot(self.__records, 'China', self.__source)
         tips = 'Save Successful.' if result else 'Save Fail.'
         tips += '\nSave File: ' + self.__source
         QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
