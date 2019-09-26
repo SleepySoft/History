@@ -1,56 +1,28 @@
 [START]: index
-uuid: """08c153dd-b518-49c4-b37a-ca3531037019"""
-since: 961.0
-until: 961.0
-abstract: """杯酒释兵权"""
-source: """C:\D\Code\git\History\depot\China\08c153dd-b518-49c4-b37a-ca3531037019.his"""
+uuid:9b54e54b-6738-4bb4-9889-64f1cba68706
+abstract: 杯酒释兵权
 index: end
-
 [START]: index
-uuid: """2266660a-8d93-41db-b6ef-de0ec64c8108"""
-since: -500000.0
-until: -500000.0
-abstract: """北京人"""
-source: """C:\D\Code\git\History\depot\China\2266660a-8d93-41db-b6ef-de0ec64c8108.his"""
+uuid:b2cadfb5-4ed5-4fc4-bad8-85d1a0bc2f2a
+abstract: 北京人
 index: end
-
 [START]: index
-uuid: """3574ead7-1c30-4c1f-9e10-2c75e0a4a152"""
-since: -800000.0
-until: -800000.0
-abstract: """蓝田人"""
-source: """C:\D\Code\git\History\depot\China\3574ead7-1c30-4c1f-9e10-2c75e0a4a152.his"""
+uuid:b59383f3-2ac1-4f7b-b58d-03b6e0c4fd0d
+abstract: 蓝田人
 index: end
-
 [START]: index
-uuid: """8751951b-2c6e-42ef-bb62-6b47382bf5fd"""
-since: -1046.0
-until: -771.0
-abstract: """西周"""
-source: """C:\D\Code\git\History\depot\China\8751951b-2c6e-42ef-bb62-6b47382bf5fd.his"""
+uuid:3680f36f-9859-4eb8-a38a-5f8d8d0a9b43
+abstract: 西周
 index: end
-
 [START]: index
-uuid: """b2686d96-fe25-499c-b35f-7392cf66c687"""
-since: 960.0
-until: 960.0
-abstract: """陈桥兵变"""
-source: """C:\D\Code\git\History\depot\China\b2686d96-fe25-499c-b35f-7392cf66c687.his"""
+uuid:09ec9256-473d-4258-89fa-a24c1cc6ce70
+abstract: 陈桥兵变
 index: end
-
 [START]: index
-uuid: """caba6c00-9d03-4421-887d-5a8562fb1a4b"""
-since: -1700000.0
-until: -1700000.0
-abstract: """元谋人"""
-source: """C:\D\Code\git\History\depot\China\caba6c00-9d03-4421-887d-5a8562fb1a4b.his"""
+uuid:7b56e84d-10dc-41a3-bf04-ce39bc349208
+abstract: 元谋人
 index: end
-
 [START]: index
-uuid: """ce01d3d6-34df-47fd-b16f-b1b8603685dc"""
-since: -1152.0
-until: -1056.0
-abstract: """周文王"""
-source: """C:\D\Code\git\History\depot\China\ce01d3d6-34df-47fd-b16f-b1b8603685dc.his"""
+uuid:903f7d4e-8ef9-4e8f-9193-f536745c84d5
+abstract: 周文王
 index: end
-

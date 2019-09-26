@@ -385,6 +385,8 @@ class LabelTag:
         return tags_text == ''
 
     def add_tags(self, label: str, tags: str or [str]):
+        if not isinstance(tags, (list, tuple)):
+            tags = [tags]
         if label not in self.__label_tags.keys():
             self.__label_tags[label] = tags
         else:
@@ -508,12 +510,9 @@ class HistoricalRecord(LabelTag):
         self.__until = his_record.until()
         self.__record_source = his_record.source()
 
-        if his_record.title() is not None and his_record.title().strip() != '':
-            abstract = his_record.title()
-        elif his_record.brief() is not None and his_record.brief().strip() != '':
-            abstract = his_record.brief()
-        elif his_record.his_record() is not None and his_record.event().strip() != '':
-            abstract = his_record.event()
+        abstract = LabelTagParser.tags_to_text(his_record.title())
+        abstract = LabelTagParser.tags_to_text(his_record.brief()) if abstract == '' else abstract
+        abstract = LabelTagParser.tags_to_text(his_record.event()) if abstract == '' else abstract
         self.set_label_tags('abstract', abstract.strip()[:50])
 
     def period_adapt(self, since: float, until: float):
@@ -558,11 +557,11 @@ class HistoricalRecord(LabelTag):
         text += 'uuid:' + self.__uuid + '\n'
 
         # Dump common labels
-        super(HistoricalRecord, self).dump_text(dump_list)
+        text += super(HistoricalRecord, self).dump_text(dump_list)
 
         # If the focus label missing, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
-            text = self.__focus_label + ': end\n'
+            text += self.__focus_label + ': end\n'
 
         return text
 
@@ -595,11 +594,11 @@ class HistoricalRecord(LabelTag):
     def __try_parse_time_tags(self, tags: [str]) -> [str]:
         time_list, error_list = TimeParser.standardize(','.join(tags))
         if len(time_list) > 0:
-            self.since = min(time_list)
-            self.until = max(time_list)
+            self.__since = min(time_list)
+            self.__until = max(time_list)
         else:
-            self.since = 0.0
-            self.until = 0.0
+            self.__since = 0.0
+            self.__until = 0.0
         return error_list
 
     def __get_sorted_labels(self) -> [str]:
@@ -645,6 +644,14 @@ class HistoricalRecord(LabelTag):
                 '|BRIEF  : ' + str(self.brief()) + '\n' + \
                 '|EVENT  : ' + str(self.event()) + '\n' + \
                 '|SOURCE : ' + str(self.__record_source) + '\n' + \
+                '---------------------------------------------------------------------------' \
+               if self.__focus_label != 'index' else \
+               '---------------------------------------------------------------------------' + '\n' + \
+                '|UUID     : ' + str(self.uuid()) + '\n' + \
+                '|SINCE    : ' + str(self.since()) + '\n' + \
+                '|UNTIL    : ' + str(self.until()) + '\n' + \
+                '|ABSTRACT : ' + str(self.get_tags('abstract')) + '\n' + \
+                '|SOURCE   : ' + str(self.__record_source) + '\n' + \
                 '---------------------------------------------------------------------------'
 
 
@@ -733,7 +740,7 @@ class HistoricalRecordLoader:
 
         for label, tags in label_tags:
             if label == '[START]':
-                self.yield_section(focus, record)
+                self.yield_record(record)
                 record = None
                 if len(tags) == 0:
                     error_list.append('Missing start section.')
@@ -746,13 +753,12 @@ class HistoricalRecordLoader:
             record.set_label_tags(label, tags)
 
             if focus != '' and label == focus:
-                self.yield_section(focus, record)
+                record.set_focus_label(focus)
+                self.yield_record(record)
                 record = None
+        self.yield_record(record)
 
-        self.yield_section(focus, record)
-
-    def yield_section(self, section, record):
-        # TODO: different section, different class
+    def yield_record(self, record):
         if record is not None:
             self.__records.append(record)
 
