@@ -97,22 +97,24 @@ class TimeParser:
     ]
 
     @staticmethod
-    def standardize(time_str: str) -> [float]:
+    def standardize(time_str: str) -> ([float], [str]):
         unified_time_str = time_str
         for i in range(1, len(TimeParser.SEPARATOR)):
             unified_time_str = unified_time_str.replace(TimeParser.SEPARATOR[i], TimeParser.SEPARATOR[0])
 
         time_list = []
+        error_list = []
         sub_time_str_list = unified_time_str.split(TimeParser.SEPARATOR[0])
         for sub_time_str in sub_time_str_list:
             try:
                 num = TimeParser.parse_single_time_str(sub_time_str)
                 time_list.append(num)
             except Exception as e:
+                error_list.append(sub_time_str)
                 print('Parse time error: ' + sub_time_str + ' -> ' + str(e))
             finally:
                 pass
-        return time_list
+        return time_list, error_list
 
     @staticmethod
     def parse_single_time_str(time_str: str) -> float:
@@ -368,68 +370,97 @@ class LabelTag:
     def reset(self):
         self.__label_tags.clear()
 
-    def set_label_tags(self, label: str, tags: str or [str]):
+    def get_tags(self, label: str) -> [str]:
+        return self.__label_tags.get(label, [])
+
+    def get_labels(self) -> [str]:
+        return list(self.__label_tags.keys())
+
+    def get_label_tags(self) -> dict:
+        return self.__label_tags
+
+    def is_label_empty(self, label: str) -> bool:
+        tags = self.__label_tags.get(label)
+        tags_text = LabelTag.tags_to_text(tags)
+        return tags_text == ''
+
+    def add_tags(self, label: str, tags: str or [str]):
         if label not in self.__label_tags.keys():
             self.__label_tags[label] = tags
         else:
             self.__label_tags[label].extend(tags)
         self.__label_tags[label] = list_unique(self.__label_tags[label])
 
-    def dump_text(self) -> str:
+    def remove_label(self, label: str):
+        if label in self.__label_tags.keys():
+            del self.__label_tags[label]
+
+    def dump_text(self, labels: [str] = None) -> str:
         text = ''
-        for label in self.__label_tags.keys():
+        if labels is None:
+            labels = list(self.__label_tags.keys())
+        for label in labels:
             tags = self.__label_tags.get(label)
             tags_text = LabelTag.tags_to_text(tags)
             if tags_text != '':
                 text += label + ': ' + tags_text + '\n'
-        # TODO
+        return text
+
+    def filter(self, filter_label_tags: dict) -> bool:
+        """
+        Filter format:
+        { +label: None } : Filter the instance that include this label.
+        { -label: None } : Filter the instance that does not include this label.
+        { label: +tag1, -tags} : Filter the instance that includes/excludes this tags in this label.
+        :param filter_label_tags: The filer label tags
+        :return:
+        """
+        return True
 
     @staticmethod
     def tags_to_text(tags: [str]) -> str:
-        if isinstance(tags, str):
+        if tags is None:
+            return ''
+        elif isinstance(tags, str):
             return tags
         elif isinstance(tags, (list, tuple)):
             return ', '.join(tags)
         else:
             return str(tags)
 
-    @staticmethod
-    def text_to_tags(text: str) -> [str]:
-        pass
 
-    # -------------------------------------------
+# ----------------------------------------------- class HistoricalRecord -----------------------------------------------
+
+class HistoricalRecord(LabelTag):
+    # Five key labels of an record: time, location, people, organization, event
+    # Optional common labels: title, brief, uuid, author, tags
+
+    def __init__(self, source: str = ''):
+        super(HistoricalRecord, self).__init__()
+        self.__uuid = str(uuid.uuid4())
+        self.__since = 0.0
+        self.__until = 0.0
+        self.__focus_label = ''
+        self.__event_source = source
+
+    # ------------------------------------------------------ Gets ------------------------------------------------------
 
     def uuid(self) -> str:
         return self.__uuid
 
-    def time(self) -> [float]:
-        return self.__time
-
     def since(self) -> float:
-        return min(self.__time)
+        return self.__since
 
     def until(self) -> float:
-        return max(self.__time)
-
-    def title(self) -> str:
-        return self.__title
-
-    def brief(self) -> str:
-        return self.__brief
-
-    def event(self) -> str:
-        return self.__event
+        return self.__until
 
     def source(self) -> str:
         return self.__event_source
 
     # -------------------------------------------
 
-    def tags(self, label: str):
-        return self.__label_tags.get(label, [])
-
-    def labels(self) -> [str]:
-        return list(self.__label_tags.keys())
+    def time(self) -> [str]:
+        return self.get_tags('time')
 
     def people(self) -> list:
         return self.tags('people')
@@ -440,352 +471,607 @@ class LabelTag:
     def organization(self) -> list:
         return self.tags('organization')
 
-    # -------------------------------------------
+    def title(self) -> str:
+        return self.get_tags('title')
 
-    def dump(self) -> str:
+    def brief(self) -> str:
+        return self.get_tags('brief')
+
+    def event(self) -> str:
+        return self.get_tags('event')
+
+    # ---------------------------------------------------- Features ----------------------------------------------------
+
+    def reset(self):
+        self.__focus_label = ''
+        self.__event_source = ''
+        super(HistoricalRecord, self).reset()
+
+    def set_source(self, source: str):
+        self.__event_source = source
+
+    def set_focus_label(self, label: str):
+        self.__focus_label = label
+
+    def set_label_tags(self, label: str, tags: str or [str]):
+        if label == 'time':
+            error_list = self.__try_parse_time_tags(tags)
+            if len(error_list) > 0:
+                print('Warning: Cannot parse the time tag - ' + str(error_list))
+        super(HistoricalRecord, self).set_label_tags()
+
+    def index_for(self, his_record):
+        self.reset()
+        self.__focus_label = 'index'
+        self.__uuid = his_record.uuid()
+        self.__since = his_record.since()
+        self.__until = his_record.until()
+        self.__event_source = his_record.source()
+
+        if his_record.title() is not None and his_record.title().strip() != '':
+            abstract = his_record.title()
+        elif his_record.brief() is not None and his_record.brief().strip() != '':
+            abstract = his_record.brief()
+        elif his_record.his_record() is not None and his_record.event().strip() != '':
+            abstract = his_record.event()
+        self.set_label_tags('abstract', abstract.strip()[:50])
+
+    def period_adapt(self, since: float, until: float):
+        return (since < self.since < until) or (since < self.until < until)
+
+    @staticmethod
+    def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
+        """
+        Check label tags error.
+        :param label:
+        :param tags:
+        :return: Error string list. The list is empty if there's no error occurs.
+        """
+        if label == 'time':
+            time_list, error_list = TimeParser.standardize(','.join(tags))
+            return error_list
+        else:
+            return []
+
+    def dump_record(self) -> str:
+        dump_list = self.__get_sorted_labels()
+
+        # Default focus label is 'event'
         if self.__focus_label is None or self.__focus_label == '':
             self.__focus_label = 'event'
-        text = '[START]:' + self.__focus_label + '\n'
 
+        # Move the focus label to the tail.
+        if self.__focus_label in dump_list:
+            dump_list.remove(self.__focus_label)
+            dump_list.append(self.__focus_label)
+
+        # uuid should not in the common dump list
+        if 'uuid' in dump_list:
+            dump_list.remove('uuid')
+
+        # Extra: The start label of HistoricalRecord
+        text = '[START]: ' + self.__focus_label + '\n'
+
+        # Extra: The uuid of event
         if self.__uuid is None or self.__uuid == '':
-            self.__uuid = uuid.uuid1()
+            self.__uuid = str(uuid.uuid4())
+        text += 'uuid:' + self.__uuid + '\n'
 
-        text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
-        text += LabelTagParser.label_tags_to_text('time', self.__time)
-        text += '\n'
+        # Dump common labels
+        super(HistoricalRecord, self).dump_text(dump_list)
 
-        for label in sorted(list(self.__label_tags.keys())):
-            text += LabelTagParser.label_tags_to_text(label, self.__label_tags[label])
-        text += '\n'
-
-        text += LabelTagParser.label_tags_to_text('title', self.__title, True)
-        text += LabelTagParser.label_tags_to_text('brief', self.__brief, True)
-        text += LabelTagParser.label_tags_to_text('event', self.__event, True)
+        # If the focus label missing, add it with 'end' tag
+        if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
+            text = self.__focus_label + ': end\n'
 
         return text
 
-    def adapt(self, **argv) -> bool:
-        if not check_condition_range(argv, 'time', self.__time):
-            return False
-        if 'contains' in argv.keys():
-            looking_for = argv['contains']
-            if self.__title.find(looking_for) == -1 and \
-                    self.__brief.find(looking_for) == -1 and \
-                    self.__event.find(looking_for) == -1:
-                return False
-        if not self.__check_label_tags(argv):
-            return False
-        return True
+    #     if not check_condition_range(argv, 'time', self.__time):
+    #         return False
+    #     if 'contains' in argv.keys():
+    #         looking_for = argv['contains']
+    #         if self.__title.find(looking_for) == -1 and \
+    #            self.__brief.find(looking_for) == -1 and \
+    #            self.__event.find(looking_for) == -1:
+    #             return False
+    #     if not self.__check_label_tags(argv):
+    #         return False
+    #     return True
+    #
+    # def __check_label_tags(self, expected: dict) -> bool:
+    #     for key in expected:
+    #         if key in ['time', 'title', 'brief', 'contains']:
+    #             continue
+    #         if key not in self.__label_tags.keys():
+    #             return False
+    #         expected_tags = expected.get(key)
+    #         history_event_tags = self.__label_tags.get(key)
+    #         if isinstance(expected_tags, (list, tuple)):
+    #             return compare_intersection(expected_tags, history_event_tags)
+    #         else:
+    #             return expected_tags in history_event_tags
+    #     return True
 
-    def __check_label_tags(self, expected: dict) -> bool:
-        for key in expected:
-            if key in ['time', 'title', 'brief', 'contains']:
+    def __try_parse_time_tags(self, tags: [str]) -> [str]:
+        time_list, error_list = TimeParser.standardize(','.join(tags))
+        if len(time_list) > 0:
+            self.since = min(time_list)
+            self.until = max(time_list)
+        else:
+            self.since = 0.0
+            self.until = 0.0
+        return error_list
+
+    def __get_sorted_labels(self) -> [str]:
+        dump_list = []
+        label_list = self.get_labels()
+
+        # Sort the labels and put the focus label at the tail of list
+
+        if 'time' in label_list:
+            dump_list.append('time')
+            label_list.remove('time')
+        if 'people' in label_list:
+            dump_list.append('people')
+            label_list.remove('people')
+        if 'location' in label_list:
+            dump_list.append('location')
+            label_list.remove('location')
+        if 'organization' in label_list:
+            dump_list.append('organization')
+            label_list.remove('organization')
+
+        dump_list.extend(sorted(label_list))
+
+        if 'title' in dump_list:
+            dump_list.remove('title')
+            dump_list.append('title')
+        if 'brief' in label_list:
+            dump_list.remove('brief')
+            dump_list.append('brief')
+        if 'event' in label_list:
+            dump_list.remove('event')
+            dump_list.append('event')
+
+        return dump_list
+
+    # ----------------------------------------------------- print ------------------------------------------------------
+
+    def __str__(self):
+        return '---------------------------------------------------------------------------' + '\n' + \
+                '|UUID   : ' + str(self.__uuid) + '\n' + \
+                '|TIME   : ' + str(self.time()) + '\n' + \
+                '|TITLE  : ' + str(self.title()) + '\n' + \
+                '|BRIEF  : ' + str(self.brief()) + '\n' + \
+                '|EVENT  : ' + str(self.event()) + '\n' + \
+                '|SOURCE : ' + str(self.__event_source) + '\n' + \
+                '---------------------------------------------------------------------------'
+
+
+# --------------------------------------------------- class history ----------------------------------------------------
+
+class HistoricalRecordLoader:
+    def __init__(self):
+        self.__records = []
+
+    def restore(self):
+        self.__records.clear()
+
+    def get_loaded_records(self) -> list:
+        return self.__records
+
+    @staticmethod
+    def to_local_depot(records: HistoricalRecord or [HistoricalRecord], depot: str, file: str) -> bool:
+        if not isinstance(records, (list, tuple)):
+            records = [records]
+        depot_path = HistoricalRecordLoader.get_local_depot_path(depot)
+        file_path = path.join(depot_path, file)
+        try:
+            with open(file_path, 'wt', encoding='utf-8') as f:
+                for record in records:
+                    record.set_source(file_path)
+                    text = record.dump()
+                    f.write(text)
+            return True
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            return False
+        finally:
+            pass
+
+    def from_local_depot(depot: str) -> int:
+        try:
+            depot_path = HistoricalRecordLoader.get_local_depot_path(depot)
+            return self.from_directory(depot_path)
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            return 0
+        finally:
+            pass
+
+    def from_directory(self, directory: str) -> int:
+        try:
+            files = HistoricalRecordLoader.enumerate_local_path(directory)
+            return self.from_files(files)
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            return 0
+        finally:
+            pass
+
+    def from_files(self, files: [str]):
+        count = 0
+        for file in files:
+            if self.from_file(file):
+                count += 1
+        return count
+
+    def from_file(self, file: str) -> bool:
+        try:
+            with open(file, 'rt', encoding='utf-8') as f:
+                self.from_text(f.read(), file)
+            return True
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            return False
+        finally:
+            pass
+
+    def from_text(self, text: str, source: str = ''):
+        error_list = []
+
+        parser = LabelTagParser()
+        parser.parse(text)
+
+        section = ''
+        record = None
+        label_tags = parser.get_label_tags()
+
+        for label, tags in label_tags:
+            if label == '[START]':
+                self.yield_section(section, record)
+                record = None
+                if len(tags) == 0:
+                    error_list.append('Missing start section.')
+                else:
+                    section = 'tags[0]'
                 continue
-            if key not in self.__label_tags.keys():
-                return False
-            expected_tags = expected.get(key)
-            history_event_tags = self.__label_tags.get(key)
-            if isinstance(expected_tags, (list, tuple)):
-                return compare_intersection(expected_tags, history_event_tags)
-            else:
-                return expected_tags in history_event_tags
-        return True
+
+            if record is None:
+                record = HistoricalRecord(source)
+                record.set_label_tags(label, tags)
+
+            if section != '' and label == section:
+                self.yield_section(section, record)
+                record = None
+
+        self.yield_section(section, record)
+
+    def yield_section(self, section, record):
+        # TODO: different section, different class
+        if record is not None:
+            self.__records.append(record)
+
+    @staticmethod
+    def get_local_depot_path(depot: str) -> str:
+        root_path = path.dirname(path.abspath(__file__))
+        depot_path = path.join(root_path, 'depot', depot)
+        return depot_path
+
+    @staticmethod
+    def enumerate_local_path(root_path: str, suffix: [str] = None) -> list:
+        files = []
+        for parent, dirnames, filenames in os.walk(root_path):
+            for filename in filenames:
+                if suffix is None:
+                    files.append(path.join(parent, filename))
+                else:
+                    for sfx in suffix:
+                        if filename.endswith(sfx):
+                            files.append(filename)
+                            break
+        return files
 
 
 # --------------------------------------------------- class history ----------------------------------------------------
 
 class History:
 
-    # ----------------------------------------------------  Event  -----------------------------------------------------
-
-    class Event:
-        # Five key labels of an event: time, location, people, organization, event
-        # Optional common labels: title, brief, uuid, author, tags, 成语
-
-        def __init__(self, source: str = ''):
-            self.__uuid = str(uuid.uuid4())
-            self.__time = []
-            self.__title = ''
-            self.__brief = ''
-            self.__event = ''
-            self.__label_tags = {}
-            self.__focus_label = ''
-            self.__event_source = source
-
-        # -------------------------------------------
-
-        def reset(self):
-            self.__time = []
-            self.__title = ''
-            self.__brief = ''
-            self.__event = ''
-            self.__label_tags = {}
-
-        def set_source(self, source: str):
-            self.__event_source = source
-
-        def set_focus_label(self, label: str):
-            self.__focus_label = label
-
-        def set_label_tags(self, label: str, tags: str or [str]):
-            if label == 'uuid':
-                self.__uuid = tags[0] if len(tags) > 0 else self.__uuid
-            elif label == 'time':
-                self.__time = tags
-            elif label == 'title':
-                self.__title = History.Event.__normalize_content_tags(tags)
-            elif label == 'brief':
-                self.__brief = History.Event.__normalize_content_tags(tags)
-            elif label == 'event':
-                self.__event = History.Event.__normalize_content_tags(tags)
-            else:
-                if label not in self.__label_tags.keys():
-                    self.__label_tags[label] = tags
-                else:
-                    self.__label_tags[label].extend(tags)
-                self.__label_tags[label] = list_unique(self.__label_tags[label])
-
-        @staticmethod
-        def __normalize_content_tags(tags: [str]) -> str:
-            if isinstance(tags, str):
-                return tags
-            elif isinstance(tags, (list, tuple)):
-                return ', '.join(tags)
-            else:
-                return str(tags)
-
-        # -------------------------------------------
-
-        def uuid(self) -> str:
-            return self.__uuid
-
-        def time(self) -> [float]:
-            return self.__time
-
-        def since(self) -> float:
-            return min(self.__time)
-
-        def until(self) -> float:
-            return max(self.__time)
-
-        def title(self) -> str:
-            return self.__title
-
-        def brief(self) -> str:
-            return self.__brief
-
-        def event(self) -> str:
-            return self.__event
-
-        def source(self) -> str:
-            return self.__event_source
-
-        # -------------------------------------------
-
-        def tags(self, label: str):
-            return self.__label_tags.get(label, [])
-
-        def labels(self) -> [str]:
-            return list(self.__label_tags.keys())
-
-        def people(self) -> list:
-            return self.tags('people')
-
-        def location(self) -> list:
-            return self.tags('location')
-
-        def organization(self) -> list:
-            return self.tags('organization')
-
-        # -------------------------------------------
-
-        def dump(self) -> str:
-            if self.__focus_label is None or self.__focus_label == '':
-                self.__focus_label = 'event'
-            text = '[START]:' + self.__focus_label + '\n'
-
-            if self.__uuid is None or self.__uuid == '':
-                self.__uuid = uuid.uuid1()
-
-            text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
-            text += LabelTagParser.label_tags_to_text('time', self.__time)
-            text += '\n'
-
-            for label in sorted(list(self.__label_tags.keys())):
-                text += LabelTagParser.label_tags_to_text(label, self.__label_tags[label])
-            text += '\n'
-
-            text += LabelTagParser.label_tags_to_text('title', self.__title, True)
-            text += LabelTagParser.label_tags_to_text('brief', self.__brief, True)
-            text += LabelTagParser.label_tags_to_text('event', self.__event, True)
-
-            return text
-
-        def adapt(self, **argv) -> bool:
-            if not check_condition_range(argv, 'time', self.__time):
-                return False
-            if 'contains' in argv.keys():
-                looking_for = argv['contains']
-                if self.__title.find(looking_for) == -1 and \
-                   self.__brief.find(looking_for) == -1 and \
-                   self.__event.find(looking_for) == -1:
-                    return False
-            if not self.__check_label_tags(argv):
-                return False
-            return True
-
-        def __check_label_tags(self, expected: dict) -> bool:
-            for key in expected:
-                if key in ['time', 'title', 'brief', 'contains']:
-                    continue
-                if key not in self.__label_tags.keys():
-                    return False
-                expected_tags = expected.get(key)
-                history_event_tags = self.__label_tags.get(key)
-                if isinstance(expected_tags, (list, tuple)):
-                    return compare_intersection(expected_tags, history_event_tags)
-                else:
-                    return expected_tags in history_event_tags
-            return True
-
-        # ----------------------------------- print -----------------------------------
-
-        def __str__(self):
-            return '---------------------------------------------------------------------------' + '\n' + \
-                    '|UUID   : ' + str(self.__uuid) + '\n' + \
-                    '|TIME   : ' + str(self.__time) + '\n' + \
-                    '|LTAGS  : ' + str(self.__label_tags) + '\n' + \
-                    '|TITLE  : ' + str(self.__title) + '\n' + \
-                    '|BRIEF  : ' + str(self.__brief) + '\n' + \
-                    '|EVENT  : ' + str(self.__event) + '\n' + \
-                    '|SOURCE : ' + str(self.__event_source) + '\n' + \
-                    '---------------------------------------------------------------------------'
+    # # ----------------------------------------------------  Event  -----------------------------------------------------
+    #
+    # class Event(LabelTag):
+    #     # Five key labels of an event: time, location, people, organization, event
+    #     # Optional common labels: title, brief, uuid, author, tags
+    #
+    #     def __init__(self, source: str = ''):
+    #         super(Event, self).__init__()
+    #         self.__uuid = str(uuid.uuid4())
+    #         self.__time = []
+    #         self.__title = ''
+    #         self.__brief = ''
+    #         self.__event = ''
+    #         self.__label_tags = {}
+    #         self.__focus_label = ''
+    #         self.__event_source = source
+    #
+    #     # -------------------------------------------
+    #
+    #     def reset(self):
+    #         self.__time = []
+    #         self.__title = ''
+    #         self.__brief = ''
+    #         self.__event = ''
+    #         self.__label_tags = {}
+    #
+    #     def set_source(self, source: str):
+    #         self.__event_source = source
+    #
+    #     def set_focus_label(self, label: str):
+    #         self.__focus_label = label
+    #
+    #     def set_label_tags(self, label: str, tags: str or [str]):
+    #         if label == 'uuid':
+    #             self.__uuid = tags[0] if len(tags) > 0 else self.__uuid
+    #         elif label == 'time':
+    #             self.__time = tags
+    #         elif label == 'title':
+    #             self.__title = History.Event.__normalize_content_tags(tags)
+    #         elif label == 'brief':
+    #             self.__brief = History.Event.__normalize_content_tags(tags)
+    #         elif label == 'event':
+    #             self.__event = History.Event.__normalize_content_tags(tags)
+    #         else:
+    #             if label not in self.__label_tags.keys():
+    #                 self.__label_tags[label] = tags
+    #             else:
+    #                 self.__label_tags[label].extend(tags)
+    #             self.__label_tags[label] = list_unique(self.__label_tags[label])
+    #
+    #     @staticmethod
+    #     def __normalize_content_tags(tags: [str]) -> str:
+    #         if isinstance(tags, str):
+    #             return tags
+    #         elif isinstance(tags, (list, tuple)):
+    #             return ', '.join(tags)
+    #         else:
+    #             return str(tags)
+    #
+    #     # -------------------------------------------
+    #
+    #     def uuid(self) -> str:
+    #         return self.__uuid
+    #
+    #     def time(self) -> [float]:
+    #         return self.__time
+    #
+    #     def since(self) -> float:
+    #         return min(self.__time)
+    #
+    #     def until(self) -> float:
+    #         return max(self.__time)
+    #
+    #     def title(self) -> str:
+    #         return self.__title
+    #
+    #     def brief(self) -> str:
+    #         return self.__brief
+    #
+    #     def event(self) -> str:
+    #         return self.__event
+    #
+    #     def source(self) -> str:
+    #         return self.__event_source
+    #
+    #     # -------------------------------------------
+    #
+    #     def tags(self, label: str):
+    #         return self.__label_tags.get(label, [])
+    #
+    #     def labels(self) -> [str]:
+    #         return list(self.__label_tags.keys())
+    #
+    #     def people(self) -> list:
+    #         return self.tags('people')
+    #
+    #     def location(self) -> list:
+    #         return self.tags('location')
+    #
+    #     def organization(self) -> list:
+    #         return self.tags('organization')
+    #
+    #     # -------------------------------------------
+    #
+    #     def dump(self) -> str:
+    #         if self.__focus_label is None or self.__focus_label == '':
+    #             self.__focus_label = 'event'
+    #         text = '[START]:' + self.__focus_label + '\n'
+    #
+    #         if self.__uuid is None or self.__uuid == '':
+    #             self.__uuid = uuid.uuid1()
+    #
+    #         text += LabelTagParser.label_tags_to_text('uuid', self.__uuid)
+    #         text += LabelTagParser.label_tags_to_text('time', self.__time)
+    #         text += '\n'
+    #
+    #         for label in sorted(list(self.__label_tags.keys())):
+    #             text += LabelTagParser.label_tags_to_text(label, self.__label_tags[label])
+    #         text += '\n'
+    #
+    #         text += LabelTagParser.label_tags_to_text('title', self.__title, True)
+    #         text += LabelTagParser.label_tags_to_text('brief', self.__brief, True)
+    #         text += LabelTagParser.label_tags_to_text('event', self.__event, True)
+    #
+    #         return text
+    #
+    #     def adapt(self, **argv) -> bool:
+    #         if not check_condition_range(argv, 'time', self.__time):
+    #             return False
+    #         if 'contains' in argv.keys():
+    #             looking_for = argv['contains']
+    #             if self.__title.find(looking_for) == -1 and \
+    #                self.__brief.find(looking_for) == -1 and \
+    #                self.__event.find(looking_for) == -1:
+    #                 return False
+    #         if not self.__check_label_tags(argv):
+    #             return False
+    #         return True
+    #
+    #     def __check_label_tags(self, expected: dict) -> bool:
+    #         for key in expected:
+    #             if key in ['time', 'title', 'brief', 'contains']:
+    #                 continue
+    #             if key not in self.__label_tags.keys():
+    #                 return False
+    #             expected_tags = expected.get(key)
+    #             history_event_tags = self.__label_tags.get(key)
+    #             if isinstance(expected_tags, (list, tuple)):
+    #                 return compare_intersection(expected_tags, history_event_tags)
+    #             else:
+    #                 return expected_tags in history_event_tags
+    #         return True
+    #
+    #     # ----------------------------------- print -----------------------------------
+    #
+    #     def __str__(self):
+    #         return '---------------------------------------------------------------------------' + '\n' + \
+    #                 '|UUID   : ' + str(self.__uuid) + '\n' + \
+    #                 '|TIME   : ' + str(self.__time) + '\n' + \
+    #                 '|LTAGS  : ' + str(self.__label_tags) + '\n' + \
+    #                 '|TITLE  : ' + str(self.__title) + '\n' + \
+    #                 '|BRIEF  : ' + str(self.__brief) + '\n' + \
+    #                 '|EVENT  : ' + str(self.__event) + '\n' + \
+    #                 '|SOURCE : ' + str(self.__event_source) + '\n' + \
+    #                 '---------------------------------------------------------------------------'
 
     # -------------------------------------------------  Events Loader -------------------------------------------------
-
-    class Loader:
-        def __init__(self):
-            self.__events = []
-
-        def restore(self):
-            self.__events.clear()
-
-        def get_loaded_events(self) -> list:
-            return self.__events
-
-        def get_local_depot_path(self, depot: str) -> str:
-            root_path = path.dirname(path.abspath(__file__))
-            depot_path = path.join(root_path, 'depot', depot)
-            return depot_path
-
-        # events: History.Event or [History.Event]
-        def to_local_depot(self, events, depot: str, file: str) -> bool:
-            if not isinstance(events, (list, tuple)):
-                events = [events]
-            depot_path = self.get_local_depot_path(depot)
-            file_path = path.join(depot_path, file)
-            try:
-                with open(file_path, 'wt', encoding='utf-8') as f:
-                    for event in events:
-                        event.set_source(file_path)
-                        text = event.dump()
-                        f.write(text)
-                return True
-            except Exception as e:
-                print(e)
-                print(traceback.format_exc())
-                return False
-            finally:
-                pass
-
-        def from_local_depot(self, depot: str) -> int:
-            try:
-                depot_path = self.get_local_depot_path(depot)
-                return self.from_directory(depot_path)
-            except Exception as e:
-                print(e)
-                print(traceback.format_exc())
-                return 0
-            finally:
-                pass
-
-        def from_directory(self, directory: str) -> int:
-            try:
-                files = self.enumerate_local_path(directory)
-                return self.from_files(files)
-            except Exception as e:
-                print(e)
-                print(traceback.format_exc())
-                return 0
-            finally:
-                pass
-
-        def from_files(self, files: [str]):
-            count = 0
-            for file in files:
-                if self.from_file(file):
-                    count += 1
-            return count
-
-        def from_file(self, file: str) -> bool:
-            try:
-                with open(file, 'rt', encoding='utf-8') as f:
-                    self.from_text(f.read(), file)
-                return True
-            except Exception as e:
-                print(e)
-                print(traceback.format_exc())
-                return False
-            finally:
-                pass
-
-        def from_text(self, text: str, source: str = ''):
-            error_list = []
-
-            parser = LabelTagParser()
-            parser.parse(text)
-
-            section = ''
-            event = None
-            label_tags = parser.get_label_tags()
-
-            for label, tags in label_tags:
-                if label == '[START]':
-                    self.yield_section(section, event)
-                    event = None
-                    if len(tags) == 0:
-                        error_list.append('Missing start section.')
-                    else:
-                        section = 'tags[0]'
-                    continue
-
-                if event is None:
-                    event = History.Event(source)
-                event.set_label_tags(label, tags)
-
-                if section != '' and label == section:
-                    self.yield_section(section, event)
-                    event = None
-
-            self.yield_section(section, event)
-
-        def yield_section(self, section, event):
-            # TODO: different section, different class
-            if event is not None:
-                self.__events.append(event)
-
-        def enumerate_local_path(self, root_path: str, suffix: [str] = None) -> list:
-            files = []
-            for parent, dirnames, filenames in os.walk(root_path):
-                for filename in filenames:
-                    if suffix is None:
-                        files.append(path.join(parent, filename))
-                    else:
-                        for sfx in suffix:
-                            if filename.endswith(sfx):
-                                files.append(filename)
-                                break
-            return files
+    #
+    # class Loader:
+    #     def __init__(self):
+    #         self.__events = []
+    #
+    #     def restore(self):
+    #         self.__events.clear()
+    #
+    #     def get_loaded_events(self) -> list:
+    #         return self.__events
+    #
+    #     def get_local_depot_path(self, depot: str) -> str:
+    #         root_path = path.dirname(path.abspath(__file__))
+    #         depot_path = path.join(root_path, 'depot', depot)
+    #         return depot_path
+    #
+    #     # events: History.Event or [History.Event]
+    #     def to_local_depot(self, events, depot: str, file: str) -> bool:
+    #         if not isinstance(events, (list, tuple)):
+    #             events = [events]
+    #         depot_path = self.get_local_depot_path(depot)
+    #         file_path = path.join(depot_path, file)
+    #         try:
+    #             with open(file_path, 'wt', encoding='utf-8') as f:
+    #                 for event in events:
+    #                     event.set_source(file_path)
+    #                     text = event.dump()
+    #                     f.write(text)
+    #             return True
+    #         except Exception as e:
+    #             print(e)
+    #             print(traceback.format_exc())
+    #             return False
+    #         finally:
+    #             pass
+    #
+    #     def from_local_depot(self, depot: str) -> int:
+    #         try:
+    #             depot_path = self.get_local_depot_path(depot)
+    #             return self.from_directory(depot_path)
+    #         except Exception as e:
+    #             print(e)
+    #             print(traceback.format_exc())
+    #             return 0
+    #         finally:
+    #             pass
+    #
+    #     def from_directory(self, directory: str) -> int:
+    #         try:
+    #             files = self.enumerate_local_path(directory)
+    #             return self.from_files(files)
+    #         except Exception as e:
+    #             print(e)
+    #             print(traceback.format_exc())
+    #             return 0
+    #         finally:
+    #             pass
+    #
+    #     def from_files(self, files: [str]):
+    #         count = 0
+    #         for file in files:
+    #             if self.from_file(file):
+    #                 count += 1
+    #         return count
+    #
+    #     def from_file(self, file: str) -> bool:
+    #         try:
+    #             with open(file, 'rt', encoding='utf-8') as f:
+    #                 self.from_text(f.read(), file)
+    #             return True
+    #         except Exception as e:
+    #             print(e)
+    #             print(traceback.format_exc())
+    #             return False
+    #         finally:
+    #             pass
+    #
+    #     def from_text(self, text: str, source: str = ''):
+    #         error_list = []
+    #
+    #         parser = LabelTagParser()
+    #         parser.parse(text)
+    #
+    #         section = ''
+    #         event = None
+    #         label_tags = parser.get_label_tags()
+    #
+    #         for label, tags in label_tags:
+    #             if label == '[START]':
+    #                 self.yield_section(section, event)
+    #                 event = None
+    #                 if len(tags) == 0:
+    #                     error_list.append('Missing start section.')
+    #                 else:
+    #                     section = 'tags[0]'
+    #                 continue
+    #
+    #             if event is None:
+    #                 event = History.Event(source)
+    #             event.set_label_tags(label, tags)
+    #
+    #             if section != '' and label == section:
+    #                 self.yield_section(section, event)
+    #                 event = None
+    #
+    #         self.yield_section(section, event)
+    #
+    #     def yield_section(self, section, event):
+    #         # TODO: different section, different class
+    #         if event is not None:
+    #             self.__events.append(event)
+    #
+    #     def enumerate_local_path(self, root_path: str, suffix: [str] = None) -> list:
+    #         files = []
+    #         for parent, dirnames, filenames in os.walk(root_path):
+    #             for filename in filenames:
+    #                 if suffix is None:
+    #                     files.append(path.join(parent, filename))
+    #                 else:
+    #                     for sfx in suffix:
+    #                         if filename.endswith(sfx):
+    #                             files.append(filename)
+    #                             break
+    #         return files
 
     # ---------------------------------------------------- History -----------------------------------------------------
 
