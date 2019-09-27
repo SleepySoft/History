@@ -7,6 +7,8 @@ from os import sys, path, listdir
 # ------------------------------------------------------ Compare ------------------------------------------------------
 import traceback
 
+import requests
+
 
 def list_unique(list1: list) -> list:
     return list(set(list1))
@@ -721,12 +723,30 @@ class HistoricalRecordLoader:
         finally:
             pass
 
+    def from_source(self, source: str):
+        if source.startswith('http'):
+            return self.from_web()
+        else:
+            return self.from_file(source)
+
     def from_files(self, files: [str]):
         count = 0
         for file in files:
             if self.from_file(file):
                 count += 1
         return count
+
+    def from_web(self, url: str) -> bool:
+        try:
+            r = requests.get(url)
+            text = r.content.decode('utf-8')
+            self.from_text(text)
+            return True
+        except Exception as e:
+            print('Error when fetching from web: ' + str(e))
+            return False
+        finally:
+            pass
 
     def from_file(self, file: str) -> bool:
         try:
@@ -795,6 +815,54 @@ class HistoricalRecordLoader:
         return files
 
 
+# ------------------------------------------- class HistoricalRecordIndexer --------------------------------------------
+
+class HistoricalRecordIndexer:
+    def __init__(self):
+        self.__indexes = []
+
+    def restore(self):
+        self.__indexes = []
+
+    def get_indexes(self) -> list:
+        return self.__indexes
+
+    def index_path(self, directory: str):
+        loader = HistoricalRecordLoader()
+        his_filels = HistoricalRecordLoader.enumerate_local_path(directory)
+        for his_file in his_filels:
+            loader.from_file(his_file)
+            records = loader.get_loaded_records()
+            self.index_records(records)
+            loader.restore()
+
+    def index_records(self, records: list):
+        for record in records:
+            index = HistoricalRecord()
+            index.index_for(record)
+            self.__indexes.append(index)
+
+    def replace_index_prefix(self, prefix_old: str, prefix_new: str):
+        for index in self.__indexes:
+            if index.source.startswith(prefix_old):
+                index.source.replace(prefix_old, prefix_new)
+
+    def dump_to_file(self, file: str):
+        with open(file, 'wt', encoding='utf-8') as f:
+            for index in self.__indexes:
+                text = index.dump_record(True)
+                f.write(text + '\n')
+
+    def load_from_file(self, file: str):
+        loader = HistoricalRecordLoader()
+        loader.from_file(file)
+        self.__indexes = loader.get_loaded_records()
+
+    def print_indexes(self):
+        for index in self.__indexes:
+            print(index)
+
+
 # --------------------------------------------------- class history ----------------------------------------------------
 
 class History:
@@ -802,18 +870,60 @@ class History:
         self.__records = []
         self.__indexes = []
 
-    def attach(self, loader):
-        self.__records = loader.get_loaded_records()
+    # ----------------------------------------------------------------------------
 
-    def load_source(self, source: str):
-        loader = HistoricalRecordLoader()
+    def get_records(self) ->[HistoricalRecord]:
+        return self.__records
+
+    def get_indexes(self) ->[HistoricalRecord]:
+        return self.__indexes
+
+    def add_records(self, records: [HistoricalRecord]):
+        History.upsert_records(self.__records, records)
+
+    def add_indexes(self, indexes: [HistoricalRecord]):
+        History.upsert_records(self.__indexes, indexes)
+
+    def reset_records(self):
+        self.__records.clear()
+
+    def reset_indexes(self):
+        self.__indexes.clear()
+
+    # ----------------------------------------------------------------------------
 
     def print_records(self):
         for record in self.__records:
             print(record)
 
+    def print_indexes(self):
+        for index in self.__indexes:
+            print(index)
 
-# ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------
+
+    @staticmethod
+    def sort_records(records: [HistoricalRecord]) -> [HistoricalRecord]:
+        return sorted(records, key=lambda x: x.since())
+
+    @staticmethod
+    def unique_records(records: [HistoricalRecord]) -> [HistoricalRecord]:
+        return {r.uuid(): r for r in records}.values()
+
+    @staticmethod
+    def upsert_records(records_list: [HistoricalRecord], records_new: [HistoricalRecord]):
+        new_records = {r.uuid(): r for r in records_new}
+        for i in range(0, len(records_list)):
+            _uuid = records_list[i].uuid()
+            if _uuid in new_records.keys():
+                records_list[i] = new_records[_uuid]
+                del new_records[_uuid]
+        records_list.extend(new_records.values())
+
+
+# ----------------------------------------------------- Test Code ------------------------------------------------------
+
+# ---------------------------- Token & Parser ----------------------------
 
 def test_token_parser(text: str, expects: [str], tokens: list, wrappers: list, escape_symbols: list):
     parser = TokenParser()
@@ -856,6 +966,8 @@ def test_token_parser_case_escape_symbol():
     pass
 
 
+# -------------------------------- History --------------------------------
+
 def test_history_basic():
     loader = HistoricalRecordLoader()
     count = loader.from_local_depot('example')
@@ -863,15 +975,36 @@ def test_history_basic():
     print('Load successful: ' + str(count))
 
     history = History()
-    history.attach(loader)
-
+    records = loader.get_loaded_records()
+    history.add_records(records)
     history.print_records()
 
+
+# -------------------------------- Indexer --------------------------------
+
+def test_generate_index():
+    depot_path = HistoricalRecordLoader.get_local_depot_path('China')
+    indexer = HistoricalRecordIndexer()
+    indexer.index_path(depot_path)
+    indexer.dump_to_file('history.index')
+
+
+def test_load_index():
+    indexer = HistoricalRecordIndexer()
+    indexer.load_from_file('history.index')
+    history = History()
+    history.add_indexes(indexer.get_indexes())
+    history.print_indexes()
+
+
+# ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
     test_token_parser_case_normal()
     test_token_parser_case_escape_symbol()
     test_history_basic()
+    test_generate_index()
+    test_load_index()
     print('All test passed.')
 
 

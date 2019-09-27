@@ -1,7 +1,7 @@
-[START]: index; uuid:344e6e1b-d87b-4327-87f4-38670fdd719e; abstract: 杯酒释兵权; since:961.0; until:961.0; index: end; 
-[START]: index; uuid:ef9e4368-bcf2-4b35-b494-542751f2d736; abstract: 北京人; since:-500000.0; until:-500000.0; index: end; 
-[START]: index; uuid:8795d33b-01be-4443-a5fe-3d6873130a45; abstract: 蓝田人; since:-800000.0; until:-800000.0; index: end; 
-[START]: index; uuid:6763728f-f70e-4932-a746-22e3b2e019db; abstract: 西周; since:-1046.0; until:-771.0; index: end; 
-[START]: index; uuid:0c0bf2f5-1f62-4ef7-8b7e-03d886a7e52d; abstract: 陈桥兵变; since:960.0; until:960.0; index: end; 
-[START]: index; uuid:026af4d9-ed4f-4332-9598-805b3f4ad0e5; abstract: 元谋人; since:-1700000.0; until:-1700000.0; index: end; 
-[START]: index; uuid:e671d0eb-f4d4-4b13-a584-0851492ff36e; abstract: 周文王; since:-1152.0; until:-1056.0; index: end; 
+[START]: index; uuid:0d45fea1-e250-4d41-a282-1a1cbe747bbc; abstract: 杯酒释兵权; since:961.0; until:961.0; index: end; 
+[START]: index; uuid:66ab296d-7d31-459f-a8c0-ead63214c41c; abstract: 北京人; since:-500000.0; until:-500000.0; index: end; 
+[START]: index; uuid:f436495b-a025-4817-b673-5b34506d1d26; abstract: 蓝田人; since:-800000.0; until:-800000.0; index: end; 
+[START]: index; uuid:f2492b4e-41bd-4792-8957-4e48c5fd3a4d; abstract: 西周; since:-1046.0; until:-771.0; index: end; 
+[START]: index; uuid:f3d809ec-3786-4d50-a0d4-b9f23b368660; abstract: 陈桥兵变; since:960.0; until:960.0; index: end; 
+[START]: index; uuid:2cf41d3a-f996-41cc-85d4-a82079cb552c; abstract: 元谋人; since:-1700000.0; until:-1700000.0; index: end; 
+[START]: index; uuid:c70d9e48-8346-40d5-898e-f8d43e61120c; abstract: 周文王; since:-1152.0; until:-1056.0; index: end; 
