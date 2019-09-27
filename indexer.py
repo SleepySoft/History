@@ -4,75 +4,6 @@ import traceback
 from core import *
 
 
-# --------------------------------------------------------------------------------------------------------------
-
-# class EventIndex:
-#     def __init__(self):
-#         self.uuid = ''
-#         self.since = 0.0
-#         self.until = 0.0
-#         self.event = None
-#         self.abstract = ''
-#
-#         self.source = ''
-#
-#     def time(self) -> float:
-#         return self.since
-#
-#     def adapt(self, since: float, until: float):
-#         return (since < self.since < until) or (since < self.until < until)
-#
-#     def index_for(self, event):
-#         self.source = event.source()
-#
-#         import core
-#         event_time_list = event.time()
-#         standard_time_list = core.TimeParser.standardize(','.join(event_time_list))
-#
-#         self.since = min(standard_time_list)
-#         self.until = max(standard_time_list)
-#
-#         self.uuid = event.uuid()
-#         self.event = event
-#
-#         if event.title() is not None and event.title().strip() != '':
-#             self.abstract = event.title()
-#         elif event.brief() is not None and event.brief().strip() != '':
-#             self.abstract = event.brief()
-#         elif event.event() is not None and event.event().strip() != '':
-#             self.abstract = event.event()
-#         self.abstract = self.abstract.strip()[:50]
-#
-#     def to_string(self) -> str:
-#         text = '[START]: index\n'
-#         text += 'uuid: """' + str(self.uuid) + '"""\n'
-#         text += 'since: ' + str(self.since) + '\n'
-#         text += 'until: ' + str(self.until) + '\n'
-#         text += 'abstract: """' + str(self.abstract) + '"""\n'
-#         text += 'source: """' + str(self.source) + '"""\n'
-#         text += 'index: end\n\n'
-#         return text
-#
-#     # ----------------------------------- print -----------------------------------
-#
-#         self.uuid = ''
-#         self.since = 0.0
-#         self.until = 0.0
-#         self.event = None
-#         self.abstract = ''
-#
-#         self.source = ''
-#
-#     def __str__(self):
-#         return '---------------------------------------------------------------------------' + '\n' + \
-#                 '|UUID     : ' + str(self.uuid) + '\n' + \
-#                 '|SINCE    : ' + str(self.since) + '\n' + \
-#                 '|UNTIL    : ' + str(self.until) + '\n' + \
-#                 '|EVENT    : ' + str(self.event) + '\n' + \
-#                 '|ABSTRACT : ' + str(self.abstract) + '\n' + \
-#                 '---------------------------------------------------------------------------'
-
-
 class RecordIndexer:
     def __init__(self):
         self.__indexes = []
@@ -106,41 +37,13 @@ class RecordIndexer:
     def dump_to_file(self, file: str):
         with open(file, 'wt', encoding='utf-8') as f:
             for index in self.__indexes:
-                text = index.dump_record()
-                f.write(text)
+                text = index.dump_record(True)
+                f.write(text + '\n')
 
     def load_from_file(self, file: str):
         loader = HistoricalRecordLoader()
         loader.from_file(file)
         self.__indexes = loader.get_loaded_records()
-
-        # parser = LabelTagParser()
-        # with open(file, 'rt', encoding='utf-8') as f:
-        #     text = f.read()
-        #     parser.parse(text)
-        #
-        # index = None
-        # label_tags = parser.get_label_tags()
-        #
-        # for label, tags in label_tags:
-        #     if label == '[START]':
-        #         index = EventIndex()
-        #         continue
-        #     if index is None:
-        #         continue
-        #     if label == 'uuid':
-        #         index.uuid = tags[0]
-        #     elif label == 'since':
-        #         index.since = float(tags[0])
-        #     elif label == 'until':
-        #         index.until = float(tags[0])
-        #     elif label == 'abstract':
-        #         index.abstract = tags[0]
-        #     elif label == 'source':
-        #         index.source = tags[0]
-        #     elif label == 'index':
-        #         self.__indexes.append(index)
-        #         index = None
 
     def print_indexes(self):
         for index in self.__indexes:

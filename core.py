@@ -267,7 +267,7 @@ class TokenParser:
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
 
-LABEL_TAG_TOKENS = [':', ',', '#', '"""', '\n', ' ']
+LABEL_TAG_TOKENS = [':', ',', ';', '#', '"""', '\n', ' ']
 LABEL_TAG_WRAPPERS = [('"""', '"""'), ('#', '\n')]
 LABEL_TAG_ESCAPES_SYMBOLS = []
 
@@ -311,7 +311,7 @@ class LabelTagParser(TokenParser):
             elif token in [':', ',', '"""']:
                 print('Drop token: ' + token)
 
-            elif token == '\n':
+            elif token == '\n' or token == ';':
                 next_step = 'label'
             elif next_step == 'label':
                 expect = [':']
@@ -397,15 +397,16 @@ class LabelTag:
         if label in self.__label_tags.keys():
             del self.__label_tags[label]
 
-    def dump_text(self, labels: [str] = None) -> str:
+    def dump_text(self, labels: [str] = None, compact: bool = False) -> str:
         text = ''
+        new_line = '; ' if compact else '\n'
         if labels is None:
             labels = list(self.__label_tags.keys())
         for label in labels:
             tags = self.__label_tags.get(label)
             tags_text = LabelTag.tags_to_text(tags)
             if tags_text != '':
-                text += label + ': ' + tags_text + '\n'
+                text += label + ': ' + tags_text + new_line
         return text
 
     def filter(self, filter_label_tags: dict) -> bool:
@@ -538,7 +539,8 @@ class HistoricalRecord(LabelTag):
         else:
             return []
 
-    def dump_record(self) -> str:
+    def dump_record(self, compact: bool = False) -> str:
+        new_line = '; ' if compact else '\n'
         dump_list = self.__get_sorted_labels()
 
         # Default focus label is 'event'
@@ -555,23 +557,23 @@ class HistoricalRecord(LabelTag):
             dump_list.remove('uuid')
 
         # Extra: The start label of HistoricalRecord
-        text = '[START]: ' + self.__focus_label + '\n'
+        text = '[START]: ' + self.__focus_label + new_line
 
         # Extra: The uuid of event
         if self.__uuid is None or self.__uuid == '':
             self.__uuid = str(uuid.uuid4())
-        text += 'uuid:' + self.__uuid + '\n'
+        text += 'uuid:' + self.__uuid + new_line
 
         # Dump common labels
-        text += super(HistoricalRecord, self).dump_text(dump_list)
+        text += super(HistoricalRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
-            text += 'since:' + str(self.__since) + '\n'
-            text += 'until:' + str(self.__until) + '\n'
+            text += 'since:' + str(self.__since) + new_line
+            text += 'until:' + str(self.__until) + new_line
 
         # If the focus label missing, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
-            text += self.__focus_label + ': end\n'
+            text += self.__focus_label + ': end' + new_line
 
         return text
 
@@ -798,9 +800,13 @@ class HistoricalRecordLoader:
 class History:
     def __init__(self):
         self.__records = []
+        self.__indexes = []
 
     def attach(self, loader):
         self.__records = loader.get_loaded_records()
+
+    def load_source(self, source: str):
+        loader = HistoricalRecordLoader()
 
     def print_records(self):
         for record in self.__records:
