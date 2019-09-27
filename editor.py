@@ -29,6 +29,8 @@ class HistoryEditor(QWidget):
         self.__current_record = None
         self.__operation_agents = []
 
+        self.__ignore_combo = False
+
         self.__tab_main = QTabWidget()
         # self.__combo_depot = QComboBox()
         self.__combo_records = QComboBox()
@@ -152,8 +154,11 @@ class HistoryEditor(QWidget):
         self.__button_apply.clicked.connect(self.on_button_apply)
         self.__button_cancel.clicked.connect(self.on_button_cancel)
 
+        self.__combo_records.currentIndexChanged.connect(self.on_combo_records)
+
     def update_combo_records(self):
         index = -1
+        self.__ignore_combo = True
         self.__combo_records.clear()
         for i in range(0, len(self.__records)):
             record = self.__records[i]
@@ -164,6 +169,7 @@ class HistoryEditor(QWidget):
             self.__combo_records.setCurrentIndex(index)
         else:
             print('Cannot find the current record in combobox.')
+        self.__ignore_combo = False
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 
@@ -184,9 +190,19 @@ class HistoryEditor(QWidget):
                 break
         if self.__current_record is None:
             self.__current_record = HistoricalRecord()
+        self.update_combo_records()
         self.load_record(self.__current_record)
 
-    def load_record(self, record: HistoricalRecord):
+    def load_record(self, record: HistoricalRecord or str):
+        # if isinstance(record, str):
+        #     for r in self.__records:
+        #         if r.uuid() == record:
+        #             record = r
+        #             break
+        # if isinstance(record, str):
+        #     print('Cannot load record for uuid: ' + record)
+        #     return
+
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
         self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
@@ -249,6 +265,20 @@ class HistoryEditor(QWidget):
         for agent in self.__operation_agents:
             agent.on_cancel()
 
+    def on_combo_records(self):
+        if self.__ignore_combo:
+            return
+
+        _uuid = self.__combo_records.currentText()
+        record = self.__look_for_record(_uuid)
+
+        if record is None:
+            print('Cannot find record for uuid: ' + _uuid)
+            return
+
+        self.__current_record = record
+        self.load_record(record)
+
     # --------------------------------------------------- Operation ----------------------------------------------------
 
     def ui_to_current_record(self, only_locked: bool = False):
@@ -308,6 +338,14 @@ class HistoryEditor(QWidget):
         tips = 'Save Successful.' if result else 'Save Fail.'
         tips += '\nSave File: ' + self.__source
         QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
+
+    # ------------------------------------------------------------------------------
+
+    def __look_for_record(self, _uuid: str):
+        for record in self.__records:
+            if record.uuid() == _uuid:
+                return record
+        return None
 
 
 # --------------------------------------------- class HistoryEditorDialog ----------------------------------------------

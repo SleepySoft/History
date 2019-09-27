@@ -502,7 +502,9 @@ class HistoricalRecord(LabelTag):
         self.__focus_label = label
 
     def set_label_tags(self, label: str, tags: str or [str]):
-        if label == 'time':
+        if label == 'uuid':
+            self.__uuid = str(tags[0])
+        elif label == 'time':
             error_list = self.__try_parse_time_tags(tags)
             if len(error_list) > 0:
                 print('Warning: Cannot parse the time tag - ' + str(error_list))
@@ -511,6 +513,9 @@ class HistoricalRecord(LabelTag):
             return
         elif label == 'until':
             self.__until = float(tags[0])
+            return
+        elif label == 'source':
+            self.__record_source = str(tags[0])
             return
         super(HistoricalRecord, self).add_tags(label, tags)
 
@@ -573,8 +578,9 @@ class HistoricalRecord(LabelTag):
         text += super(HistoricalRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
-            text += 'since:' + str(self.__since) + new_line
-            text += 'until:' + str(self.__until) + new_line
+            text += 'since: ' + str(self.since()) + new_line
+            text += 'until: ' + str(self.until()) + new_line
+            text += 'source: """' + str(self.source()) + '"""' + new_line
 
         # If the focus label missing, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
@@ -777,6 +783,7 @@ class HistoricalRecordLoader:
             if label == '[START]':
                 self.yield_record(record)
                 record = None
+                focus = ''
                 if len(tags) == 0:
                     error_list.append('Missing start section.')
                 else:
@@ -785,12 +792,13 @@ class HistoricalRecordLoader:
 
             if record is None:
                 record = HistoricalRecord(source)
+                record.set_focus_label(focus)
             record.set_label_tags(label, tags)
 
             if focus != '' and label == focus:
-                record.set_focus_label(focus)
                 self.yield_record(record)
                 record = None
+                focus = ''
         self.yield_record(record)
 
     def yield_record(self, record):
