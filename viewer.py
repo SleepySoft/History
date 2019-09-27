@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox
 
 from core import *
 from editor import *
-from indexer import *
 from Utility.ui_utility import *
 
 
@@ -289,6 +288,7 @@ class TimeAxis(QWidget):
         # self.setMouseTracking(True)
 
         self.__history_core = None
+        self.__history_editor = None
         self.__history_threads = []
 
     # ----------------------------------------------------- Method -----------------------------------------------------
@@ -381,26 +381,27 @@ class TimeAxis(QWidget):
 
     def popup_editor_for_index(self, index: HistoricalRecord):
         if index is None:
-            print('Index is empty.')
+            print('None index.')
             return
-        if index.source is None or len(index.source) == 0:
-            print('Source is empty.')
-            return
-        loader = History.Loader()
-        if not loader.from_file(index.source):
-            print('Load source error : ' + index.source)
-            return
-        events = loader.get_loaded_events()
-        if len(events) > 0:
-            dlg = HistoryEditorDialog()
-            dlg.setWindowFlags(dlg.windowFlags() |
-                               Qt.WindowMinMaxButtonsHint |
-                               QtCore.Qt.WindowSystemMenuHint)
-            dlg.get_history_editor().load_event(events[0])
-            dlg.exec()
 
-            dlg.event()
-            index.index_for()
+        # if index.get_focus_label() == 'index':
+        #     source = index.source()
+        #     if source is None or source == '':
+        #         print('Source is empty.')
+        #         return
+        #     loader = HistoricalRecordLoader()
+        #     if not loader.from_source(source):
+        #         print('Load source error : ' + source)
+        #         return
+        #     records = loader.get_loaded_records()
+        #     self.add_records(records)
+        # else:
+        #     # It's a full record
+        #     records = [index]
+
+        self.__history_editor = HistoryEditorDialog(editor_agent=self)
+        self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
+        self.__history_editor.exec()
 
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
@@ -572,27 +573,55 @@ class TimeAxis(QWidget):
         #         delta = 0
         # return sign * delta * ratio
 
-    def notify_scale_updated(self, since: float, until: float):
-        pass
+    # ------------------------------- HistoryEditor.Agent -------------------------------
+
+    def on_apply(self):
+        if self.__history_editor is None:
+            print('Unexpected Error: History editor is None.')
+            return
+
+        records = self.__history_editor.get_history_editor().get_records()
+
+        if records is None or len(records) == 0:
+            return
+
+        indexer = HistoricalRecordIndexer()
+        indexer.index_records(records)
+        indexes = indexer.get_indexes()
+
+        # TODO: Maybe we should named it as update_*()
+        self.__history_core.add_records(records)
+        self.__history_core.add_indexes(indexes)
+
+        self.__history_editor.on_apply()
+        self.__history_editor.close()
+
+        self.repaint()
+
+    def on_cancel(self):
+        if self.__history_editor is not None:
+            self.__history_editor.close()
+        else:
+            print('Unexpected Error: History editor is None.')
 
 
-# ------------------------------------------------- class HistoryViewer ------------------------------------------------
-#
-# class HistoryViewer(QWidget):
-#     def __init__(self):
-#         super(HistoryViewer, self).__init__()
-#
-#         self.__axis = TimeAxis()
-#
-#         root_layout = QHBoxLayout()
-#         self.setLayout(root_layout)
-#
-#         root_layout.addWidget(self.__axis)
-#
-#     def paintEvent(self, event):
-#         qp = QPainter()
-#         qp.begin(self)
-#         qp.end()
+# --------------------------------------------- class HistoryViewerDialog ----------------------------------------------
+
+class HistoryViewerDialog(QDialog):
+    def __init__(self):
+        super(HistoryViewerDialog, self).__init__()
+
+        self.time_axis = TimeAxis()
+        layout = QVBoxLayout()
+        layout.addWidget(self.time_axis)
+
+        self.setLayout(layout)
+        self.setWindowFlags(self.windowFlags() |
+                            Qt.WindowMinMaxButtonsHint |
+                            QtCore.Qt.WindowSystemMenuHint)
+
+    def get_time_axis(self) -> TimeAxis:
+        return self.time_axis
 
 
 # ---------------------------------------------------- Test ------------------------------------------------------------
@@ -642,8 +671,8 @@ def main():
     app = QApplication(sys.argv)
 
     # Indexer
-    indexer = RecordIndexer()
-    indexer.load_from_file('history.index')
+    indexer = HistoricalRecordIndexer()
+    indexer.load_from_file('depot/history.index')
     indexer.print_indexes()
 
     # Threads
@@ -653,22 +682,13 @@ def main():
 
     # History
     history = History()
+    history.add_indexes(indexer.get_indexes())
 
-    # TimeAxis
-    time_axis = TimeAxis()
-    time_axis.set_history_core(history)
-    time_axis.add_history_thread(thread)
-
-    # UI
-    layout = QVBoxLayout()
-    layout.addWidget(time_axis)
-
-    dlg = QDialog()
-    dlg.setLayout(layout)
-    dlg.setWindowFlags(dlg.windowFlags() |
-                       Qt.WindowMinMaxButtonsHint |
-                       QtCore.Qt.WindowSystemMenuHint)
-    dlg.exec()
+    # HistoryViewerDialog
+    history_viewer = HistoryViewerDialog()
+    history_viewer.get_time_axis().set_history_core(history)
+    history_viewer.get_time_axis().add_history_thread(thread)
+    history_viewer.exec()
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -10,12 +10,24 @@ from Utility.ui_utility import *
 # ------------------------------------------------- class HistoryEditor ------------------------------------------------
 
 class HistoryEditor(QWidget):
+
+    class Agent:
+        def __init__(self):
+            pass
+
+        def on_apply(self):
+            pass
+
+        def on_cancel(self):
+            pass
+
     def __init__(self, parent: QWidget):
         super(HistoryEditor, self).__init__(parent)
 
         self.__records = []
         self.__source = ''
         self.__current_record = None
+        self.__operation_agents = []
 
         self.__tab_main = QTabWidget()
         # self.__combo_depot = QComboBox()
@@ -155,14 +167,33 @@ class HistoryEditor(QWidget):
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 
+    def add_agent(self, agent):
+        self.__operation_agents.append(agent)
+
+    def edit_source(self, source: str, current_uuid: str) -> bool:
+        # TODO: Do we need this?
+        loader = HistoricalRecordLoader()
+        if not loader.from_source(source):
+            return False
+        self.__source = source
+        self.__records = loader.get_loaded_records()
+        self.__current_record = None
+        for record in self.__records:
+            if record.uuid() == current_uuid:
+                self.__current_record = record
+                break
+        if self.__current_record is None:
+            self.__current_record = HistoricalRecord()
+        self.load_record(self.__current_record)
+
     def load_record(self, record: HistoricalRecord):
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
         self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
-        self.__line_location.setText(LabelTagParser.tags_to_text(record.tags('location')))
-        self.__line_people.setText(LabelTagParser.tags_to_text(record.tags('people')))
-        self.__line_organization.setText(LabelTagParser.tags_to_text(record.tags('location')))
-        self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.tags('tags')))
+        self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
+        self.__line_people.setText(LabelTagParser.tags_to_text(record.get_tags('people')))
+        self.__line_organization.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
+        self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.get_tags('tags')))
 
         self.__line_title.setText(LabelTagParser.tags_to_text(record.title()))
         self.__text_brief.setText(LabelTagParser.tags_to_text(record.brief()))
@@ -174,8 +205,14 @@ class HistoryEditor(QWidget):
         self.__source = source
         self.update_combo_records()
 
-    def get_record(self) -> HistoricalRecord:
+    def get_source(self) -> str:
+        return self.__source
+
+    def get_records(self) -> [HistoricalRecord]:
         return self.__records
+
+    def get_current_record(self) -> HistoricalRecord:
+        return self.__current_record
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
@@ -200,35 +237,17 @@ class HistoryEditor(QWidget):
     def on_button_apply(self):
         if self.__current_record is None:
             self.__current_record = HistoricalRecord()
+            self.__records.append(self.__current_record)
         else:
             self.__current_record.reset()
-
         self.ui_to_current_record()
 
-        result = False
-        if len(self.__records) == 0:
-            source = str(self.__current_record.uuid()) + '.his'
-            result = History.Loader().to_local_depot(
-                self.__current_record, 'China', source)
-        else:
-            # The whole file should be updated
-            if self.__current_record not in self.__records:
-                self.__records.append(self.__current_record)
-            source = self.__records[0].source()
-            if source is None or len(source) == 0:
-                source = str(self.__current_record.uuid()) + '.his'
-                result = History.Loader().to_local_depot(self.__records, 'China', source)
-
-        tips = 'Save Successful.' if result else 'Save Fail.'
-        if len(source) > 0:
-            tips += '\nSave File: ' + source
-        QMessageBox.information(self, 'Save', tips, QMessageBox.Ok)
+        for agent in self.__operation_agents:
+            agent.on_apply()
 
     def on_button_cancel(self):
-        if self.parent() is not None:
-            self.parent().close()
-        else:
-            self.close()
+        for agent in self.__operation_agents:
+            agent.on_cancel()
 
     # --------------------------------------------------- Operation ----------------------------------------------------
 
@@ -294,15 +313,59 @@ class HistoryEditor(QWidget):
 # --------------------------------------------- class HistoryEditorDialog ----------------------------------------------
 
 class HistoryEditorDialog(QDialog):
-    def __init__(self):
+    def __init__(self, editor_agent: HistoryEditor.Agent = None):
         super(HistoryEditorDialog, self).__init__()
+
         self.history_editor = HistoryEditor(self)
+        self.history_editor.add_agent(editor_agent if editor_agent is not None else self)
+
         layout = QVBoxLayout()
         layout.addWidget(self.history_editor)
+
         self.setLayout(layout)
+        self.setWindowFlags(self.windowFlags() |
+                            Qt.WindowMinMaxButtonsHint |
+                            QtCore.Qt.WindowSystemMenuHint)
 
     def get_history_editor(self) -> HistoryEditor:
         return self.history_editor
+
+    # ------------------------------- HistoryEditor.Agent -------------------------------
+
+    def on_apply(self):
+        source = self.history_editor.get_source()
+        records = self.history_editor.get_records()
+
+        if records is None or len(records) == 0:
+            return
+
+        if source is None or source == '':
+            source = records[0].source()
+        if source is None or source == '':
+            source = records[0].uuid() + '.his'
+
+        # TODO: Select depot
+        result = HistoricalRecordLoader.to_local_depot(records, 'China', source)
+
+        # result = False
+        # if len(self.__records) == 0:
+        #     source = str(self.__current_record.uuid()) + '.his'
+        # else:
+        #     # The whole file should be updated
+        #     if self.__current_record not in self.__records:
+        #         self.__records.append(self.__current_record)
+        #     source = self.__records[0].source()
+        #     if source is None or len(source) == 0:
+        #         source = str(self.__current_record.uuid()) + '.his'
+        #         result = History.Loader().to_local_depot(self.__records, 'China', source)
+
+        tips = 'Save Successful.' if result else 'Save Fail.'
+        if len(source) > 0:
+            tips += '\nSave File: ' + source
+        QMessageBox.information(self, 'Save', tips, QMessageBox.Ok)
+
+    def on_cancel(self):
+        self.close()
 
 
 # ------------------------------------------------ File Entry : main() -------------------------------------------------

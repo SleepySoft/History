@@ -462,6 +462,9 @@ class HistoricalRecord(LabelTag):
     def source(self) -> str:
         return self.__record_source
 
+    def get_focus_label(self) -> str:
+        return self.__focus_label
+
     # -------------------------------------------
 
     def time(self) -> [str]:
@@ -723,13 +726,13 @@ class HistoricalRecordLoader:
         finally:
             pass
 
-    def from_source(self, source: str):
+    def from_source(self, source: str) -> bool:
         if source.startswith('http'):
             return self.from_web()
         else:
             return self.from_file(source)
 
-    def from_files(self, files: [str]):
+    def from_files(self, files: [str]) -> int:
         count = 0
         for file in files:
             if self.from_file(file):
@@ -872,6 +875,12 @@ class History:
 
     # ----------------------------------------------------------------------------
 
+    def get_record(self, _uuid: str) -> HistoricalRecord or None:
+        for record in self.__records:
+            if record.uuid() == _uuid:
+                return record
+        return None
+
     def get_records(self) ->[HistoricalRecord]:
         return self.__records
 
@@ -986,12 +995,12 @@ def test_generate_index():
     depot_path = HistoricalRecordLoader.get_local_depot_path('China')
     indexer = HistoricalRecordIndexer()
     indexer.index_path(depot_path)
-    indexer.dump_to_file('history.index')
+    indexer.dump_to_file('test_history.index')
 
 
 def test_load_index():
     indexer = HistoricalRecordIndexer()
-    indexer.load_from_file('history.index')
+    indexer.load_from_file('test_history.index')
     history = History()
     history.add_indexes(indexer.get_indexes())
     history.print_indexes()
