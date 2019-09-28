@@ -139,7 +139,7 @@ class TimeAxis(QWidget):
                     # Pre-allocation
                     self.__indexes_layout.append(-1)
                     self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
-            sorted(self.__paint_indexes, key=lambda x: x.since())
+            self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
 
             self.layout_event_to_track()
 

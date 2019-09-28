@@ -144,7 +144,7 @@ class TokenParser:
         self.__tokens = []
         self.__wrappers = []                  # [(start, close)]
         self.__space_tokens = [' ']
-        self.__escape_symbols = []
+        self.__escape_symbols = ['\\']
 
         self.__mark_idx = 0
         self.__parse_idx = 0
@@ -206,7 +206,7 @@ class TokenParser:
                 if self.__meet_token != '':
                     break
             self.offset(1)
-        return self.next_token() if self.yield_len() == 0 and not self.reaches_end() else self.yield_str()
+        return self.yield_str() if self.yield_len() > 0 or self.reaches_end() else self.next_token()
 
     # ========================================== Text processing ==========================================
 
@@ -275,7 +275,7 @@ class TokenParser:
 
 LABEL_TAG_TOKENS = [':', ',', ';', '#', '"""', '\n', ' ']
 LABEL_TAG_WRAPPERS = [('"""', '"""'), ('#', '\n')]
-LABEL_TAG_ESCAPES_SYMBOLS = []
+LABEL_TAG_ESCAPES_SYMBOLS = ['\\']
 
 
 class LabelTagParser(TokenParser):
