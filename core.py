@@ -79,7 +79,10 @@ class TimeParser:
 
     SEPARATOR = [
         '-',
-        ','
+        ',',
+        '~',
+        '－',
+        '～',
     ]
 
     PREFIX_CE = [
@@ -95,6 +98,7 @@ class TimeParser:
         'bce',
         'before common era',
         '公元前',
+        '前',
         '距今',
     ]
 
@@ -159,7 +163,7 @@ class TokenParser:
 
         for wrapper in wrappers:
             if not isinstance(wrapper, (list, tuple)) or len(wrapper) != 2:
-                print('Error wrapper format. Its format should be: [(start, close)], ...')
+                print('! Error wrapper format. Its format should be: [(start, close)], ...')
             for token in wrapper:
                 if token not in self.__tokens:
                     self.__tokens.append(token)
@@ -305,7 +309,7 @@ class LabelTagParser(TokenParser):
             elif len(expect) > 0:
                 if token not in expect:
                     ret = False
-                    print('Expect token: ' + str(expect) + ' but met: ' + token)
+                    print('! Expect token: ' + str(expect) + ' but met: ' + token)
                 expect = []
 
             if token == '#':
@@ -320,7 +324,7 @@ class LabelTagParser(TokenParser):
                 next_step = 'tag'
                 self.switch_label(token)
             elif next_step == 'tag':
-                expect = [',', '\n', '"""']
+                expect = [',', '\n', '"""', ';']
                 self.append_tag(token)
             else:
                 print('Should not reach here.')
@@ -353,14 +357,24 @@ class LabelTagParser(TokenParser):
         if tags is None:
             return ''
         if isinstance(tags, (list, tuple)):
-            tags = [str(tag) for tag in tags]
+            tags = [LabelTagParser.check_wrap_tag(tag) for tag in tags]
             if len(tags) > 0:
                 text = ', '.join(tags)
             else:
                 return ''
         else:
-            text = str(tags)
+            text = LabelTagParser.check_wrap_tag(tags)
         return text
+
+    @staticmethod
+    def check_wrap_tag(tag: any) -> str:
+        if not isinstance(tag, str):
+            tag = str(tag)
+        tag = tag.replace('"""', '\\"""')
+        for token in LABEL_TAG_TOKENS:
+            if token in tag:
+                return '"""' + tag + '"""'
+        return tag
 
 
 # --------------------------------------------------- class LabelTag ---------------------------------------------------
@@ -383,7 +397,7 @@ class LabelTag:
 
     def is_label_empty(self, label: str) -> bool:
         tags = self.__label_tags.get(label)
-        tags_text = LabelTag.tags_to_text(tags)
+        tags_text = LabelTagParser.tags_to_text(tags)
         return tags_text == ''
 
     def add_tags(self, label: str, tags: str or [str]):
@@ -406,7 +420,7 @@ class LabelTag:
             labels = list(self.__label_tags.keys())
         for label in labels:
             tags = self.__label_tags.get(label)
-            tags_text = LabelTag.tags_to_text(tags)
+            tags_text = LabelTagParser.tags_to_text(tags)
             if tags_text != '':
                 text += label + ': ' + tags_text + new_line
         return text
@@ -422,16 +436,16 @@ class LabelTag:
         """
         return True
 
-    @staticmethod
-    def tags_to_text(tags: [str]) -> str:
-        if tags is None:
-            return ''
-        elif isinstance(tags, str):
-            return tags
-        elif isinstance(tags, (list, tuple)):
-            return ', '.join(tags)
-        else:
-            return str(tags)
+    # @staticmethod
+    # def tags_to_text(tags: [str]) -> str:
+    #     if tags is None:
+    #         return ''
+    #     elif isinstance(tags, str):
+    #         return tags
+    #     elif isinstance(tags, (list, tuple)):
+    #         return ', '.join(tags)
+    #     else:
+    #         return str(tags)
 
 
 # ----------------------------------------------- class HistoricalRecord -----------------------------------------------
@@ -700,7 +714,7 @@ class HistoricalRecordLoader:
             with open(file_path, 'wt', encoding='utf-8') as f:
                 for record in records:
                     record.set_source(file_path)
-                    text = record.dump()
+                    text = record.dump_record()
                     f.write(text)
             return True
         except Exception as e:

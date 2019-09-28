@@ -191,29 +191,7 @@ class HistoryEditor(QWidget):
         if self.__current_record is None:
             self.__current_record = HistoricalRecord()
         self.update_combo_records()
-        self.load_record(self.__current_record)
-
-    def load_record(self, record: HistoricalRecord or str):
-        # if isinstance(record, str):
-        #     for r in self.__records:
-        #         if r.uuid() == record:
-        #             record = r
-        #             break
-        # if isinstance(record, str):
-        #     print('Cannot load record for uuid: ' + record)
-        #     return
-
-        self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
-        self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
-
-        self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
-        self.__line_people.setText(LabelTagParser.tags_to_text(record.get_tags('people')))
-        self.__line_organization.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
-        self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.get_tags('tags')))
-
-        self.__line_title.setText(LabelTagParser.tags_to_text(record.title()))
-        self.__text_brief.setText(LabelTagParser.tags_to_text(record.brief()))
-        self.__text_record.setText(LabelTagParser.tags_to_text(record.event()))
+        self.record_to_ui(self.__current_record)
 
     def set_records(self, records: HistoricalRecord or [HistoricalRecord], source: str):
         self.__records = records if isinstance(records, list) else [records]
@@ -256,7 +234,9 @@ class HistoryEditor(QWidget):
             self.__records.append(self.__current_record)
         else:
             self.__current_record.reset()
-        self.ui_to_current_record()
+
+        if not self.ui_to_record(self.__current_record):
+            return
 
         for agent in self.__operation_agents:
             agent.on_apply()
@@ -277,47 +257,96 @@ class HistoryEditor(QWidget):
             return
 
         self.__current_record = record
-        self.load_record(record)
+        self.record_to_ui(record)
 
     # --------------------------------------------------- Operation ----------------------------------------------------
 
-    def ui_to_current_record(self, only_locked: bool = False):
-        """
-        UI data to current record.
-        :param only_locked: Only used for keeping the locked data. Pass True to enable this feature.
-        :return:
-        """
-        input_time = self.__line_time.text()
-        input_location = self.__line_location.text()
-        input_people = self.__line_people.text()
-        input_organization = self.__line_organization.text()
-        input_default_tags = self.__line_default_tags.text()
-
+    def clear_ui(self):
         lock_time = self.__check_time.isChecked()
         lock_location = self.__check_location.isChecked()
         lock_people = self.__check_people.isChecked()
         lock_organization = self.__check_organization.isChecked()
         lock_default_tags = self.__check_default_tags.isChecked()
 
+        self.__label_uuid.setText('')
+
+        if not lock_time:
+            self.__line_time.setText('')
+        if not lock_location:
+            self.__line_location.setText('')
+        if not lock_people:
+            self.__line_people.setText('')
+        if not lock_organization:
+            self.__line_organization.setText('')
+        if not lock_default_tags:
+            self.__line_default_tags.setText('')
+
+    def ui_to_record(self, record: HistoricalRecord) -> bool:
+        input_time = self.__line_time.text()
+        input_location = self.__line_location.text()
+        input_people = self.__line_people.text()
+        input_organization = self.__line_organization.text()
+        input_default_tags = self.__line_default_tags.text()
+
         input_title = self.__line_title.text()
         input_brief = self.__text_brief.toPlainText()
         input_event = self.__text_record.toPlainText()
 
-        if not only_locked or lock_time:
-            self.__current_record.set_label_tags('time',         input_time.split(','))
-        if not only_locked or lock_location:
-            self.__current_record.set_label_tags('location',     input_location.split(','))
-        if not only_locked or lock_people:
-            self.__current_record.set_label_tags('people',       input_people.split(','))
-        if not only_locked or lock_organization:
-            self.__current_record.set_label_tags('organization', input_organization.split(','))
-        if not only_locked or lock_default_tags:
-            self.__current_record.set_label_tags('tags',         input_default_tags.split(','))
+        focus_time = self.__radio_time.isChecked()
+        focus_location = self.__radio_location.isChecked()
+        focus_poeple = self.__radio_people.isChecked()
+        focus_organization = self.__radio_organization.isChecked()
+        focus_record = self.__radio_record.isChecked()
 
-        if not only_locked:
-            self.__current_record.set_label_tags('title', input_title)
-            self.__current_record.set_label_tags('brief', input_brief)
-            self.__current_record.set_label_tags('event', input_event)
+        focus_label = ''
+        input_valid = False
+
+        if focus_time:
+            focus_label = 'time'
+            input_valid = (len(input_time.strip()) != 0)
+        if focus_location:
+            focus_label = 'location'
+            input_valid = (len(input_location.strip()) != 0)
+        if focus_poeple:
+            focus_label = 'people'
+            input_valid = (len(input_people.strip()) != 0)
+        if focus_organization:
+            focus_label = 'organization'
+            input_valid = (len(input_time.strip()) != 0)
+        if focus_record:
+            focus_label = 'event'
+            input_valid = (len(input_title.strip()) != 0 or
+                           len(input_brief.strip()) != 0 or
+                           len(input_event.strip()) != 0)
+        if not input_valid:
+            tips = 'The focus label you select is: ' + focus_label + ".\n\nBut you didn't put content in it."
+            QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
+            return False
+
+        record.set_label_tags('time',         input_time.split(','))
+        record.set_label_tags('location',     input_location.split(','))
+        record.set_label_tags('people',       input_people.split(','))
+        record.set_label_tags('organization', input_organization.split(','))
+        record.set_label_tags('tags',         input_default_tags.split(','))
+
+        record.set_label_tags('title', input_title)
+        record.set_label_tags('brief', input_brief)
+        record.set_label_tags('event', input_event)
+
+        return True
+
+    def record_to_ui(self, record: HistoricalRecord or str):
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
+        self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
+
+        self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
+        self.__line_people.setText(LabelTagParser.tags_to_text(record.get_tags('people')))
+        self.__line_organization.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
+        self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.get_tags('tags')))
+
+        self.__line_title.setText(LabelTagParser.tags_to_text(record.title()))
+        self.__text_brief.setText(LabelTagParser.tags_to_text(record.brief()))
+        self.__text_record.setText(LabelTagParser.tags_to_text(record.event()))
 
     def create_new_record(self):
         if self.__current_record is not None:
@@ -325,9 +354,9 @@ class HistoryEditor(QWidget):
             pass
         self.__current_record = HistoricalRecord()
         self.__records.append(self.__current_record)
-        self.ui_to_current_record(True)
-        self.load_record(self.__current_record)
+        self.clear_ui()
         self.update_combo_records()
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
 
     def create_new_file(self):
         self.create_new_record()
