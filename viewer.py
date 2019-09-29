@@ -401,6 +401,7 @@ class TimeAxis(QWidget):
 
         self.__history_editor = HistoryEditorDialog(editor_agent=self)
         self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
+        self.__history_editor.show_browser(False)
         self.__history_editor.exec()
 
     # ----------------------------------------------------- Paint ------------------------------------------------------
@@ -573,7 +574,7 @@ class TimeAxis(QWidget):
         #         delta = 0
         # return sign * delta * ratio
 
-    # ------------------------------- HistoryEditor.Agent -------------------------------
+    # ------------------------------- HistoryRecordEditor.Agent -------------------------------
 
     def on_apply(self):
         if self.__history_editor is None:

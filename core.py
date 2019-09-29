@@ -576,29 +576,24 @@ class HistoricalRecord(LabelTag):
         # Move the focus label to the tail.
         if self.__focus_label in dump_list:
             dump_list.remove(self.__focus_label)
-            dump_list.append(self.__focus_label)
+        dump_list.append(self.__focus_label)
 
         # uuid should not in the common dump list
         if 'uuid' in dump_list:
             dump_list.remove('uuid')
 
         # Extra: The start label of HistoricalRecord
-        # text = '[START]: ' + self.__focus_label + new_line
         text = LabelTagParser.label_tags_to_text('[START]', self.__focus_label, new_line)
 
         # Extra: The uuid of event
         if self.__uuid is None or self.__uuid == '':
             self.__uuid = str(uuid.uuid4())
-        # text += 'uuid:' + self.__uuid + new_line
         text += LabelTagParser.label_tags_to_text('uuid', self.__uuid, new_line)
 
-        # Dump common labels
+        # ---------------------- Dump common labels ----------------------
         text += super(HistoricalRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
-            # text += 'since: ' + str(self.since()) + new_line
-            # text += 'until: ' + str(self.until()) + new_line
-            # text += 'source: """' + str(self.source()) + '"""' + new_line
             text += LabelTagParser.label_tags_to_text('since', self.since(), new_line)
             text += LabelTagParser.label_tags_to_text('until', self.until(), new_line)
             text += LabelTagParser.label_tags_to_text('source', self.source(), new_line)
@@ -875,7 +870,7 @@ class HistoricalRecordLoader:
                 else:
                     for sfx in suffix:
                         if filename.endswith(sfx):
-                            files.append(filename)
+                            files.append(path.join(parent, filename))
                             break
         return files
 

@@ -1,15 +1,15 @@
 import traceback
 
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
-    QTabWidget, QComboBox, QGridLayout, QRadioButton
+    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem
 
 from core import *
 from Utility.ui_utility import *
 
 
-# ------------------------------------------------- class HistoryEditor ------------------------------------------------
+# ---------------------------------------------- class HistoryRecordEditor ---------------------------------------------
 
-class HistoryEditor(QWidget):
+class HistoryRecordEditor(QWidget):
 
     class Agent:
         def __init__(self):
@@ -22,10 +22,11 @@ class HistoryEditor(QWidget):
             pass
 
     def __init__(self, parent: QWidget):
-        super(HistoryEditor, self).__init__(parent)
+        super(HistoryRecordEditor, self).__init__(parent)
 
         self.__records = []
         self.__source = ''
+        self.__current_depot = 'default'
         self.__current_record = None
         self.__operation_agents = []
 
@@ -176,7 +177,10 @@ class HistoryEditor(QWidget):
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
 
-    def edit_source(self, source: str, current_uuid: str) -> bool:
+    def set_current_depot(self, depot: str):
+        self.__current_depot = depot
+
+    def edit_source(self, source: str, current_uuid: str = '') -> bool:
         # TODO: Do we need this?
         loader = HistoricalRecordLoader()
         if not loader.from_source(source):
@@ -184,10 +188,12 @@ class HistoryEditor(QWidget):
         self.__source = source
         self.__records = loader.get_loaded_records()
         self.__current_record = None
+
         for record in self.__records:
-            if record.uuid() == current_uuid:
+            if current_uuid is None or current_uuid == '' or record.uuid() == current_uuid:
                 self.__current_record = record
                 break
+
         if self.__current_record is None:
             self.__current_record = HistoricalRecord()
         self.update_combo_records()
@@ -281,6 +287,10 @@ class HistoryEditor(QWidget):
         if not lock_default_tags:
             self.__line_default_tags.setText('')
 
+        self.__line_title.clear()
+        self.__text_brief.clear()
+        self.__text_record.clear()
+
     def ui_to_record(self, record: HistoricalRecord) -> bool:
         input_time = self.__line_time.text()
         input_location = self.__line_location.text()
@@ -352,15 +362,19 @@ class HistoryEditor(QWidget):
         if self.__current_record is not None:
             # TODO:
             pass
-        self.__current_record = HistoricalRecord()
-        self.__records.append(self.__current_record)
-        self.clear_ui()
-        self.update_combo_records()
-        self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+        if self.__source is None or self.__source == '':
+            self.create_new_file()
+        else:
+            self.__current_record = HistoricalRecord(self.__source)
+            self.__records.append(self.__current_record)
+            self.clear_ui()
+            self.update_combo_records()
+            self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
 
     def create_new_file(self):
+        self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
+        self.__records.clear()
         self.create_new_record()
-        self.__source = str(self.__current_record.uuid()) + '.his'
 
     # def save_records(self):
     #     result = History.Loader().to_local_depot(self.__records, 'China', self.__source)
@@ -377,16 +391,127 @@ class HistoryEditor(QWidget):
         return None
 
 
+# --------------------------------------------- class HistoryRecordBrowser ---------------------------------------------
+
+class HistoryRecordBrowser(QWidget):
+
+    class Agent:
+        def __init__(self):
+            pass
+
+        def on_select_depot(self, depot: str):
+            pass
+
+        def on_select_record(self, record: str):
+            pass
+
+    def __init__(self, parent: QWidget):
+        super(HistoryRecordBrowser, self).__init__(parent)
+
+        self.__ignore_combo = False
+        self.__current_depot = 'default'
+        self.__operation_agents = []
+
+        self.__combo_depot = QComboBox()
+        self.__list_record = QListWidget()
+
+        self.init_ui()
+        self.config_ui()
+
+    def init_ui(self):
+        root_layout = QVBoxLayout()
+        self.setLayout(root_layout)
+
+        root_layout.addWidget(self.__combo_depot, 0)
+        root_layout.addWidget(self.__list_record, 10)
+
+    def config_ui(self):
+        self.setMinimumWidth(200)
+        self.update_combo_depot()
+        self.__combo_depot.currentIndexChanged.connect(self.on_combo_depot_changed)
+        self.__list_record.selectionModel().selectionChanged.connect(self.on_list_record_changed)
+
+    def add_agent(self, agent):
+        self.__operation_agents.append(agent)
+
+    def refresh(self):
+        self.update_list_record(self.__current_depot)
+
+    def get_current_depot(self):
+        return self.__current_depot
+
+    def update_combo_depot(self):
+        depots = HistoryRecordBrowser.enumerate_local_depot()
+        if len(depots) == 0:
+            return
+        self.__ignore_combo = True
+        for depot in depots:
+            self.__combo_depot.addItem(os.path.basename(depot), depot)
+        self.__ignore_combo = False
+
+        self.__combo_depot.setCurrentIndex(0)
+        self.on_combo_depot_changed()
+
+    def update_list_record(self, depot: str):
+        record_dir_file = HistoryRecordBrowser.enumerate_depot_record(depot)
+
+        self.__list_record.clear()
+        for record_path, record_file in record_dir_file:
+            item = QListWidgetItem()
+            item.setText(record_file)
+            item.setData(QtCore.Qt.UserRole, path.join(record_path, record_file))
+            self.__list_record.addItem(item)
+
+    def on_combo_depot_changed(self):
+        if self.__ignore_combo:
+            return
+        depot = self.__combo_depot.currentText()
+        self.update_list_record(depot)
+
+        for agent in self.__operation_agents:
+            agent.on_select_depot(depot)
+
+    def on_list_record_changed(self):
+        item = self.__list_record.currentItem()
+        record_path = item.data(QtCore.Qt.UserRole)
+
+        for agent in self.__operation_agents:
+            agent.on_select_record(record_path)
+
+    @staticmethod
+    def enumerate_local_depot() -> list:
+        depot_root = HistoricalRecordLoader.get_local_depot_root()
+        return os.listdir(depot_root)
+
+    @staticmethod
+    def enumerate_depot_record(depot: str) -> list:
+        record_dir_file = []
+        depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
+        for parent, dirnames, filenames in os.walk(depot_path):
+            for filename in filenames:
+                if filename.endswith('.his'):
+                    record_dir_file.append((parent, filename))
+        return record_dir_file
+
+
 # --------------------------------------------- class HistoryEditorDialog ----------------------------------------------
 
 class HistoryEditorDialog(QDialog):
-    def __init__(self, editor_agent: HistoryEditor.Agent = None):
+    def __init__(self,
+                 editor_agent: HistoryRecordEditor.Agent = None,
+                 browser_agent: HistoryRecordBrowser.Agent = None):
         super(HistoryEditorDialog, self).__init__()
 
-        self.history_editor = HistoryEditor(self)
+        self.__current_depot = 'default'
+
+        self.history_editor = HistoryRecordEditor(self)
         self.history_editor.add_agent(editor_agent if editor_agent is not None else self)
 
-        layout = QVBoxLayout()
+        self.history_browser = HistoryRecordBrowser(self)
+        self.history_browser.add_agent(browser_agent if browser_agent is not None else self)
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.history_browser)
         layout.addWidget(self.history_editor)
 
         self.setLayout(layout)
@@ -394,10 +519,19 @@ class HistoryEditorDialog(QDialog):
                             Qt.WindowMinMaxButtonsHint |
                             QtCore.Qt.WindowSystemMenuHint)
 
-    def get_history_editor(self) -> HistoryEditor:
+        self.__current_depot = self.history_browser.get_current_depot()
+        self.history_editor.set_current_depot(self.__current_depot)
+
+    def show_browser(self, show: bool = True):
+        self.get_history_browser().setVisible(show)
+
+    def get_history_editor(self) -> HistoryRecordEditor:
         return self.history_editor
 
-    # ------------------------------- HistoryEditor.Agent -------------------------------
+    def get_history_browser(self) -> HistoryRecordBrowser:
+        return self.history_browser
+
+    # ------------------------------- HistoryRecordEditor.Agent -------------------------------
 
     def on_apply(self):
         source = self.history_editor.get_source()
@@ -409,7 +543,7 @@ class HistoryEditorDialog(QDialog):
         if source is None or source == '':
             source = records[0].source()
         if source is None or source == '':
-            source = records[0].uuid() + '.his'
+            source = path.join(self.__current_depot, records[0].uuid() + '.his')
 
         # TODO: Select depot
         # result = HistoricalRecordLoader.to_local_source(records, source)
@@ -432,8 +566,19 @@ class HistoryEditorDialog(QDialog):
             tips += '\nSave File: ' + source
         QMessageBox.information(self, 'Save', tips, QMessageBox.Ok)
 
+        self.history_browser.refresh()
+
     def on_cancel(self):
         self.close()
+
+    # ------------------------------ HistoryRecordBrowser.Agent ------------------------------
+
+    def on_select_depot(self, depot: str):
+        self.__current_depot = depot
+        self.history_editor.set_current_depot(depot)
+
+    def on_select_record(self, record: str):
+        self.history_editor.edit_source(record)
 
 
 # ------------------------------------------------ File Entry : main() -------------------------------------------------
