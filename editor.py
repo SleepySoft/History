@@ -362,11 +362,11 @@ class HistoryEditor(QWidget):
         self.create_new_record()
         self.__source = str(self.__current_record.uuid()) + '.his'
 
-    def save_records(self):
-        result = History.Loader().to_local_depot(self.__records, 'China', self.__source)
-        tips = 'Save Successful.' if result else 'Save Fail.'
-        tips += '\nSave File: ' + self.__source
-        QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
+    # def save_records(self):
+    #     result = History.Loader().to_local_depot(self.__records, 'China', self.__source)
+    #     tips = 'Save Successful.' if result else 'Save Fail.'
+    #     tips += '\nSave File: ' + self.__source
+    #     QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
 
     # ------------------------------------------------------------------------------
 
@@ -412,7 +412,8 @@ class HistoryEditorDialog(QDialog):
             source = records[0].uuid() + '.his'
 
         # TODO: Select depot
-        result = HistoricalRecordLoader.to_local_depot(records, 'China', source)
+        # result = HistoricalRecordLoader.to_local_source(records, source)
+        result = HistoricalRecordLoader.to_local_source(records, source)
 
         # result = False
         # if len(self.__records) == 0:

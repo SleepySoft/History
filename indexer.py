@@ -10,7 +10,7 @@ def main():
         for arg in sys.argv[1:]:
             indexer.index_path(arg)
     else:
-        depot_path = HistoricalRecordLoader.get_local_depot_path('China')
+        depot_path = HistoricalRecordLoader.join_local_depot_path('China')
         indexer.index_path(depot_path)
     indexer.dump_to_file('depot/history.index')
 

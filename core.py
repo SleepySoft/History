@@ -1,6 +1,7 @@
 import os
-import string
 import uuid
+import ntpath
+import posixpath
 from os import sys, path, listdir
 
 
@@ -339,25 +340,22 @@ class LabelTagParser(TokenParser):
             self.__last_tags.append(tag)
 
     @staticmethod
-    def label_tags_to_text(label: str, tags, whole: bool = False):
+    def label_tags_to_text(label: str, tags, new_line: str = '\n'):
         if label is None or len(label) == 0:
             return ''
-        if whole:
-            if len(str(tags)) == 0:
-                return ''
-            tag_text = '"""' + str(tags) + '"""'
         else:
-            tag_text = LabelTagParser.tags_to_text(tags)
+            tag_text = LabelTagParser.tags_to_text(tags, True)
             if len(tag_text) == 0:
                 return ''
-        return label + ': ' + tag_text + '\n'
+        return label + ': ' + tag_text + new_line
 
     @staticmethod
-    def tags_to_text(tags):
+    def tags_to_text(tags, persistence: bool = False):
         if tags is None:
             return ''
         if isinstance(tags, (list, tuple)):
-            tags = [LabelTagParser.check_wrap_tag(tag) for tag in tags]
+            if persistence:
+                tags = [LabelTagParser.check_wrap_tag(tag.strip()) for tag in tags]
             if len(tags) > 0:
                 text = ', '.join(tags)
             else:
@@ -420,7 +418,7 @@ class LabelTag:
             labels = list(self.__label_tags.keys())
         for label in labels:
             tags = self.__label_tags.get(label)
-            tags_text = LabelTagParser.tags_to_text(tags)
+            tags_text = LabelTagParser.tags_to_text(tags, True)
             if tags_text != '':
                 text += label + ': ' + tags_text + new_line
         return text
@@ -516,6 +514,10 @@ class HistoricalRecord(LabelTag):
         self.__focus_label = label
 
     def set_label_tags(self, label: str, tags: str or [str]):
+        if isinstance(tags, str):
+            tags = [tags]
+        tags = [tag.strip() for tag in tags]
+
         if label == 'uuid':
             self.__uuid = str(tags[0])
         elif label == 'time':
@@ -581,24 +583,30 @@ class HistoricalRecord(LabelTag):
             dump_list.remove('uuid')
 
         # Extra: The start label of HistoricalRecord
-        text = '[START]: ' + self.__focus_label + new_line
+        # text = '[START]: ' + self.__focus_label + new_line
+        text = LabelTagParser.label_tags_to_text('[START]', self.__focus_label, new_line)
 
         # Extra: The uuid of event
         if self.__uuid is None or self.__uuid == '':
             self.__uuid = str(uuid.uuid4())
-        text += 'uuid:' + self.__uuid + new_line
+        # text += 'uuid:' + self.__uuid + new_line
+        text += LabelTagParser.label_tags_to_text('uuid', self.__uuid, new_line)
 
         # Dump common labels
         text += super(HistoricalRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
-            text += 'since: ' + str(self.since()) + new_line
-            text += 'until: ' + str(self.until()) + new_line
-            text += 'source: """' + str(self.source()) + '"""' + new_line
+            # text += 'since: ' + str(self.since()) + new_line
+            # text += 'until: ' + str(self.until()) + new_line
+            # text += 'source: """' + str(self.source()) + '"""' + new_line
+            text += LabelTagParser.label_tags_to_text('since', self.since(), new_line)
+            text += LabelTagParser.label_tags_to_text('until', self.until(), new_line)
+            text += LabelTagParser.label_tags_to_text('source', self.source(), new_line)
 
         # If the focus label missing, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
-            text += self.__focus_label + ': end' + new_line
+            # text += self.__focus_label + ': end' + new_line
+            text += LabelTagParser.label_tags_to_text(self.__focus_label, 'end', new_line)
 
         return text
 
@@ -705,15 +713,21 @@ class HistoricalRecordLoader:
         return self.__records
 
     @staticmethod
-    def to_local_depot(records: HistoricalRecord or [HistoricalRecord], depot: str, file: str) -> bool:
+    def to_local_depot(records: HistoricalRecord or [HistoricalRecord], depot: str, source: str) -> bool:
+        base_name = os.path.basename(source)
+        depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
+        source = path.join(depot_path, base_name)
+        HistoricalRecordLoader.to_local_source(records, source)
+
+    @staticmethod
+    def to_local_source(records: HistoricalRecord or [HistoricalRecord], source: str):
         if not isinstance(records, (list, tuple)):
             records = [records]
-        depot_path = HistoricalRecordLoader.get_local_depot_path(depot)
-        file_path = path.join(depot_path, file)
         try:
-            with open(file_path, 'wt', encoding='utf-8') as f:
+            full_path = HistoricalRecordLoader.source_to_absolute_path(source)
+            print('| <= Write record: ' + full_path)
+            with open(full_path, 'wt', encoding='utf-8') as f:
                 for record in records:
-                    record.set_source(file_path)
                     text = record.dump_record()
                     f.write(text)
             return True
@@ -726,7 +740,7 @@ class HistoricalRecordLoader:
 
     def from_local_depot(self, depot: str) -> int:
         try:
-            depot_path = HistoricalRecordLoader.get_local_depot_path(depot)
+            depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
             return self.from_directory(depot_path)
         except Exception as e:
             print(e)
@@ -747,10 +761,10 @@ class HistoricalRecordLoader:
             pass
 
     def from_source(self, source: str) -> bool:
-        if source.startswith('http'):
+        if HistoricalRecordLoader.is_web_url(source):
             return self.from_web()
         else:
-            return self.from_file(source)
+            return self.from_file(HistoricalRecordLoader.source_to_absolute_path(source))
 
     def from_files(self, files: [str]) -> int:
         count = 0
@@ -773,6 +787,7 @@ class HistoricalRecordLoader:
 
     def from_file(self, file: str) -> bool:
         try:
+            print('| => Load record: ' + file)
             with open(file, 'rt', encoding='utf-8') as f:
                 self.from_text(f.read(), file)
             return True
@@ -805,7 +820,7 @@ class HistoricalRecordLoader:
                 continue
 
             if record is None:
-                record = HistoricalRecord(source)
+                record = HistoricalRecord(HistoricalRecordLoader.normalize_source(source))
                 record.set_focus_label(focus)
             record.set_label_tags(label, tags)
 
@@ -820,9 +835,34 @@ class HistoricalRecordLoader:
             self.__records.append(record)
 
     @staticmethod
-    def get_local_depot_path(depot: str) -> str:
-        root_path = path.dirname(path.abspath(__file__))
-        depot_path = path.join(root_path, 'depot', depot)
+    def is_web_url(_path: str):
+        return _path.startswith('http') or _path.startswith('ftp')
+
+    @staticmethod
+    def is_absolute_path(_path: str):
+        return ntpath.isabs(_path) or posixpath.isabs(_path)
+
+    @staticmethod
+    def source_to_absolute_path(source: str) -> str:
+        return source if \
+            HistoricalRecordLoader.is_absolute_path(source) else \
+            path.join(HistoricalRecordLoader.get_local_depot_root(), source)
+
+    @staticmethod
+    def normalize_source(source: str) -> str:
+        depot_root = HistoricalRecordLoader.get_local_depot_root()
+        return source[len(depot_root) + 1:] if source.startswith(depot_root) else source
+
+    @staticmethod
+    def get_local_depot_root() -> str:
+        project_root = path.dirname(path.abspath(__file__))
+        depot_path = path.join(project_root, 'depot')
+        return depot_path
+
+    @staticmethod
+    def join_local_depot_path(depot: str) -> str:
+        root_path = HistoricalRecordLoader.get_local_depot_root()
+        depot_path = path.join(root_path, depot)
         return depot_path
 
     @staticmethod
@@ -873,6 +913,7 @@ class HistoricalRecordIndexer:
                 index.source.replace(prefix_old, prefix_new)
 
     def dump_to_file(self, file: str):
+        print('| => Write record: ' + file)
         with open(file, 'wt', encoding='utf-8') as f:
             for index in self.__indexes:
                 text = index.dump_record(True)
@@ -1014,7 +1055,7 @@ def test_history_basic():
 # -------------------------------- Indexer --------------------------------
 
 def test_generate_index():
-    depot_path = HistoricalRecordLoader.get_local_depot_path('China')
+    depot_path = HistoricalRecordLoader.join_local_depot_path('China')
     indexer = HistoricalRecordIndexer()
     indexer.index_path(depot_path)
     indexer.dump_to_file('test_history.index')
