@@ -179,13 +179,18 @@ class HistoryRecordEditor(QWidget):
 
     def set_current_depot(self, depot: str):
         self.__current_depot = depot
+        print('| Editor current depot: ' + depot)
+
+    def set_current_source(self, source: str):
+        self.__source = source
+        print('Editor current source: ' + source)
 
     def edit_source(self, source: str, current_uuid: str = '') -> bool:
         # TODO: Do we need this?
         loader = HistoricalRecordLoader()
         if not loader.from_source(source):
             return False
-        self.__source = source
+        self.set_current_source(source)
         self.__records = loader.get_loaded_records()
         self.__current_record = None
 
@@ -202,7 +207,7 @@ class HistoryRecordEditor(QWidget):
     def set_records(self, records: HistoricalRecord or [HistoricalRecord], source: str):
         self.__records = records if isinstance(records, list) else [records]
         self.__current_record = self.__records[0]
-        self.__source = source
+        self.set_current_source(source)
         self.update_combo_records()
 
     def get_source(self) -> str:
@@ -362,19 +367,22 @@ class HistoryRecordEditor(QWidget):
         if self.__current_record is not None:
             # TODO:
             pass
-        if self.__source is None or self.__source == '':
-            self.create_new_file()
-        else:
-            self.__current_record = HistoricalRecord(self.__source)
-            self.__records.append(self.__current_record)
-            self.clear_ui()
-            self.update_combo_records()
-            self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+        self.__new_record()
+
+        self.clear_ui()
+        self.update_combo_records()
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
 
     def create_new_file(self):
-        self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
-        self.__records.clear()
-        self.create_new_record()
+        self.__new_file()
+
+        self.clear_ui()
+        self.update_combo_records()
+        self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+
+        # self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
+        # self.__records.clear()
+        # self.create_new_record()
 
     # def save_records(self):
     #     result = History.Loader().to_local_depot(self.__records, 'China', self.__source)
@@ -383,6 +391,19 @@ class HistoryRecordEditor(QWidget):
     #     QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
 
     # ------------------------------------------------------------------------------
+
+    def __new_file(self):
+        self.__records.clear()
+        self.set_current_source('')
+        self.__new_record()
+
+    def __new_record(self):
+        self.__current_record = HistoricalRecord()
+        self.__records.append(self.__current_record)
+        if self.__source is None or self.__source == '':
+            self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
+            self.set_current_source(self.__source)
+        self.__current_record.set_source(self.__source)
 
     def __look_for_record(self, _uuid: str):
         for record in self.__records:
@@ -467,6 +488,7 @@ class HistoryRecordBrowser(QWidget):
             return
         depot = self.__combo_depot.currentText()
         self.update_list_record(depot)
+        self.__current_depot = depot
 
         for agent in self.__operation_agents:
             agent.on_select_depot(depot)

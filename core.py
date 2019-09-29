@@ -945,10 +945,10 @@ class History:
     def get_indexes(self) ->[HistoricalRecord]:
         return self.__indexes
 
-    def add_records(self, records: [HistoricalRecord]):
+    def update_records(self, records: [HistoricalRecord]):
         History.upsert_records(self.__records, records)
 
-    def add_indexes(self, indexes: [HistoricalRecord]):
+    def update_indexes(self, indexes: [HistoricalRecord]):
         History.upsert_records(self.__indexes, indexes)
 
     def reset_records(self):
@@ -956,6 +956,17 @@ class History:
 
     def reset_indexes(self):
         self.__indexes.clear()
+
+    # ----------------------------------------------------------------------------
+
+    def load_source(self, source: str):
+        pass
+
+    def load_depot(self, depot: str):
+        pass
+
+    def load_path(self, _path: str):
+        pass
 
     # ----------------------------------------------------------------------------
 
@@ -1043,7 +1054,7 @@ def test_history_basic():
 
     history = History()
     records = loader.get_loaded_records()
-    history.add_records(records)
+    history.update_records(records)
     history.print_records()
 
 
@@ -1060,7 +1071,7 @@ def test_load_index():
     indexer = HistoricalRecordIndexer()
     indexer.load_from_file('test_history.index')
     history = History()
-    history.add_indexes(indexer.get_indexes())
+    history.update_indexes(indexer.get_indexes())
     history.print_indexes()
 
 

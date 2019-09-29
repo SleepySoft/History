@@ -394,7 +394,7 @@ class TimeAxis(QWidget):
         #         print('Load source error : ' + source)
         #         return
         #     records = loader.get_loaded_records()
-        #     self.add_records(records)
+        #     self.update_records(records)
         # else:
         #     # It's a full record
         #     records = [index]
@@ -591,8 +591,8 @@ class TimeAxis(QWidget):
         indexes = indexer.get_indexes()
 
         # TODO: Maybe we should named it as update_*()
-        self.__history_core.add_records(records)
-        self.__history_core.add_indexes(indexes)
+        self.__history_core.update_records(records)
+        self.__history_core.update_indexes(indexes)
 
         self.__history_editor.on_apply()
         self.__history_editor.close()
@@ -683,7 +683,7 @@ def main():
 
     # History
     history = History()
-    history.add_indexes(indexer.get_indexes())
+    history.update_indexes(indexer.get_indexes())
 
     # HistoryViewerDialog
     history_viewer = HistoryViewerDialog()
