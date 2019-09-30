@@ -330,7 +330,7 @@ class HistoryRecordEditor(QWidget):
             input_valid = (len(input_people.strip()) != 0)
         if focus_organization:
             focus_label = 'organization'
-            input_valid = (len(input_time.strip()) != 0)
+            input_valid = (len(input_organization.strip()) != 0)
         if focus_record:
             focus_label = 'event'
             input_valid = (len(input_title.strip()) != 0 or

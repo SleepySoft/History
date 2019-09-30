@@ -4,3 +4,12 @@
 [START]: index; uuid: 5e5ef264-8c40-4af2-8b66-5900fe011993; abstract: 东周; since: -770.0; until: -256.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
 [START]: index; uuid: 7c7a6056-ad8b-4e42-ad5e-b5e3331065e4; abstract: 春秋; since: -770.0; until: -476.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
 [START]: index; uuid: 3d721692-290d-4d1c-b078-cedc3aa623aa; abstract: 战国; since: -475.0; until: -221.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 26a9e3d5-1aa9-478b-bb7d-bf6bdc497c2b; abstract: 秦朝; since: -221.0; until: -207.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 13362e3f-66dd-423f-a2e9-8338bf9cf866; abstract: 汉朝; since: -202.0; until: 220.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 8b4522c5-88bf-4c02-a7a9-0f9b273b9889; abstract: 三国; since: 220.0; until: 280.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 0dbf6c09-27b7-4b94-8751-17672e13d851; abstract: 晋朝（266年－420年），中国历史上的朝代，上承三国下启南北朝，分为西晋与东晋两个时期，其中西晋为; since: 266.0; until: 420.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: fa980ba5-50c5-4a80-bf3c-133e65fc97e1; abstract: 西晋; since: 266.0; until: 371.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 0cf22e8f-da67-4bea-bd7e-37735f838feb; abstract: 东晋; since: 271.0; until: 420.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: e8bb62b5-2fb5-4e76-9c74-3ad3d402eac5; abstract: 南北朝; since: 420.0; until: 589.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 353807b4-a658-4426-aa1d-6b6caa7fe09c; abstract: 北朝; since: 386.0; until: 581.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 3851a827-1a85-4583-b34f-f45691e1230c; abstract: 南朝; since: 420.0; until: 589.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
