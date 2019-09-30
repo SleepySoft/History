@@ -162,7 +162,7 @@ class TimeAxis(QWidget):
                         self.__indexes_layout[j] = 0
                     else:
                         # Default layout to the last track
-                        if track_place is None or index.since() > track_place or (i == self.__thread_track_count - 1):
+                        if track_place is None or index.since() >= track_place or (i == self.__thread_track_count - 1):
                             self.__indexes_layout[j] = i
                             track_place = index.until()
 

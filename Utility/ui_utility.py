@@ -7,9 +7,10 @@ from types import SimpleNamespace
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMainWindow, QApplication, QHBoxLayout, QWidget, QPushButton, \
     QDockWidget, QAction, qApp, QMessageBox, QDialog, QVBoxLayout, QLabel, QGroupBox, QBoxLayout, QTableWidget, \
-    QTableWidgetItem, QTabWidget, QLayout
+    QTableWidgetItem, QTabWidget, QLayout, QTextEdit
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -36,6 +37,17 @@ def create_new_tab(tab_widget: QTabWidget, title: str, layout: QLayout = None) -
     tab_widget.addTab(empty_wnd, title)
     return wnd_layout
 
+
+def restore_text_editor(editor: QTextEdit):
+    editor.clear()
+    editor.setFocus()
+    font = QFont()
+    font.setFamily("微软雅黑")
+    font.setPointSize(10)
+    editor.selectAll()
+    editor.setCurrentFont(font)
+    editor.setTextColor(Qt.black)
+    editor.setTextBackgroundColor(Qt.white)
 
 
 # =========================================== InfoDialog ===========================================

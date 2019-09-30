@@ -1,3 +1,6 @@
-[START]: index; uuid: 08c153dd-b518-49c4-b37a-ca3531037019; abstract: 杯酒释兵权; since: 961.0; until: 961.0; source: China\08c153dd-b518-49c4-b37a-ca3531037019.his; index: end; 
-[START]: index; uuid: 3574ead7-1c30-4c1f-9e10-2c75e0a4a152; abstract: 蓝田人; since: -800000.0; until: -800000.0; source: China\08c153dd-b518-49c4-b37a-ca3531037019.his; index: end; 
-[START]: index; uuid: 2266660a-8d93-41db-b6ef-de0ec64c8108; abstract: 北京人; since: -500000.0; until: -500000.0; source: China\08c153dd-b518-49c4-b37a-ca3531037019.his; index: end; 
+[START]: index; uuid: e88def03-930e-4c93-8937-bce211c11eb2; abstract: 夏朝; since: -2070.0; until: -1600.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: fc49742e-deb1-47c4-94aa-0a68f667cd02; abstract: 商朝; since: -1600.0; until: -1046.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: e3b2b7d8-fc6d-4219-bef4-1d2b49e2e855; abstract: 西周; since: -1046.0; until: -771.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 5e5ef264-8c40-4af2-8b66-5900fe011993; abstract: 东周; since: -770.0; until: -256.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 7c7a6056-ad8b-4e42-ad5e-b5e3331065e4; abstract: 春秋; since: -770.0; until: -476.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 3d721692-290d-4d1c-b078-cedc3aa623aa; abstract: 战国; since: -475.0; until: -221.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 

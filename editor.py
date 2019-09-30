@@ -296,6 +296,9 @@ class HistoryRecordEditor(QWidget):
         self.__text_brief.clear()
         self.__text_record.clear()
 
+        restore_text_editor(self.__text_brief)
+        restore_text_editor(self.__text_record)
+
     def ui_to_record(self, record: HistoricalRecord) -> bool:
         input_time = self.__line_time.text()
         input_location = self.__line_location.text()
@@ -351,12 +354,14 @@ class HistoryRecordEditor(QWidget):
         return True
 
     def record_to_ui(self, record: HistoricalRecord or str):
+        self.clear_ui()
+
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
         self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
         self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
         self.__line_people.setText(LabelTagParser.tags_to_text(record.get_tags('people')))
-        self.__line_organization.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
+        self.__line_organization.setText(LabelTagParser.tags_to_text(record.get_tags('organization')))
         self.__line_default_tags.setText(LabelTagParser.tags_to_text(record.get_tags('tags')))
 
         self.__line_title.setText(LabelTagParser.tags_to_text(record.title()))
@@ -533,11 +538,11 @@ class HistoryEditorDialog(QDialog):
         self.history_browser.add_agent(browser_agent if browser_agent is not None else self)
 
         layout = QHBoxLayout()
-        layout.addWidget(self.history_browser)
-        layout.addWidget(self.history_editor)
+        layout.addWidget(self.history_browser, 1)
+        layout.addWidget(self.history_editor, 3)
 
         self.setLayout(layout)
-        self.setWindowFlags(self.windowFlags() |
+        self.setWindowFlags(int(self.windowFlags()) |
                             Qt.WindowMinMaxButtonsHint |
                             QtCore.Qt.WindowSystemMenuHint)
 
@@ -570,6 +575,8 @@ class HistoryEditorDialog(QDialog):
         # TODO: Select depot
         # result = HistoricalRecordLoader.to_local_source(records, source)
         result = HistoricalRecordLoader.to_local_source(records, source)
+        if not result:
+            return
 
         # result = False
         # if len(self.__records) == 0:

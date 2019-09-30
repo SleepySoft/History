@@ -114,7 +114,7 @@ class TimeParser:
         sub_time_str_list = unified_time_str.split(TimeParser.SEPARATOR[0])
         for sub_time_str in sub_time_str_list:
             try:
-                num = TimeParser.parse_single_time_str(sub_time_str)
+                num = TimeParser.parse_single_time_str(sub_time_str.strip())
                 time_list.append(num)
             except Exception as e:
                 error_list.append(sub_time_str)
