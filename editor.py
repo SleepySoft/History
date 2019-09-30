@@ -351,6 +351,8 @@ class HistoryRecordEditor(QWidget):
         record.set_label_tags('brief', input_brief)
         record.set_label_tags('event', input_event)
 
+        record.set_focus_label(focus_label)
+
         return True
 
     def record_to_ui(self, record: HistoricalRecord or str):
