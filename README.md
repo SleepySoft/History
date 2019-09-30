@@ -10,11 +10,12 @@ A distributed and open history memo
 (DONE) | 	所选择的内容为必填项  
 (DONE) | 3.编辑界面需要加入“锁定”功能，锁定的项目在新建的时候不会被消除  
 (DONE) | 统一LabelTag、Index及event  
+(DONE) | Editor中加入depot与文件浏览界面  
+(DONE) | depot的分类和选择  
 
 # TODO:
 
-Editor中加入depot与文件浏览界面  
-depot的分类和选择  
+如何相同时间（约）中发生的事，如前12世纪廪辛康丁，武乙，文丁等人发动的各场战争  
 合并文件功能：可以将多个小文件合并成一个大文件  
 
 五要素外其它tags的编辑功能  

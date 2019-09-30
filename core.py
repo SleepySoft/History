@@ -88,6 +88,14 @@ class TimeParser:
         '—',
     ]
 
+    SPACE_CHAR = [
+        '约',
+    ]
+
+    REPLACE_CHAR = [
+        ('世纪', '00'),
+    ]
+
     PREFIX_CE = [
         'ac',
         'ce',
@@ -108,6 +116,13 @@ class TimeParser:
     @staticmethod
     def standardize(time_str: str) -> ([float], [str]):
         unified_time_str = time_str
+
+        for space in TimeParser.SPACE_CHAR:
+            unified_time_str = unified_time_str.replace(space, '')
+
+        for old_char, new_char in TimeParser.REPLACE_CHAR:
+            unified_time_str = unified_time_str.replace(old_char, new_char)
+
         for i in range(1, len(TimeParser.SEPARATOR)):
             unified_time_str = unified_time_str.replace(TimeParser.SEPARATOR[i], TimeParser.SEPARATOR[0])
 
