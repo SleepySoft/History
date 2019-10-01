@@ -12,8 +12,8 @@
 [START]: index; uuid: 25fe9d9c-ebf2-4411-8083-bc7df5a6c7c6; abstract: 周季历攻燕京戎之战; since: -1200.0; until: -1200.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: e6f39333-1405-4a6b-a179-8651eb6e4498; abstract: 周季历攻余无戎之战; since: -1200.0; until: -1200.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: ed8dab41-05c0-4f4c-9abd-5841bf13140b; abstract: 周季历攻翳徒戎之战; since: -1200.0; until: -1200.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
-[START]: index; uuid: 35371176-0bff-4414-979e-1b906df05279; abstract: 周文王攻商之战; since: -1200.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
-[START]: index; uuid: c8ac064c-9bfe-4c67-80bf-61a8c3a92943; abstract: 帝乙帝辛攻盂方之战; since: -1200.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
+[START]: index; uuid: 35371176-0bff-4414-979e-1b906df05279; abstract: 周文王攻商之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
+[START]: index; uuid: c8ac064c-9bfe-4c67-80bf-61a8c3a92943; abstract: 帝乙帝辛攻盂方之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: 50500fba-3808-4e7a-8a36-3e68d62b5013; abstract: 帝辛十祀征夷方; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: 2be32aec-16f9-4b82-81dd-0b0e5e3061de; abstract: 帝辛十五祀征夷方; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: abeabe2f-a781-4bec-8fe4-c574d0c1df19; abstract: 周文王攻犬戎之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
@@ -22,6 +22,9 @@
 [START]: index; uuid: 7a49c318-9cfd-4228-994f-263c0348f0ac; abstract: 商王周文王攻耆之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: bcc3d409-5706-41d0-a50c-f0e34e0d6a7e; abstract: 周文王灭邗之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: 613a9333-1adf-4b7c-bd64-77a69a44fafc; abstract: 牧野之战; since: -1100.0; until: -1100.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
+[START]: index; uuid: cbc19292-d0d8-405f-9456-7ab0331d00fc; abstract: 元谋人; since: -1700000.0; until: -1700000.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
+[START]: index; uuid: 25892dcf-761b-4eaf-9c8d-714ed00afb55; abstract: 北京人; since: -700000.0; until: -200000.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
+[START]: index; uuid: 91bdc207-e3d5-4a06-bf81-4d31f85e96c1; abstract: 山顶洞人; since: -30000.0; until: -30000.0; source: China_CN\05632484-3b9c-4e0a-8bd9-b288d5319251.his; index: end; 
 [START]: index; uuid: 1f62c467-6f81-4ee9-98cb-c00798a157c2; abstract: 三监之乱; since: -1041.0; until: -1039.0; source: China_CN\1f62c467-6f81-4ee9-98cb-c00798a157c2.his; index: end; 
 [START]: index; uuid: a60d915c-e079-4498-9524-b295d743b8ab; abstract: 成康之治; since: -1042.0; until: -996.0; source: China_CN\1f62c467-6f81-4ee9-98cb-c00798a157c2.his; index: end; 
 [START]: index; uuid: e88def03-930e-4c93-8937-bce211c11eb2; abstract: 夏朝; since: -2070.0; until: -1600.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
@@ -47,3 +50,7 @@
 [START]: index; uuid: 5b9cf38c-597b-46d7-9688-19aecccc08bc; abstract: 元朝; since: 1271.0; until: 1368.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
 [START]: index; uuid: b62447f9-30a1-4c94-a2b3-96cf70daf349; abstract: 明朝; since: 1368.0; until: 1644.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
 [START]: index; uuid: c38f5094-2694-457f-843e-e66947f80452; abstract: 清朝; since: 1636.0; until: 1912.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 26d44377-ac3a-488c-8b6a-5eb123de665e; abstract: 原始社会; since: -1700000.0; until: -2100.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 3df5e3b7-4b31-4467-9624-c447c8930f9c; abstract: 魏; since: 220.0; until: 265.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 8b804a57-48de-47de-9ba8-a3b7d3cd4c26; abstract: 蜀; since: 221.0; until: 263.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 
+[START]: index; uuid: 51b16df5-5756-4000-bbd3-3d4ec6667ce2; abstract: 吴; since: 222.0; until: 280.0; source: China_CN\e88def03-930e-4c93-8937-bce211c11eb2.his; index: end; 

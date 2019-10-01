@@ -37,6 +37,7 @@ class HistoryRecordEditor(QWidget):
         self.__combo_records = QComboBox()
 
         self.__label_uuid = QLabel()
+        self.__label_source = QLabel()
         self.__line_time = QLineEdit()
         self.__line_location = QLineEdit()
         self.__line_people = QLineEdit()
@@ -79,12 +80,17 @@ class HistoryRecordEditor(QWidget):
         root_layout = QVBoxLayout()
 
         line = QHBoxLayout()
+        # line.addWidget(QLabel('Event Source'), 0)
+        line.addWidget(self.__label_source, 1)
+        line.addWidget(self.__button_new_file, 0)
+        root_layout.addLayout(line)
+
+        line = QHBoxLayout()
         line.addWidget(self.__combo_records, 1)
         line.addWidget(self.__button_new, 0)
-        line.addWidget(self.__button_new_file, 0)
         line.addWidget(self.__button_del, 0)
-
         root_layout.addLayout(line)
+
         root_layout.addWidget(self.__tab_main)
         root_layout.addLayout(horizon_layout([self.__button_apply, self.__button_cancel]))
         self.setLayout(root_layout)
@@ -93,39 +99,46 @@ class HistoryRecordEditor(QWidget):
 
         property_layout = QGridLayout()
 
-        property_layout.addWidget(QLabel('Event ID'), 0, 0)
-        property_layout.addWidget(self.__label_uuid, 0, 1)
+        row = 0
+        property_layout.addWidget(QLabel('Event ID'), row, 0)
+        property_layout.addWidget(self.__label_uuid, row, 1)
 
-        property_layout.addWidget(QLabel('Event Tags'), 1, 0)
-        property_layout.addWidget(self.__line_default_tags, 1, 1, 1, 2)
-        property_layout.addWidget(self.__check_default_tags, 1, 3)
+        row += 1
+        property_layout.addWidget(QLabel('Event Tags'), row, 0)
+        property_layout.addWidget(self.__line_default_tags, row, 1, 1, 2)
+        property_layout.addWidget(self.__check_default_tags, row, 3)
 
+        row += 1
         # property_layout.addWidget(QLabel('Event Time'), 1, 0)
-        property_layout.addWidget(self.__radio_time, 2, 0)
-        property_layout.addWidget(self.__line_time, 2, 1)
-        property_layout.addWidget(self.__button_auto_time, 2, 2)
-        property_layout.addWidget(self.__check_time, 2, 3)
+        property_layout.addWidget(self.__radio_time, row, 0)
+        property_layout.addWidget(self.__line_time, row, 1)
+        property_layout.addWidget(self.__button_auto_time, row, 2)
+        property_layout.addWidget(self.__check_time, row, 3)
 
+        row += 1
         # property_layout.addWidget(QLabel('Event Location'), 2, 0)
-        property_layout.addWidget(self.__radio_location, 3, 0)
-        property_layout.addWidget(self.__line_location, 3, 1)
-        property_layout.addWidget(self.__button_auto_location, 3, 2)
-        property_layout.addWidget(self.__check_location, 3, 3)
+        property_layout.addWidget(self.__radio_location, row, 0)
+        property_layout.addWidget(self.__line_location, row, 1)
+        property_layout.addWidget(self.__button_auto_location, row, 2)
+        property_layout.addWidget(self.__check_location, row, 3)
 
+        row += 1
         # property_layout.addWidget(QLabel('Event Participant'), 3, 0)
-        property_layout.addWidget(self.__radio_people, 4, 0)
-        property_layout.addWidget(self.__line_people, 4, 1)
-        property_layout.addWidget(self.__button_auto_people, 4, 2)
-        property_layout.addWidget(self.__check_people, 4, 3)
+        property_layout.addWidget(self.__radio_people, row, 0)
+        property_layout.addWidget(self.__line_people, row, 1)
+        property_layout.addWidget(self.__button_auto_people, row, 2)
+        property_layout.addWidget(self.__check_people, row, 3)
 
+        row += 1
         # property_layout.addWidget(QLabel('Event Organization'), 4, 0)
-        property_layout.addWidget(self.__radio_organization, 5, 0)
-        property_layout.addWidget(self.__line_organization, 5, 1)
-        property_layout.addWidget(self.__button_auto_organization, 5, 2)
-        property_layout.addWidget(self.__check_organization, 5, 3)
+        property_layout.addWidget(self.__radio_organization, row, 0)
+        property_layout.addWidget(self.__line_organization, row, 1)
+        property_layout.addWidget(self.__button_auto_organization, row, 2)
+        property_layout.addWidget(self.__check_organization, row, 3)
 
+        row += 1
         self.__radio_record.setChecked(True)
-        property_layout.addWidget(self.__radio_record, 6, 0)
+        property_layout.addWidget(self.__radio_record, row, 0)
 
         record_page_layout.addLayout(property_layout)
 
@@ -293,6 +306,7 @@ class HistoryRecordEditor(QWidget):
         lock_default_tags = self.__check_default_tags.isChecked()
 
         self.__label_uuid.setText('')
+        self.__label_source.setText('')
 
         if not lock_time:
             self.__line_time.setText('')
@@ -372,6 +386,7 @@ class HistoryRecordEditor(QWidget):
         self.clear_ui()
 
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
+        self.__label_source.setText(self.__source)
         self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
         self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
@@ -392,6 +407,7 @@ class HistoryRecordEditor(QWidget):
         self.clear_ui()
         self.update_combo_records()
         self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+        self.__label_source.setText(self.__source)
 
     def create_new_file(self):
         self.__new_file()
@@ -399,6 +415,7 @@ class HistoryRecordEditor(QWidget):
         self.clear_ui()
         self.update_combo_records()
         self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+        self.__label_source.setText(self.__source)
 
         # self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
         # self.__records.clear()

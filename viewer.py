@@ -233,7 +233,10 @@ class TimeAxis(QWidget):
                 #     text_rect.setTop(0)
                 qp.setPen(Qt.SolidLine)
                 qp.setPen(QPen(Qt.black, 1))
-                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, index.get_tags('abstract')[0])
+
+                abstract_tags = index.get_tags('abstract')
+                abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
+                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, abstract)
                 # qp.restore()
 
     STEP_LIST = [

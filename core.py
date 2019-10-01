@@ -94,6 +94,7 @@ class TimeParser:
 
     REPLACE_CHAR = [
         ('世纪', '00'),
+        ('万', '0000'),
     ]
 
     PREFIX_CE = [
@@ -101,7 +102,6 @@ class TimeParser:
         'ce',
         'common era',
         '公元',
-        '距今',
     ]
 
     PREFIX_BCE = [
@@ -111,6 +111,7 @@ class TimeParser:
         '公元前',
         '前',
         '距今',
+        '史前',
     ]
 
     @staticmethod
