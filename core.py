@@ -566,7 +566,7 @@ class HistoricalRecord(LabelTag):
         self.set_label_tags('abstract', abstract.strip()[:50])
 
     def period_adapt(self, since: float, until: float):
-        return (since < self.__since < until) or (since < self.__until < until)
+        return (self.__since < until) and (since < self.__until)
 
     @staticmethod
     def check_label_tags(self, label: str, tags: str or [str]) -> [str]:

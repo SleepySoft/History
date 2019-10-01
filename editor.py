@@ -68,6 +68,7 @@ class HistoryRecordEditor(QWidget):
 
         self.__button_new = QPushButton('New Event')
         self.__button_new_file = QPushButton('New File')
+        self.__button_del = QPushButton('Del Event')
         self.__button_apply = QPushButton('Apply')
         self.__button_cancel = QPushButton('Cancel')
 
@@ -81,6 +82,7 @@ class HistoryRecordEditor(QWidget):
         line.addWidget(self.__combo_records, 1)
         line.addWidget(self.__button_new, 0)
         line.addWidget(self.__button_new_file, 0)
+        line.addWidget(self.__button_del, 0)
 
         root_layout.addLayout(line)
         root_layout.addWidget(self.__tab_main)
@@ -152,6 +154,7 @@ class HistoryRecordEditor(QWidget):
 
         self.__button_new.clicked.connect(self.on_button_new)
         self.__button_new_file.clicked.connect(self.on_button_file)
+        self.__button_del.clicked.connect(self.on_button_del)
         self.__button_apply.clicked.connect(self.on_button_apply)
         self.__button_cancel.clicked.connect(self.on_button_cancel)
 
@@ -161,9 +164,13 @@ class HistoryRecordEditor(QWidget):
         index = -1
         self.__ignore_combo = True
         self.__combo_records.clear()
-        for i in range(0, len(self.__records)):
-            record = self.__records[i]
-            self.__combo_records.addItem(record.uuid())
+
+        sorted_records = History.sort_records(self.__records)
+
+        for i in range(0, len(sorted_records)):
+            record = sorted_records[i]
+            self.__combo_records.addItem('[' + str(record.since()) + '] ' + record.uuid())
+            self.__combo_records.setItemData(i, record.uuid())
             if record == self.__current_record:
                 index = i
         if index >= 0:
@@ -239,6 +246,12 @@ class HistoryRecordEditor(QWidget):
     def on_button_file(self):
         self.create_new_file()
 
+    def on_button_del(self):
+        if self.__current_record in self.__records:
+            self.__records.remove(self.__current_record)
+        self.__current_record = None
+        self.update_combo_records()
+
     def on_button_apply(self):
         if self.__current_record is None:
             self.__current_record = HistoricalRecord()
@@ -260,7 +273,7 @@ class HistoryRecordEditor(QWidget):
         if self.__ignore_combo:
             return
 
-        _uuid = self.__combo_records.currentText()
+        _uuid = self.__combo_records.currentData()
         record = self.__look_for_record(_uuid)
 
         if record is None:

@@ -17,6 +17,7 @@ A distributed and open history memo
 
 如何相同时间（约）中发生的事，如前12世纪廪辛康丁，武乙，文丁等人发动的各场战争  
 合并文件功能：可以将多个小文件合并成一个大文件  
+event combobox显示时间并按时间排序
 
 五要素外其它tags的编辑功能  
 viewer可以直接载入event而不仅仅只是index  

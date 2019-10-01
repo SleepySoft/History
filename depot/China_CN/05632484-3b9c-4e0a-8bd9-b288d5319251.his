@@ -84,13 +84,13 @@ title: 周季历攻翳徒戎之战
 event: end
 [START]: event
 uuid: 35371176-0bff-4414-979e-1b906df05279
-time: 约前12世纪末-前11世纪初
+time: 前11世纪初
 people: 帝乙
 title: 周文王攻商之战
 event: end
 [START]: event
 uuid: c8ac064c-9bfe-4c67-80bf-61a8c3a92943
-time: 约前12世纪末-前11世纪初
+time: 前11世纪初
 people: 帝乙
 title: 帝乙帝辛攻盂方之战
 event: end
@@ -139,6 +139,7 @@ event: end
 [START]: event
 uuid: 613a9333-1adf-4b7c-bd64-77a69a44fafc
 time: 约前11世纪
-people: 帝辛
-title: 周灭商之战
-event: end
+people: 帝辛, 周武王
+location: 孟津
+title: 牧野之战
+event: 周国兴盛于周文王昌作首领的时候，在他的统治使周国势力强盛，文王死，次子姬发即位，在沣河东岸又建镐京，丰镐二京隔水相望，有桥相连，并称丰镐城，姬发率兵会盟军于孟津（今河南孟津），公元前11世纪，率戎车三百，虎贲三千，甲士四万五千与商朝七十万军队大战于牧野（今河南汲县）。周军大胜，纣王于鹿台身被珠宝玉器自焚。商朝亡，因为周部落到古公亶父时迁居于周原，武王灭殷以后，就以“周”为朝代名，定鼎洛邑，周朝立。
