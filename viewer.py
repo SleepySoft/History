@@ -106,6 +106,8 @@ class TimeAxis(QWidget):
 
         def on_paint_canvas_size_update(self, area: QRect):
             self.__paint_area = area
+            # Reserved space
+            self.__paint_area.setLeft(self.__paint_area.left() + 20)
             self.calc_paint_parameters()
 
         def on_paint_scale_range_updated(self, since: float, until: float):
@@ -222,9 +224,10 @@ class TimeAxis(QWidget):
                     qp.drawRect(index_rect)
 
                 self.__indexes_adapt_rect[i] = index_rect
-                self.paint_index_text(qp, index, index_rect)
+                TimeAxis.Thread.paint_index_text(qp, index, index_rect)
 
-        def paint_index_text(self, qp: QPainter, index, rect: QRect):
+        @staticmethod
+        def paint_index_text(qp: QPainter, index, rect: QRect):
                 # qp.save()
                 # qp.translate(rect.center())
                 # qp.rotate(-90)
