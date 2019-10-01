@@ -79,6 +79,14 @@ class TimeAxis(QWidget):
             self.__thread_track_width = 50
             self.__paint_area = QRect(0, 0, 0, 0)
 
+            self.__event_font = QFont()
+            self.__event_font.setFamily("微软雅黑")
+            self.__event_font.setPointSize(6)
+
+            self.__period_font = QFont()
+            self.__period_font.setFamily("微软雅黑")
+            self.__period_font.setPointSize(8)
+
             self.__event_bk = QColor(243, 244, 246)
             self.__story_bk = QColor(185, 227, 217)
             self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -198,6 +206,9 @@ class TimeAxis(QWidget):
                 print('Index and layout mismatch. Something wrong in the layout calculation.')
                 return
 
+            overlap_count = 0
+            prev_index_area = None
+
             for i in range(0, len(self.__paint_indexes)):
                 index = self.__paint_indexes[i]
                 track = self.__indexes_layout[i]
@@ -209,25 +220,58 @@ class TimeAxis(QWidget):
                 if index.since() == index.until():
                     diagonal = right - left
                     half_diagonal = diagonal / 2
-                    v_mid = top
-                    h_mid = left + half_diagonal
+                    # v_mid = top
+                    # h_mid = left + half_diagonal
                     index_rect = QRect(left, top - half_diagonal, diagonal, diagonal)
-                    diamond_points = [QPoint(left, v_mid), QPoint(h_mid, v_mid - half_diagonal),
-                                      QPoint(right, v_mid), QPoint(h_mid, v_mid + half_diagonal)]
-                    qp.setBrush(self.__event_bk)
-                    qp.drawPolygon(QPolygon(diamond_points))
+                    self.adjust_shape_area(index_rect)
                 else:
                     bottom = self.__paint_area.top() + self.value_to_pixel(index.until())
-
                     index_rect = QRect(left, top, right - left, bottom - top)
-                    qp.setBrush(self.__story_bk)
-                    qp.drawRect(index_rect)
 
+                if prev_index_area is not None and index_rect == prev_index_area:
+                    overlap_count += 1
+                else:
+                    overlap_count = 0
+                prev_index_area = index_rect
+
+                self.adjust_shape_area(index_rect)
+                index_rect = index_rect.translated(0, -3 * overlap_count)
                 self.__indexes_adapt_rect[i] = index_rect
-                TimeAxis.Thread.paint_index_text(qp, index, index_rect)
+
+                if index.since() == index.until():
+                    TimeAxis.Thread.paint_event_bar(qp, index_rect, self.__event_bk)
+                    TimeAxis.Thread.paint_index_text(qp, index, index_rect, self.__event_font)
+                else:
+                    TimeAxis.Thread.paint_period_bar(qp, index_rect, self.__story_bk)
+                    TimeAxis.Thread.paint_index_text(qp, index, index_rect, self.__period_font)
+
+        def adjust_shape_area(self, area: QRect) -> QRect:
+            if area.top() < self.__paint_area.top():
+                area.setTop(self.__paint_area.top())
+            if area.bottom() > self.__paint_area.bottom():
+                area.setBottom(self.__paint_area.bottom())
+            return area
 
         @staticmethod
-        def paint_index_text(qp: QPainter, index, rect: QRect):
+        def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor):
+            arrow_points = [QPoint(index_rect.left() - 10, index_rect.center().y()),
+                            index_rect.topLeft(), index_rect.topRight(),
+                            index_rect.bottomRight(), index_rect.bottomLeft()]
+            qp.setBrush(back_ground)
+            qp.drawPolygon(QPolygon(arrow_points))
+
+            # diamond_points = [QPoint(left, v_mid), QPoint(h_mid, v_mid - half_diagonal),
+            #                   QPoint(right, v_mid), QPoint(h_mid, v_mid + half_diagonal)]
+            # qp.setBrush(self.__event_bk)
+            # qp.drawPolygon(QPolygon(diamond_points))
+
+        @staticmethod
+        def paint_period_bar(qp: QPainter, index_rect: QRect, back_ground: QColor):
+            qp.setBrush(back_ground)
+            qp.drawRect(index_rect)
+
+        @staticmethod
+        def paint_index_text(qp: QPainter, index: HistoricalRecord, index_rect: QRect, font: QFont):
                 # qp.save()
                 # qp.translate(rect.center())
                 # qp.rotate(-90)
@@ -236,10 +280,11 @@ class TimeAxis(QWidget):
                 #     text_rect.setTop(0)
                 qp.setPen(Qt.SolidLine)
                 qp.setPen(QPen(Qt.black, 1))
+                qp.setFont(font)
 
                 abstract_tags = index.get_tags('abstract')
                 abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
-                qp.drawText(rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, abstract)
+                qp.drawText(index_rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, abstract)
                 # qp.restore()
 
     STEP_LIST = [
