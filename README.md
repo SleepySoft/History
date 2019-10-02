@@ -12,12 +12,13 @@ A distributed and open history memo
 (DONE) | 统一LabelTag、Index及event  
 (DONE) | Editor中加入depot与文件浏览界面  
 (DONE) | depot的分类和选择  
+(DONE) | 如何处理相同时间（约）中发生的事，如前12世纪廪辛康丁，武乙，文丁等人发动的各场战争  
+(DONE) | 文件重命名
+(DONE) | 文event combobox显示时间并按时间排序
 
 # TODO:
 
-如何相同时间（约）中发生的事，如前12世纪廪辛康丁，武乙，文丁等人发动的各场战争  
 合并文件功能：可以将多个小文件合并成一个大文件  
-event combobox显示时间并按时间排序
 
 五要素外其它tags的编辑功能  
 viewer可以直接载入event而不仅仅只是index  

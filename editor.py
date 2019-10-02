@@ -1,7 +1,7 @@
 import traceback
 
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
-    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem
+    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog
 
 from core import *
 from Utility.ui_utility import *
@@ -467,11 +467,13 @@ class HistoryRecordBrowser(QWidget):
         super(HistoryRecordBrowser, self).__init__(parent)
 
         self.__ignore_combo = False
+        self.__current_file = ''
         self.__current_depot = 'default'
         self.__operation_agents = []
 
         self.__combo_depot = QComboBox()
         self.__list_record = QListWidget()
+        self.__button_rename = QPushButton('Rename')
 
         self.init_ui()
         self.config_ui()
@@ -482,12 +484,14 @@ class HistoryRecordBrowser(QWidget):
 
         root_layout.addWidget(self.__combo_depot, 0)
         root_layout.addWidget(self.__list_record, 10)
+        root_layout.addWidget(self.__button_rename, 0)
 
     def config_ui(self):
         self.setMinimumWidth(200)
         self.update_combo_depot()
         self.__combo_depot.currentIndexChanged.connect(self.on_combo_depot_changed)
         self.__list_record.selectionModel().selectionChanged.connect(self.on_list_record_changed)
+        self.__button_rename.clicked.connect(self.on_button_rename)
 
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
@@ -533,9 +537,30 @@ class HistoryRecordBrowser(QWidget):
     def on_list_record_changed(self):
         item = self.__list_record.currentItem()
         record_path = item.data(QtCore.Qt.UserRole)
+        self.__current_file = record_path
 
         for agent in self.__operation_agents:
             agent.on_select_record(record_path)
+
+    def on_button_rename(self):
+        if self.__current_file is None or self.__current_file == '':
+            return
+        text, ok = QInputDialog.getText(self, 'Rename', 'New Name')
+        if not ok:
+            return
+        if not text.endswith('.his'):
+            text += '.his'
+        new_path = os.path.join(os.path.dirname(self.__current_file), text)
+
+        tip = 'Rename from \n"' + self.__current_file + '" \nto "' + new_path + '" '
+        try:
+            os.rename(self.__current_file, new_path)
+            QMessageBox.information(self, 'Rename', tip + 'Successful.', QMessageBox.Ok)
+            self.refresh()
+        except Exception as e:
+            QMessageBox.information(self, 'Rename', tip + 'Failed.', QMessageBox.Ok)
+        finally:
+            pass
 
     @staticmethod
     def enumerate_local_depot() -> list:
