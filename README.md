@@ -47,10 +47,34 @@ A distributed and open history time line.
 > 1. record更新后viewer无法实时更新（需要先更新index）
 > 2. 服务器做实时查询比较困难（当然也可以根据查询生成一个index并传回前端）
 
+## Python版本的使用
+
+* 运行环境：python3 + pyqt5  
+* editor.py：直接运行打开编辑器  
+> 编辑器左侧为depot和文件browser  
+> 右侧上方的combobox选择需要编辑的record  
+> 点击"New Record"在当前文件中增加一个record  
+> 点击"New File"新建一个文件并在这个文件中增加一个record  
+> 任何更改在点击"apply"后生效  
+> 为防止bug导致文件损坏（一般不会），建议编辑一段后及时git add  
+> 修改完record后记得更新Index  
+* viewer.py：直接运行打开viewer  
+> 鼠标拖动或滚轮移动时间轴  
+> CTRL + 滚轮更改坐标轴的scale  
+> 双击一个record查看具体内容  
+> 当前未完成状态下默认只有一个历史线索(thread)  
+* indexer.py：直接运行默认为“China_CN”depot生成index  
+
+## 关于开放协作（虽然应该没人会响应...）  
+
+* 有兴趣的同志们可以fork一份代码，在自己的repo上提交你的record后，再向我提交一个pull request。在record中可以增加一个名为author的label，并填上你的名字。  
+* 不知道有没有高手可以做一个网页版本的viewer...  
+
 -------------------------------------------------------------------------------------------------
 
 # Readme EN  
 
+TODO  
 
 
 -------------------------------------------------------------------------------------------------
