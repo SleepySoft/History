@@ -150,6 +150,8 @@ class TimeParser:
         else:
             sign = 1
         # non_numeric_chars = ''.join(set(string.printable) - set(string.digits))
+        if '年' in time_str:
+            time_str = time_str[0: time_str.find('年')]
         number_str = int("".join(filter(str.isdigit, time_str)))
         # number_str = time_str.translate(non_numeric_chars)
         return sign * float(number_str)

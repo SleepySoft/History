@@ -24,18 +24,19 @@ event: """商朝（约公元前1600年—约公元前1046年），是中国历�
 商朝势力范围以内和以外分散有许多远较商族落后的方国。其中最为强大的是西北和北方的舌方、鬼方、土方和羌方。在商朝时期，长江流域也平行存在发达的非中原文明。
 
 https://baike.baidu.com/item/%E5%95%86%E6%9C%9D"""
-[START]: event
+[START]: organization
 uuid: e3b2b7d8-fc6d-4219-bef4-1d2b49e2e855
 time: 前1046-前771
 people: 周文王-姬昌
 location: 镐京(陕西西安)
-organization: 西周
 tags: 西周
 title: 西周
+brief: """西周 约前1070～771 文王昌（姬姓） 前1070年称王，前1051年武王发灭商"""
 event: """西周（前1046—前771），周是关中一个古老的部族，始祖名弃，善种植，尧舜时被封为“后稷”，封于邰（今陕西武功县及杨陵区一带）。公刘时由邰迁到邠（今彬县、旬邑县之间），到古公亶父时迁到岐山之阳的“周原”（今扶风县与岐山县交界处）。周人在这里兴建城邑、疆理田地、设置官吏、建立军队，商代晚期已为渭水中游的强盛诸侯国。姬昌（文王）迁都丰（今西安市长安区马王村一带）。姬昌死，其子姬发（武王）即位，在沣河的东岸营建镐京（今沣东新区斗门镇一带）并修文王绪业，公元前1046年，经牧野之战，灭商建立周朝，史称西周。
 西周后期社会矛盾包括统治集团内部矛盾日趋激化，对土地以及政权的争夺，加速了西周的灭亡。国人暴动动摇了西周统治的基础，公元前771年，周幽王被犬戎杀死，西周灭亡了。公元前770年，申侯和其它一些诸侯立周平王（宜臼）为国王，平王将京都从宗周迁至洛邑（洛阳），历史上称东迁以后的周王朝为东周 。
 
 https://baike.baidu.com/item/%E8%A5%BF%E5%91%A8/510056"""
+organization: 西周
 [START]: event
 uuid: 5e5ef264-8c40-4af2-8b66-5900fe011993
 time: 公元前770年-公元前256年
@@ -239,3 +240,38 @@ time: 222年-280年
 title: 吴
 brief: 280年东晋灭吴
 organization: 吴
+[START]: organization
+uuid: 23b180bf-d90e-4d83-a969-b804f229e4ed
+time: 公元前2660年-公元前2070年
+title: 黄帝时期
+organization: 黄帝时期
+[START]: organization
+uuid: 99657785-bd3a-4edf-9a41-27da9150b405
+time: 前704～前223
+title: 楚国
+brief: """楚国 前704～前223 武王熊通（芈姓） 前704年称王"""
+organization: 楚国
+[START]: organization
+uuid: 73912bbb-9c07-4450-b6b7-9a746cb569fa
+time: 前632～前403
+title: 晋国
+brief: """晋国 前632～前403 文公重耳（姬姓） 前632年开创宗室诸侯的霸业"""
+organization: 晋国
+[START]: organization
+uuid: e8a7a77b-575c-46ca-985e-01805a2bd94d
+time: 前403-前225
+title: 魏国
+brief: """魏国 前403～前225 文侯魏斯（姬姓） 前403年继承宗室诸侯的霸业"""
+organization: 魏国
+[START]: organization
+uuid: 3d260869-0da9-45f5-9d67-b10333bfc827
+time: 前341-前221
+title: 齐国
+brief: """齐国 前341～前221 威王田因齐（妫姓） 前341年称王"""
+organization: 齐国
+[START]: organization
+uuid: 540d5bc0-ce13-4b4b-a657-1fd5f70380c5
+time: 前323-前222
+title: 赵国
+brief: """赵国 前323～前222 武灵王赵雍（嬴姓） 前323年称王"""
+organization: 赵国

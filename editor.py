@@ -26,13 +26,13 @@ class HistoryRecordEditor(QWidget):
 
         self.__records = []
         self.__source = ''
-        self.__current_depot = 'default'
         self.__current_record = None
         self.__operation_agents = []
 
         self.__ignore_combo = False
 
         self.__tab_main = QTabWidget()
+        self.__current_depot = 'default'
         # self.__combo_depot = QComboBox()
         self.__combo_records = QComboBox()
 

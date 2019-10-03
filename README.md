@@ -96,7 +96,12 @@ TODO
 (DONE) | 文event combobox显示时间并按时间排序  
 
 ## TODO:
-
+  
+Thread编辑  
+    界面支持配置1-10个thread，包括enable，focus label，depot，filter  
+    界面根据用户配置生成不同的Index供不同的thread载入  
+    在LabelTags层面上支持filter功能  
+    
 合并文件功能：可以将多个小文件合并成一个大文件  
 
 五要素外其它tags的编辑功能  
