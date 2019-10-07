@@ -139,7 +139,7 @@ event: end
 [START]: event
 uuid: 613a9333-1adf-4b7c-bd64-77a69a44fafc
 time: 约前11世纪
-people: 帝辛, 周武王
+people: 周武王, 帝辛
 location: 孟津
 title: 牧野之战
 event: 周国兴盛于周文王昌作首领的时候，在他的统治使周国势力强盛，文王死，次子姬发即位，在沣河东岸又建镐京，丰镐二京隔水相望，有桥相连，并称丰镐城，姬发率兵会盟军于孟津（今河南孟津），公元前11世纪，率戎车三百，虎贲三千，甲士四万五千与商朝七十万军队大战于牧野（今河南汲县）。周军大胜，纣王于鹿台身被珠宝玉器自焚。商朝亡，因为周部落到古公亶父时迁居于周原，武王灭殷以后，就以“周”为朝代名，定鼎洛邑，周朝立。
@@ -163,3 +163,32 @@ time: 史前3万年
 location: 北京周口店
 title: 山顶洞人
 people: 山顶洞人
+[START]: event
+uuid: 0f379c40-e562-4779-9bf5-b6a98b802bdb
+time: 公元前2540年
+location: 甘肃曹家嘴
+title: 曹家嘴遗址
+event: 安特生发掘的甘肃彩陶遗址中最古老的曹家嘴遗址，根据放射性碳元素测定法得到的结果，误差在100年之内。
+[START]: event
+uuid: 342dd58d-0c01-48c3-9557-044604660bae
+time: 公元前4080年
+location: 西安半坡村
+title: 仰韶文化遗址
+event: 1952年，在西安发现的半坡村发现的仰韶文化遗址。该文化擅长在红陶的基础上创作造型，样式，制造彩纹陶器。
+[START]: event
+uuid: 7626ace9-3caf-448f-9466-d1ed36352af2
+time: 公元前2600-公元前2000年
+title: 龙山文化
+event: 龙山文化的遗址覆盖在仰韶文化之上，故其应为前后关系。
+[START]: event
+uuid: 4e109f5b-b259-4515-bb83-3717348fe2fe
+time: 公元前2700年
+location: 浙江省
+title: 良渚文化
+event: end
+[START]: event
+uuid: bfb90ef1-6a99-476d-b80d-aaceafa6e6b5
+time: 公元前3400年
+location: 江苏省
+title: 青莲岗文化
+event: end
