@@ -1,8 +1,8 @@
 import random
 import traceback, math
 
-from PyQt5.QtCore import QRect, QPoint
-from PyQt5.QtGui import QPainter, QColor, QFont, QPen, QPolygon
+from PyQt5.QtCore import QRect, QPoint, QSize
+from PyQt5.QtGui import QPainter, QColor, QFont, QPen, QPolygon, QFontMetrics
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
     QTabWidget, QComboBox, QGridLayout
 
@@ -287,6 +287,10 @@ class TimeAxis(QWidget):
                 qp.drawText(index_rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, abstract)
                 # qp.restore()
 
+    # ------------------------------------------------------------------------------------------
+    # ------------------------------------- TimeAxis Start -------------------------------------
+    # ------------------------------------------------------------------------------------------
+
     STEP_LIST = [
         10000, 5000, 2500, 2000, 1000, 500, 250, 200, 100, 50, 25, 20, 10, 5, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01
     ]
@@ -324,6 +328,17 @@ class TimeAxis(QWidget):
         self.__l_pressing = False
         self.__l_down_point = None
 
+        # Real time tips
+
+        self.__tip_font = QFont()
+        self.__tip_font.setFamily("微软雅黑")
+        self.__tip_font.setPointSize(8)
+
+        self.__enable_real_time_tips = True
+        self.__mouse_on_index = HistoricalRecord()
+        self.__mouse_on_scale_value = 0.0
+        self.__mouse_on_coordinate = QPoint(0, 0)
+
         self.__era = ''
         self.__horizon = False
 
@@ -336,7 +351,7 @@ class TimeAxis(QWidget):
 
         self.set_time_range(0, 2000)
 
-        # self.setMouseTracking(True)
+        self.setMouseTracking(True)
 
         self.__history_core = None
         self.__history_editor = None
@@ -371,6 +386,9 @@ class TimeAxis(QWidget):
         if thread in self.__history_threads:
             self.__history_threads.remove(thread)
 
+    def enable_real_time_tips(self, enable: bool):
+        self.__enable_real_time_tips = enable
+
     # --------------------------------------------------- UI Action ----------------------------------------------------
 
     def mousePressEvent(self,  event):
@@ -387,11 +405,9 @@ class TimeAxis(QWidget):
 
     def mouseDoubleClickEvent(self,  event):
         now_pos = event.pos()
-        for thread in self.__history_threads:
-            index = thread.index_from_point(now_pos)
-            if index is not None:
-                print(index)
-                self.popup_editor_for_index(index)
+        index = self.index_from_point(now_pos)
+        if index is not None:
+            self.popup_editor_for_index(index)
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
@@ -401,8 +417,8 @@ class TimeAxis(QWidget):
             else:
                 self.__offset = self.__l_down_point.y() - now_pos.y()
             self.repaint()
-        pixel_scale_value = self.pixel_offset_to_scale_value(now_pos.y())
-        print('Time : ' + str(pixel_scale_value))
+        else:
+            self.on_pos_updated(now_pos)
 
     def wheelEvent(self, event):
         angle = event.angleDelta() / 8
@@ -480,6 +496,7 @@ class TimeAxis(QWidget):
         else:
             self.paint_vertical(qp)
         self.paint_threads(qp)
+        self.paint_real_time_tips(qp)
 
         qp.end()
 
@@ -511,7 +528,40 @@ class TimeAxis(QWidget):
         for thread in self.__history_threads:
             thread.repaint(qp)
 
+    def paint_real_time_tips(self, qp: QPainter):
+        if not self.__enable_real_time_tips or self.__l_pressing:
+            return
+
+        qp.drawLine(0, self.__mouse_on_coordinate.y(), self.__width, self.__mouse_on_coordinate.y())
+        qp.drawLine(self.__mouse_on_coordinate.x(), 0, self.__mouse_on_coordinate.x(), self.__height)
+
+        tip_text = self.format_real_time_tip()
+
+        fm = QFontMetrics(self.__tip_font)
+        text_width = fm.width(tip_text)
+        text_height = fm.height()
+        tip_area = QRect(self.__mouse_on_coordinate, QSize(text_width, text_height))
+
+        tip_area.setTop(tip_area.top() - fm.height())
+        tip_area.setBottom(tip_area.bottom() - fm.height())
+        if tip_area.right() > self.__axis_width:
+            tip_area.setLeft(tip_area.left() - text_width)
+            tip_area.setRight(tip_area.right() - text_width)
+
+        qp.setFont(self.__tip_font)
+        qp.setBrush(QColor(36, 169, 225))
+
+        qp.drawRect(tip_area)
+        qp.drawText(tip_area, Qt.AlignLeft, tip_text)
+
     # -------------------------------------------------- Calculation ---------------------------------------------------
+
+    def index_from_point(self, point: QPoint) -> HistoricalRecord:
+        for thread in self.__history_threads:
+            index = thread.index_from_point(point)
+            if index is not None:
+                return index
+        return None
 
     def calc_point_to_paint_start_offset(self, point):
         if self.__horizon:
@@ -624,6 +674,36 @@ class TimeAxis(QWidget):
         #     else:
         #         delta = 0
         # return sign * delta * ratio
+
+    # ------------------------------------------ Art ------------------------------------------
+
+    def format_real_time_tip(self) -> str:
+        tip_text = '(' + TimeParser.standard_time_to_str(self.__mouse_on_scale_value) + ')'
+        if self.__mouse_on_index is not None:
+            since = self.__mouse_on_index.since()
+            until = self.__mouse_on_index.until()
+            abstract_tags = self.__mouse_on_index.get_tags('abstract')
+            abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
+
+            tip_text += ' | '
+            tip_text += abstract + ' : ['
+            if since == until:
+                tip_text += TimeParser.standard_time_to_str(since)
+            else:
+                tip_text += TimeParser.standard_time_to_str(since) + ' - ' \
+                            + TimeParser.standard_time_to_str(until) + ']'
+        return tip_text
+
+    # ------------------------------------- Real Time Tips ------------------------------------
+
+    def on_pos_updated(self, pos: QPoint):
+        if not self.__enable_real_time_tips:
+            return
+        if self.__mouse_on_coordinate != pos:
+            self.__mouse_on_coordinate = pos
+            self.__mouse_on_scale_value = self.pixel_offset_to_scale_value(pos.y())
+            self.__mouse_on_index = self.index_from_point(pos)
+            self.repaint()
 
     # ------------------------------- HistoryRecordEditor.Agent -------------------------------
 

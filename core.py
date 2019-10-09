@@ -1,3 +1,4 @@
+import math
 import os
 import uuid
 import ntpath
@@ -155,6 +156,17 @@ class TimeParser:
         number_str = int("".join(filter(str.isdigit, time_str)))
         # number_str = time_str.translate(non_numeric_chars)
         return sign * float(number_str)
+
+    @staticmethod
+    def standard_time_to_str(std_time: float) -> str:
+        year = math.floor(std_time)
+        date = std_time - year
+        text = str(year)
+        if std_time < 0:
+            text += ' BCE'
+        else:
+            text += ' CE'
+        return text
 
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
