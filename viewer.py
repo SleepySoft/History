@@ -684,14 +684,19 @@ class TimeAxis(QWidget):
             until = self.__mouse_on_index.until()
             abstract_tags = self.__mouse_on_index.get_tags('abstract')
             abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
+            abstract = abstract.strip()
 
-            tip_text += ' | '
-            tip_text += abstract + ' : ['
+            if len(abstract) > 0:
+                tip_text += ' | '
+                tip_text += abstract
+
             if since == until:
-                tip_text += TimeParser.standard_time_to_str(since)
+                tip_text += ' : [' + TimeParser.standard_time_to_str(since) + ']'
             else:
-                tip_text += TimeParser.standard_time_to_str(since) + ' - ' \
-                            + TimeParser.standard_time_to_str(until) + ']'
+                tip_text += '(' + str(math.floor(self.__mouse_on_scale_value - since + 1)) + \
+                            '/' + str(math.floor(until - since)) + ') : ['
+                tip_text += TimeParser.standard_time_to_str(since) + \
+                            ' - ' + TimeParser.standard_time_to_str(until) + ']'
         return tip_text
 
     # ------------------------------------- Real Time Tips ------------------------------------

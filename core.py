@@ -163,9 +163,9 @@ class TimeParser:
         date = std_time - year
         text = str(year)
         if std_time < 0:
-            text += ' BCE'
+            text = str(-year) + ' BCE'
         else:
-            text += ' CE'
+            text = str(year) + ' CE'
         return text
 
 
