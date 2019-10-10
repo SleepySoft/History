@@ -96,6 +96,9 @@ TODO
 (DONE) | 文event combobox显示时间并按时间排序  
 
 ## TODO:
+
+如何优化一年内多起事件的显示（重叠的问题）  
+同一时代人物太多经常导致显示空间不足，如何处理  
   
 Thread编辑  
     界面支持配置1-10个thread，包括enable，focus label，depot，filter  
