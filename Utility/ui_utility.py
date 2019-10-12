@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMainWindow, QApplication, QHBoxLayout, QWidget, QPushButton, \
     QDockWidget, QAction, qApp, QMessageBox, QDialog, QVBoxLayout, QLabel, QGroupBox, QBoxLayout, QTableWidget, \
-    QTableWidgetItem, QTabWidget, QLayout, QTextEdit
+    QTableWidgetItem, QTabWidget, QLayout, QTextEdit, QListWidget, QListWidgetItem
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -235,7 +235,7 @@ class CommonMainWindow(QMainWindow):
             pass
 
 
-# =========================================== CommonMainWindow ===========================================
+# =========================================== EasyQTableWidget ===========================================
 
 class EasyQTableWidget(QTableWidget):
     def __init__(self, *__args):
@@ -255,6 +255,86 @@ class EasyQTableWidget(QTableWidget):
 
     def GetCurrentIndex(self) -> int:
         return self.selectionModel().currentIndex().row() if self.selectionModel().hasSelection() else -1
+
+
+# =========================================== EasyQListSuite ===========================================
+
+class EasyQListSuite(QWidget):
+    def __init__(self, *__args):
+        super(EasyQListSuite, self).__init__(*__args)
+
+        self.__item_list = []
+
+        self.__list_main = QListWidget(self)
+        self.__button_add = QPushButton('Add')
+        self.__button_remove = QPushButton('Remove')
+
+        self.__init_ui()
+        self.__config_ui()
+
+    def update_item(self, items: [(str, any)]):
+        self.__item_list.clear()
+        for item in items:
+            if isinstance(item, (list, tuple)):
+                if len(item) == 0:
+                    continue
+                elif len(item) == 1:
+                    self.__item_list.append((str(item[0]), item[0]))
+                else:
+                    self.__item_list.append((str(item[0]), item[1]))
+            else:
+                self.__item_list.append((str(item), item))
+        self.__update_list()
+
+    def get_select_items(self) -> [any]:
+        return [item.getData(Qt.UserRole) for item in self.__list_main.selectedItems()]
+
+    def set_add_handler(self, handler):
+        self.__button_add.clicked.connect(handler)
+
+    def set_remove_handler(self, handler):
+        self.__button_remove.clicked.connect(handler)
+
+    # ---------------------------------------- Private ----------------------------------------
+
+    def __init_ui(self):
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+
+        line_layout = QHBoxLayout()
+        line_layout.addWidget(self.__button_add)
+        line_layout.addWidget(self.__button_remove)
+
+        main_layout.addWidget(self.__list_main)
+        main_layout.addLayout(line_layout)
+
+    def __config_ui(self):
+        pass
+        # self.__button_add.clicked.connect(self.__on_btn_click_add)
+        # self.__button_remove.clicked.connect(self.__on_btn_click_remove)
+
+    def __update_list(self):
+        self.__list_main.clear()
+        for text, obj in self.__item_list:
+            item = QListWidgetItem()
+            item.setText(text)
+            item.setData(Qt.UserRole, obj)
+            self.__list_main.addItem(item)
+
+    def __on_btn_click_add(self):
+        pass
+
+    def __on_btn_click_remove(self):
+        pass
+
+
+
+
+
+
+
+
+
 
 
 
