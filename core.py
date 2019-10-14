@@ -474,7 +474,19 @@ class LabelTag:
         return text
 
     def filter(self, include_label_tags: dict, exclude_label_tags: dict) -> bool:
+        pass
+
+    def includes(self, label_tag_dict: dict):
+        for key in label_tag_dict:
+            if key not in self.__label_tags.keys():
+                return False
+            expect_tags = label_tag_dict[key]
+            exists_tags = self.__label_tags[key]
+            for tag in expect_tags:
+                if tag not in exists_tags:
+                    return False
         return True
+
 
     # @staticmethod
     # def tags_to_text(tags: [str]) -> str:
