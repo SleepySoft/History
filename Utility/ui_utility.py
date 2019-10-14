@@ -287,7 +287,7 @@ class EasyQListSuite(QWidget):
         self.__update_list()
 
     def get_select_items(self) -> [any]:
-        return [item.getData(Qt.UserRole) for item in self.__list_main.selectedItems()]
+        return [item.data(Qt.UserRole) for item in self.__list_main.selectedItems()]
 
     def set_add_handler(self, handler):
         self.__button_add.clicked.connect(handler)

@@ -311,7 +311,7 @@ LABEL_TAG_WRAPPERS = [('"""', '"""'), ('#', '\n')]
 LABEL_TAG_ESCAPES_SYMBOLS = ['\\']
 
 
-class LabelTagParser(TokenParser):
+class LabelTagParser:
     def __init__(self):
         self.__last_tags = []
         self.__label_tags = []
@@ -353,7 +353,7 @@ class LabelTagParser(TokenParser):
             elif token == '\n' or token == ';':
                 next_step = 'label'
             elif next_step == 'label':
-                expect = [':']
+                expect = [':', ';']
                 next_step = 'tag'
                 self.switch_label(token)
             elif next_step == 'tag':
@@ -406,6 +406,15 @@ class LabelTagParser(TokenParser):
                 return '"""' + tag + '"""'
         return tag
 
+    @staticmethod
+    def label_tags_list_to_dict(label_tags_list: [str, [str]]) -> dict:
+        label_tags_dict = {}
+        for label, tags in label_tags_list:
+            if label not in label_tags_list:
+                label_tags_dict[label] = []
+            label_tags_dict[label].extend(tags)
+        return label_tags_dict
+
 
 # --------------------------------------------------- class LabelTag ---------------------------------------------------
 
@@ -415,6 +424,15 @@ class LabelTag:
 
     def reset(self):
         self.__label_tags.clear()
+
+    def attach(self, label_tags_list: list):
+        self.__label_tags = LabelTagParser.label_tags_list_to_dict(label_tags_list)
+
+        # self.__label_tags.clear()
+        # for label, tags in raw_label_tags:
+        #     if label not in self.__label_tags:
+        #         self.__label_tags[label] = []
+        #     self.__label_tags[label].extend(tags)
 
     def get_tags(self, label: str) -> [str]:
         return self.__label_tags.get(label, [])
@@ -455,15 +473,7 @@ class LabelTag:
                 text += label + ': ' + tags_text + new_line
         return text
 
-    def filter(self, filter_label_tags: dict) -> bool:
-        """
-        Filter format:
-        { +label: None } : Filter the instance that include this label.
-        { -label: None } : Filter the instance that does not include this label.
-        { label: +tag1, -tags} : Filter the instance that includes/excludes this tags in this label.
-        :param filter_label_tags: The filer label tags
-        :return:
-        """
+    def filter(self, include_label_tags: dict, exclude_label_tags: dict) -> bool:
         return True
 
     # @staticmethod
