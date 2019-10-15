@@ -24,6 +24,9 @@ class HistoricalFilter(LabelTag):
 
     # ---------------------------- Sets ----------------------------
 
+    def set_sources(self, sources: [str]):
+        self.__set_label_tags_str('sources', sources)
+
     def set_focus_label(self, label: str):
         self.__set_label_tags_str('focus_label', [label])
 
@@ -52,6 +55,9 @@ class HistoricalFilter(LabelTag):
         return True
 
     # ---------------------------- Gets ----------------------------
+
+    def get_sources(self) -> [str]:
+        return self.get_tags('sources')
 
     def get_focus_label(self) -> str:
         focus_label = self.get_tags('focus_label')
@@ -109,10 +115,11 @@ class FilterEditor(QWidget):
         self.__list_source = EasyQListSuite()
         self.__list_include = EasyQListSuite()
         self.__list_exclude = EasyQListSuite()
-        
-        self.__button_gen_index = QPushButton('Generate Index')
+
         self.__button_save_filter = QPushButton('Save')
         self.__button_load_filter = QPushButton('Load')
+        self.__button_check_match = QPushButton('Check')
+        self.__button_gen_index = QPushButton('Generate Index')
 
         self.__init_ui()
         self.__config_ui()
@@ -143,11 +150,19 @@ class FilterEditor(QWidget):
         layout.addWidget(self.__combo_focus)
         main_layout.addWidget(group)
 
-        main_layout.addLayout(horizon_layout([self.__button_gen_index,
-                                              self.__button_save_filter,
-                                              self.__button_load_filter]))
+        main_layout.addLayout(horizon_layout([self.__button_save_filter,
+                                              self.__button_load_filter,
+                                              self.__button_check_match,
+                                              self.__button_gen_index]))
 
     def __config_ui(self):
+        self.__combo_focus.setEditable(True)
+        self.__combo_focus.addItem('')
+        self.__combo_focus.addItem('event')
+        self.__combo_focus.addItem('people')
+        self.__combo_focus.addItem('location')
+        self.__combo_focus.addItem('organization')
+
         self.__list_source.set_add_handler(self.__on_source_add)
         self.__list_source.set_remove_handler(self.__on_source_remove)
 
@@ -157,17 +172,20 @@ class FilterEditor(QWidget):
         self.__list_exclude.set_add_handler(self.__on_exclude_add)
         self.__list_exclude.set_remove_handler(self.__on_exclude_remove)
 
-        self.__button_gen_index.clicked.connect(self.__on_btn_click_gen)
         self.__button_save_filter.clicked.connect(self.__on_btn_click_save)
         self.__button_load_filter.clicked.connect(self.__on_btn_click_load)
+        self.__button_check_match.clicked.connect(self.__on_btn_click_chk)
+        self.__button_gen_index.clicked.connect(self.__on_btn_click_gen)
 
     # ---------------------------------------------------------------
 
     def __on_source_add(self):
+        root_path = HistoricalRecordLoader.get_local_depot_root()
         fname, ftype = QFileDialog.getOpenFileNames(self,
                                                     'Select History Files',
-                                                    HistoricalRecordLoader.get_local_depot_root(),
+                                                    root_path,
                                                     'History Files (*.his)')
+        # fname = [f[len(root_path):] if f.startswith(root_path) else f for f in fname]
         self.__sources.extend(fname)
         self.__sources = list(set(self.__sources))
         self.__list_source.update_item([(s, s) for s in self.__sources])
@@ -208,14 +226,90 @@ class FilterEditor(QWidget):
 
     # ---------------------------------------------------------------
 
-    def __on_btn_click_gen(self):
-        pass
-
     def __on_btn_click_save(self):
-        pass
+        fileName_choose, filetype = QFileDialog.getSaveFileName(self,
+                                                                'Save Filter',
+                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                'Filter Files (*.hisfilter)')
+        if fileName_choose == '':
+            return
+
+        his_filter = self.ui_to_filter()
+        text = his_filter.dump_text()
+
+        with open(fileName_choose, 'wt') as f:
+            f.write(text)
 
     def __on_btn_click_load(self):
-        pass
+        fileName_choose, filetype = QFileDialog.getOpenFileName(self,
+                                                                'Load Filter',
+                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                'Filter Files (*.hisfilter)')
+        if fileName_choose == '':
+            return
+
+        with open(fileName_choose, 'rt') as f:
+            text = f.read()
+
+        parser = LabelTagParser()
+        if not parser.parse(text):
+            print('Load from (' + fileName_choose + ') failed.')
+            return
+
+        his_filter = HistoricalFilter()
+        his_filter.attach(parser.get_label_tags())
+
+        self.filter_to_ui(his_filter)
+
+    def __on_btn_click_chk(self):
+        his_filter = self.ui_to_filter()
+
+    def __on_btn_click_gen(self):
+        his_filter = self.ui_to_filter()
+
+    # ---------------------------------------------------------------
+
+    def filter_to_ui(self, his_filter: HistoricalFilter):
+        self.__combo_focus.setCurrentText(his_filter.get_focus_label())
+
+        self.__sources = his_filter.get_sources()
+        self.__includes = self.__label_tag_dict_to_text(his_filter.get_include_tags())
+        self.__excludes = self.__label_tag_dict_to_text(his_filter.get_exclude_tags())
+
+        self.__list_source.update_item([(s, s) for s in self.__sources])
+        self.__list_include.update_item([(s, s) for s in self.__includes])
+        self.__list_exclude.update_item([(s, s) for s in self.__excludes])
+
+    def ui_to_filter(self) -> HistoricalFilter:
+        his_filter = HistoricalFilter()
+        his_filter.set_sources(self.__sources)
+        his_filter.set_focus_label(self.__combo_focus.currentText())
+        his_filter.set_include_tags_str(self.__includes)
+        his_filter.set_exclude_tags_str(self.__excludes)
+        return his_filter
+
+    def load_source_records(self) -> [HistoricalRecord]:
+        records = []
+        for source in self.__sources:
+            loader = HistoricalRecordLoader()
+            if not loader.from_file(source):
+                continue
+            records.extend(loader.get_loaded_records())
+        return records
+
+    def load_filter_records(self) -> [HistoricalRecord]:
+        history = History()
+        records = self.load_source_records()
+        history.set_records(records)
+
+        focus_label = self.__combo_focus.currentText()
+        his_filter.set_include_tags_str(self.__includes
+        his_filter.set_exclude_tags_str(self.__excludes
+
+        history.get_records()
+
+    def __label_tag_dict_to_text(self, label_tags_dict: dict):
+        return [key + ': ' + ', '.join(label_tags_dict[key]) for key in label_tags_dict.keys()]
 
 
 # ----------------------------------------------------- HistoryUi ------------------------------------------------------
@@ -269,6 +363,9 @@ class HistoryUi(QMainWindow):
 def test_historical_filter():
     his_filter = HistoricalFilter()
 
+    his_filter.set_sources(['/a/b/c',
+                            'D:\\abc',
+                            'test.his'])
     his_filter.set_focus_label('people')
 
     assert his_filter.add_include_tags_str('include_1')
@@ -290,9 +387,14 @@ def test_historical_filter():
     his_filter = HistoricalFilter()
     his_filter.attach(parser.get_label_tags())
 
+    sources = his_filter.get_sources()
     focus_label = his_filter.get_focus_label()
     include_ltags = his_filter.get_include_tags()
     exclude_ltags = his_filter.get_exclude_tags()
+
+    assert '/a/b/c' in sources
+    assert 'D:\\abc' in sources
+    assert 'test.his' in sources
 
     assert focus_label == 'people'
 
@@ -324,7 +426,7 @@ def test_historical_filter_ui():
 
 def main():
     test_historical_filter()
-    # test_historical_filter_ui()
+    test_historical_filter_ui()
 
 
 # ----------------------------------------------------------------------------------------------------------------------

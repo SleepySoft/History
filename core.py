@@ -401,6 +401,7 @@ class LabelTagParser:
         if not isinstance(tag, str):
             tag = str(tag)
         tag = tag.replace('"""', '\\"""')
+        # tag = tag.replace('\\', '\\\\')
         for token in LABEL_TAG_TOKENS:
             if token in tag:
                 return '"""' + tag + '"""'
@@ -1002,19 +1003,26 @@ class History:
 
     # ----------------------------------------------------------------------------
 
+    def set_records(self, records:[HistoricalRecord]):
+        self.__records = records
+
     def get_record(self, _uuid: str) -> HistoricalRecord or None:
         for record in self.__records:
             if record.uuid() == _uuid:
                 return record
         return None
 
-    def get_records(self,
+    def get_records(self, focus_label: str = '',
                     include_label_tags: dict = None, include_all: bool = True,
                     exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
         if include_label_tags is None and exclude_label_tags is None:
             return self.__records
-        records = [record for record in self.__records if record.filter(include_label_tags, include_all,
-                                                                        exclude_label_tags, exclude_any)]
+        if focus_label is not None and focus_label != '':
+            records = [record for record in self.__records if record.get_focus_label() == focus_label]
+        else:
+            records = self.__records
+        records = [record for record in records if record.filter(include_label_tags, include_all,
+                                                                 exclude_label_tags, exclude_any)]
         return records
 
     def get_indexes(self) ->[HistoricalRecord]:
