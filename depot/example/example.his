@@ -1,14 +1,13 @@
 [START]: event
 
-time: 20190910, 20250201.090000
+uuid: 5319e5f1-11de-4aa9-9aed-adb015ca425c
+time: BC3000
 location: Shanghai, Beijing
 people: qyf
 organization: SleepySoft
 
-tags: example
+tags: example, readme
 author: Sleepy
-成语: 开宗明义
-
 
 title:"""
 Hi-Story Example
@@ -30,11 +29,83 @@ A2. The data can device into different time line and it should be easy for combi
 A3. Github is a good place who provide a contribute mechanism, so the data format is text and it can stored on github, it should be perfect.
 """
 
+# ----------------------------------------------------------------------------------------------------------------------
 
-[START]:event
+[START]:people
 
-time: 20190914
+uuid: ba15c705-ebe8-424d-acf6-db54458c3aee
+time: 2019
+location: Guangdong
+
+tags: tag1, tag2, tag3, tag4, tag5, odd
+author: Sleepy
 
 event:"""
-Mid-autumn festival
+Test event 1
 """
+
+people: Mike
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+[START]: event
+
+uuid: e8a9fd7f-4425-4bd2-bcce-8d7c1fd5adb0
+time: 2030
+location: Chengdu
+
+tags: tag2, tag3, tag4, tag5, even
+author: SleepySoft
+
+event:"""
+Test event 2
+"""
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+[START]: location
+
+uuid: ae5d913f-1815-484d-9963-00d4df6be39b
+time: 3000
+
+tags: tag3, tag4, tag5, odd
+author: SleepySoft, Sleepy
+
+event:"""
+Test event 3
+"""
+
+location: Guangxi
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+[START]: event
+
+uuid: 4c2231b0-cccf-49e8-b686-450b196497a8
+time: 4000
+location: Fujian
+
+tags: tag4, tag5, even
+author: Sleepy
+
+event:"""
+Test event 4
+"""
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+[START]: event
+
+uuid: c925053a-cc87-4bb5-97a8-5423c8f35d1a
+time: 6000
+
+tags: tag5, odd
+author: SleepySoft
+
+event:"""
+Test event 5
+"""
+
+
+
+

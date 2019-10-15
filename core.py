@@ -473,20 +473,35 @@ class LabelTag:
                 text += label + ': ' + tags_text + new_line
         return text
 
-    def filter(self, include_label_tags: dict, exclude_label_tags: dict) -> bool:
-        pass
-
-    def includes(self, label_tag_dict: dict):
-        for key in label_tag_dict:
-            if key not in self.__label_tags.keys():
-                return False
-            expect_tags = label_tag_dict[key]
-            exists_tags = self.__label_tags[key]
-            for tag in expect_tags:
-                if tag not in exists_tags:
-                    return False
+    def filter(self,
+               include_label_tags: dict, include_all: bool = True,
+               exclude_label_tags: dict = None, exclude_any: bool = True) -> bool:
+        if include_label_tags is not None and not self.includes(include_label_tags, include_all):
+            return False
+        if exclude_label_tags is not None and self.includes(exclude_label_tags, not exclude_any):
+            return False
         return True
 
+    def includes(self, label_tag_dict: dict, include_all: bool = False):
+        result = False
+        for key in label_tag_dict:
+            if key not in self.__label_tags.keys():
+                if include_all:
+                    return False
+                else:
+                    continue
+            expect_tags = label_tag_dict[key]
+            exists_tags = self.__label_tags[key]
+            for expect_tag in expect_tags:
+                if expect_tag not in exists_tags:
+                    if include_all:
+                        return False
+                else:
+                    if include_all:
+                        result = True
+                    else:
+                        return True
+        return result
 
     # @staticmethod
     # def tags_to_text(tags: [str]) -> str:
@@ -993,8 +1008,14 @@ class History:
                 return record
         return None
 
-    def get_records(self) ->[HistoricalRecord]:
-        return self.__records
+    def get_records(self,
+                    include_label_tags: dict = None, include_all: bool = True,
+                    exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
+        if include_label_tags is None and exclude_label_tags is None:
+            return self.__records
+        records = [record for record in self.__records if record.filter(include_label_tags, include_all,
+                                                                        exclude_label_tags, exclude_any)]
+        return records
 
     def get_indexes(self) ->[HistoricalRecord]:
         return self.__indexes
@@ -1112,6 +1133,38 @@ def test_history_basic():
     history.print_records()
 
 
+def test_history_filter():
+    loader = HistoricalRecordLoader()
+    loader.from_local_depot('example')
+
+    history = History()
+    history.update_records(loader.get_loaded_records())
+
+    records = history.get_records(include_label_tags={'tags': ['tag1']},
+                                  include_all=True)
+    assert len(records) == 1
+
+    records = history.get_records(include_label_tags={'tags': ['tag3']},
+                                  include_all=True)
+    assert len(records) == 3
+
+    records = history.get_records(include_label_tags={'tags': ['tag5', 'odd']},
+                                  include_all=True)
+    assert len(records) == 3
+
+    records = history.get_records(include_label_tags={'tags': ['tag1', 'even']},
+                                  include_all=False)
+    assert len(records) == 3
+
+    records = history.get_records(include_label_tags={'tags': ['tag']},
+                                  include_all=True)
+    assert len(records) == 0
+
+    records = history.get_records(include_label_tags={'author': ['Sleepy']},
+                                  include_all=True)
+    assert len(records) == 4
+
+
 # -------------------------------- Indexer --------------------------------
 
 def test_generate_index():
@@ -1135,6 +1188,7 @@ def main():
     test_token_parser_case_normal()
     test_token_parser_case_escape_symbol()
     test_history_basic()
+    test_history_filter()
     test_generate_index()
     test_load_index()
     print('All test passed.')
