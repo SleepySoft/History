@@ -477,9 +477,11 @@ class LabelTag:
     def filter(self,
                include_label_tags: dict, include_all: bool = True,
                exclude_label_tags: dict = None, exclude_any: bool = True) -> bool:
-        if include_label_tags is not None and not self.includes(include_label_tags, include_all):
+        if include_label_tags is not None and len(include_label_tags) > 0 and \
+                not self.includes(include_label_tags, include_all):
             return False
-        if exclude_label_tags is not None and self.includes(exclude_label_tags, not exclude_any):
+        if exclude_label_tags is not None and len(exclude_label_tags) > 0 and \
+                self.includes(exclude_label_tags, not exclude_any):
             return False
         return True
 

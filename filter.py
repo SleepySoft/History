@@ -185,7 +185,7 @@ class FilterEditor(QWidget):
                                                     'Select History Files',
                                                     root_path,
                                                     'History Files (*.his)')
-        # fname = [f[len(root_path):] if f.startswith(root_path) else f for f in fname]
+        fname = [f[len(root_path):] if f.startswith(root_path) else f for f in fname]
         self.__sources.extend(fname)
         self.__sources = list(set(self.__sources))
         self.__list_source.update_item([(s, s) for s in self.__sources])
@@ -262,10 +262,22 @@ class FilterEditor(QWidget):
         self.filter_to_ui(his_filter)
 
     def __on_btn_click_chk(self):
-        his_filter = self.ui_to_filter()
+        pass
 
     def __on_btn_click_gen(self):
-        his_filter = self.ui_to_filter()
+        fileName_choose, filetype = QFileDialog.getSaveFileName(self,
+                                                                'Generate Index',
+                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                'Filter Files (*.index)')
+        if fileName_choose == '':
+            return
+
+        records = self.load_filter_records()
+        indexer = HistoricalRecordIndexer()
+        indexer.index_records(records)
+        indexer.dump_to_file(fileName_choose)
+
+        QMessageBox.information(self, 'Generate Done', 'Generate index for ' + str(len(records)) + ' records Done.')
 
     # ---------------------------------------------------------------
 
@@ -292,7 +304,11 @@ class FilterEditor(QWidget):
         records = []
         for source in self.__sources:
             loader = HistoricalRecordLoader()
-            if not loader.from_file(source):
+            if path.isabs(source):
+                ret = loader.from_file(source)
+            else:
+                ret = loader.from_source(source)
+            if not ret:
                 continue
             records.extend(loader.get_loaded_records())
         return records
@@ -302,11 +318,11 @@ class FilterEditor(QWidget):
         records = self.load_source_records()
         history.set_records(records)
 
-        focus_label = self.__combo_focus.currentText()
-        his_filter.set_include_tags_str(self.__includes
-        his_filter.set_exclude_tags_str(self.__excludes
+        his_filter = self.ui_to_filter()
 
-        history.get_records()
+        return history.get_records(his_filter.get_focus_label(),
+                                   his_filter.get_include_tags(), False,
+                                   his_filter.get_exclude_tags(), True)
 
     def __label_tag_dict_to_text(self, label_tags_dict: dict):
         return [key + ': ' + ', '.join(label_tags_dict[key]) for key in label_tags_dict.keys()]
