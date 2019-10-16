@@ -237,6 +237,26 @@ class CommonMainWindow(QMainWindow):
 
 # =========================================== EasyQTableWidget ===========================================
 
+class WrapperQDialog(QDialog):
+    def __init__(self, wrapped_wnd: QWidget):
+        super(WrapperQDialog, self).__init__()
+
+        self.__wrapped_wnd = wrapped_wnd
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.__wrapped_wnd)
+
+        self.setLayout(layout)
+        self.setWindowFlags(int(self.windowFlags()) |
+                            Qt.WindowMinMaxButtonsHint |
+                            QtCore.Qt.WindowSystemMenuHint)
+
+    def get_wrapped_wnd(self) -> QWidget:
+        return self.__wrapped_wnd
+
+
+# =========================================== EasyQTableWidget ===========================================
+
 class EasyQTableWidget(QTableWidget):
     def __init__(self, *__args):
         super(EasyQTableWidget, self).__init__(*__args)

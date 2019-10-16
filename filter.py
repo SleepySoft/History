@@ -328,52 +328,6 @@ class FilterEditor(QWidget):
         return [key + ': ' + ', '.join(label_tags_dict[key]) for key in label_tags_dict.keys()]
 
 
-# ----------------------------------------------------- HistoryUi ------------------------------------------------------
-
-class HistoryUi(QMainWindow):
-    def __init__(self):
-        super(HistoryUi, self).__init__()
-        self.init_ui()
-        self.init_menu()
-
-    def init_ui(self):
-        self.statusBar().showMessage('Ready')
-
-        self.resize(1280, 800)
-        self.move(QApplication.desktop().screen().rect().center() - self.rect().center());
-        self.setWindowTitle('History - Sleepy')
-
-    def init_menu(self):
-        menu_bar = self.menuBar()
-        menu_file = menu_bar.addMenu('File')
-        menu_file = menu_bar.addMenu('Config')
-        menu_help = menu_bar.addMenu('Help')
-
-        exit_action = QAction('&Exit', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.setStatusTip('Exit app')
-        exit_action.triggered.connect(qApp.quit)
-        menu_file.addAction(exit_action)
-
-        config_action = QAction('&C', self)
-        exit_action.setShortcut('Ctrl+Q')
-        exit_action.setStatusTip('Exit app')
-        exit_action.triggered.connect(qApp.quit)
-        menu_file.addAction(exit_action)
-
-        help_action = QAction('&Help', self)
-        help_action.setShortcut('Ctrl+H')
-        help_action.setStatusTip('Open help Window')
-        help_action.triggered.connect(self.on_menu_help)
-        menu_help.addAction(help_action)
-
-        about_action = QAction('&About', self)
-        about_action.setShortcut('Ctrl+B')
-        about_action.setStatusTip('Open about Window')
-        about_action.triggered.connect(self.on_menu_about)
-        menu_help.addAction(about_action)
-
-
 # -------------------------------------------------------  Test --------------------------------------------------------
 
 def test_historical_filter():
