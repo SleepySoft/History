@@ -21,9 +21,70 @@ from Utility.ui_utility import *
 
 # --------------------------------------------------- Thread Editor ----------------------------------------------------
 
+class ThreadEditor(QWidget):
+    def __init__(self, parent=None):
+        super(ThreadEditor, self).__init__(parent)
+
+        # Agent Interface:
+        #   on_remove(editor: ThreadEditor)
+        self.__agent = None
+
+        self.__layout = QVBoxLayout()
+        self.__line_width = QLineEdit()
+        self.__line_index = QLineEdit()
+        self.__radio_left = QRadioButton('Left')
+        self.__radio_right = QRadioButton('Right')
+        self.__button_browse = QPushButton('Browse')
+        self.__button_remove = QPushButton('Remove')
+
+        self.__init_ui()
+        self.__config_ui()
+
+    def __init_ui(self):
+        self.__layout.addLayout(horizon_layout([QLabel('Thread Index : '), self.__line_index, self.__button_browse]))
+        self.__layout.addLayout(horizon_layout([QLabel('Thread Layout: '), self.__radio_left, self.__radio_right,
+                                               QLabel('Track Width'), self.__line_width, self.__button_remove]))
+        self.setLayout(self.__layout)
+
+    def __config_ui(self):
+        self.__button_browse.clicked.connect(self.on_button_browse)
+        self.__button_remove.clicked.connect(self.on_button_remove)
+
+    def set_agent(self, agent):
+        self.__agent = agent
+
+    def get_thread_config(self):
+        layout = TimeAxis.ALIGN_LEFT if self.__radio_left.isChecked() else TimeAxis.ALIGN_RIGHT
+        try:
+            track_width = int(self.__line_width)
+            track_width = min(10, track_width)
+            track_width = max(100, track_width)
+        except Exception as e:
+            track_width = 50
+        finally:
+            pass
+        track_index = self.__line_index.text()
+        return layout, track_width, track_index
+
+    def on_button_browse(self):
+        file_choose, filetype = QFileDialog.getOpenFileName(self,
+                                                            'Load Filter',
+                                                            HistoricalRecordLoader.get_local_depot_root(),
+                                                            'Filter Files (*.index)')
+        if file_choose != '':
+            self.__line_index.setText(file_choose)
+
+    def on_button_remove(self):
+        self.__agent.on_thread_remove(self)
+
+
+# -------------------------------------------------- AppearanceEditor --------------------------------------------------
+
 class AppearanceEditor(QWidget):
     def __init__(self, parent: QWidget = None):
         super(AppearanceEditor, self).__init__(parent)
+
+        self.__thread_editor = []
 
         self.__radio_horizon = QRadioButton('Horizon')
         self.__radio_vertical = QRadioButton('Vertical')
@@ -37,20 +98,26 @@ class AppearanceEditor(QWidget):
         self.__group_thread_editor = None
         self.__layout_thread_editor = None
         self.__button_thread_add = QPushButton('Add')
-        self.__label_thread_place_holder = QHBoxLayout()
+
+        self.__thread_place_holder_widget = QWidget()
+        self.__thread_place_holder_layout = QHBoxLayout()
+        self.__thread_place_holder_widget.setLayout(self.__thread_place_holder_layout)
+
+        self.resize(600, 400)
 
         self.__init_ui()
+        self.__config_ui()
 
     def __init_ui(self):
-        self.__label_thread_place_holder.addWidget(QLabel(''), 100)
-        self.__label_thread_place_holder.addWidget(self.__button_thread_add, 0)
+        self.__thread_place_holder_layout.addWidget(QLabel(''), 100)
+        self.__thread_place_holder_layout.addWidget(self.__button_thread_add, 0)
 
         group_appearance, layout_appearance = create_v_group_box('Appearance')
         layout_appearance.addLayout(horizon_layout([QLabel('Layout  '), self.__radio_horizon, self.__radio_vertical]))
         layout_appearance.addLayout(horizon_layout([QLabel('Position'), self.__slider_position, self.__label_position]))
 
         self.__group_thread_editor, self.__layout_thread_editor = create_v_group_box('Thread Config')
-        self.__layout_thread_editor.addLayout(self.__label_thread_place_holder)
+        self.__layout_thread_editor.addWidget(self.__thread_place_holder_widget)
 
         # --------------------- Main layout ---------------------
         main_layout = QVBoxLayout()
@@ -58,19 +125,43 @@ class AppearanceEditor(QWidget):
         main_layout.addWidget(self.__group_thread_editor)
         self.setLayout(main_layout)
 
-    def __create_thread_group_layout(self):
-        layout = QVBoxLayout()
-        line_width = QLineEdit()
-        line_index = QLineEdit()
-        radio_left = QRadioButton('Left')
-        radio_right = QRadioButton('Right')
-        button_browse = QPushButton('Browse')
-        button_remove = QPushButton('Remove')
+    def __config_ui(self):
+        self.__radio_vertical.setChecked(True)
+        self.__radio_horizon.setEnabled(False)
+        self.__button_thread_add.clicked.connect(self.append_thread)
 
-        layout.addLayout(horizon_layout([QLabel('Thread Layout: '), radio_left, radio_right,
-                                         QLabel('Width'), line_width, button_remove]))
-        layout.addLayout(horizon_layout([QLabel('Thread Index : '), line_index, button_browse]))
-    
+    # ------------------------------------------------------------------------------------------------
+
+    def get_appearance_config(self) -> tuple:
+        layout = TimeAxis.LAYOUT_HORIZON if self.__radio_horizon.isChecked() else TimeAxis.LAYOUT_VERTICAL
+        position = int(self.__label_position.text())
+        thread_config = [thread.get_thread_config() for thread in self.__thread_editor]
+        return layout, position, thread_config
+
+    # ------------------------------------------------------------------------------------------------
+
+    def on_thread_remove(self, thread: ThreadEditor):
+        self.remove_thread(thread)
+
+    def remove_thread(self, thread: ThreadEditor):
+        self.__thread_editor.remove(thread)
+        thread.setParent(None)
+        self.layout_thread_editor()
+
+    def append_thread(self):
+        thread = ThreadEditor(self)
+        self.__thread_editor.append(thread)
+        thread.set_agent(self)
+        self.layout_thread_editor()
+
+    def layout_thread_editor(self):
+        for i in range(self.__layout_thread_editor.count()):
+            layout_item = self.__layout_thread_editor.itemAt(i)
+            self.__layout_thread_editor.removeItem(layout_item)
+        for thread in self.__thread_editor:
+            self.__layout_thread_editor.addWidget(thread)
+        self.__layout_thread_editor.addWidget(self.__thread_place_holder_widget)
+
 
 # ----------------------------------------------------- HistoryUi ------------------------------------------------------
 
@@ -160,8 +251,11 @@ class HistoryUi(QMainWindow):
 
     def on_menu_thread_editor(self):
         wnd = AppearanceEditor()
-        dlg = WrapperQDialog(wnd)
+        dlg = WrapperQDialog(wnd, True)
         dlg.exec()
+        if dlg.is_ok():
+            layout, position, thread_config = wnd.get_appearance_config()
+            self.apply_appearance_config(layout, position, thread_config)
 
     def on_menu_help(self):
         try:
@@ -205,6 +299,28 @@ class HistoryUi(QMainWindow):
             sys.exit(0)
         else:
             pass
+
+    # ------------------------------------------------------------------------------------------------------------------
+
+    def apply_appearance_config(self, layout, position, thread_config):
+        if layout == TimeAxis.LAYOUT_HORIZON:
+            self.__time_axis.set_horizon()
+        else:
+            self.__time_axis.set_vertical()
+        self.__time_axis.set_offset(position / 100)
+        self.__time_axis.remove_all_history_threads()
+
+        thread_index = 0
+        for layout, track_width, track_index in thread_config:
+            indexer = HistoricalRecordIndexer()
+            indexer.load_from_file(track_index)
+
+            thread = TimeAxis.Thread()
+            thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
+            thread.set_thread_event_indexes(indexer.get_indexes())
+            self.__time_axis.add_history_thread(thread)
+
+            thread_index += 1
 
 
 # ----------------------------------------------------------------------------------------------------------------------

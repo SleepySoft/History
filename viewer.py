@@ -60,6 +60,10 @@ THREAD_BACKGROUND_COLORS = [QColor(182, 194, 154), QColor(138, 151, 123), QColor
 # --------------------------------------------------- class TimeAxis ---------------------------------------------------
 
 class TimeAxis(QWidget):
+    LAYOUT_HORIZON = 1
+    LAYOUT_VERTICAL = 2
+    ALIGN_LEFT = 4
+    ALIGN_RIGHT = 8
 
     class Thread:
         REFERENCE_TRACK_WIDTH = 50
@@ -72,7 +76,7 @@ class TimeAxis(QWidget):
 
             self.__since = 0.0
             self.__until = 0.0
-            self.__horizon = False
+            self.__layout = TimeAxis.LAYOUT_VERTICAL
             self.__thread_width = 0
             self.__thread_length = 0
             self.__thread_track_count = 0
@@ -97,7 +101,7 @@ class TimeAxis(QWidget):
             self.__paint_color = color
 
         def set_thread_horizon(self, horizon: bool):
-            self.__horizon = horizon
+            self.__layout = TimeAxis.LAYOUT_HORIZON if horizon else TimeAxis.LAYOUT_VERTICAL
             self.calc_paint_parameters()
 
         def set_thread_event_indexes(self, indexes: list):
@@ -124,7 +128,7 @@ class TimeAxis(QWidget):
             self.calc_paint_parameters()
 
         def calc_paint_parameters(self):
-            if self.__horizon:
+            if self.__layout == TimeAxis.LAYOUT_HORIZON:
                 self.__thread_width = self.__paint_area.height()
                 self.__thread_length = self.__paint_area.width()
             else:
@@ -193,7 +197,7 @@ class TimeAxis(QWidget):
             qp.setBrush(self.__paint_color)
             qp.drawRect(self.__paint_area)
 
-            if self.__horizon:
+            if self.__layout == TimeAxis.LAYOUT_HORIZON:
                 self.paint_horizon(qp)
             else:
                 self.paint_vertical(qp)
@@ -340,7 +344,7 @@ class TimeAxis(QWidget):
         self.__mouse_on_coordinate = QPoint(0, 0)
 
         self.__era = ''
-        self.__horizon = False
+        self.__layout = TimeAxis.LAYOUT_VERTICAL
 
         self.__step_selection = 0
         self.__main_step = 0
@@ -362,11 +366,18 @@ class TimeAxis(QWidget):
     def set_era(self, era: str):
         self.__era = era
 
+    def set_offset(self, offset: float):
+        if 0.0 <= offset <= 1.0:
+            self.__offset = offset
+        self.repaint()
+
     def set_horizon(self):
-        self.__horizon = True
+        self.__layout = TimeAxis.LAYOUT_HORIZON
+        self.repaint()
 
     def set_vertical(self):
-        self.__horizon = False
+        self.__layout = TimeAxis.LAYOUT_VERTICAL
+        self.repaint()
 
     def set_time_range(self, since: float, until: float):
         self.auto_scale(min(since, until), max(since, until))
@@ -385,6 +396,10 @@ class TimeAxis(QWidget):
     def remove_history_threads(self, thread):
         if thread in self.__history_threads:
             self.__history_threads.remove(thread)
+
+    def remove_all_history_threads(self):
+        self.__history_threads.clear()
+        self.repaint()
 
     def enable_real_time_tips(self, enable: bool):
         self.__enable_real_time_tips = enable
@@ -412,7 +427,7 @@ class TimeAxis(QWidget):
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
         if self.__l_pressing and self.__l_down_point is not None:
-            if self.__horizon:
+            if self.__layout == TimeAxis.LAYOUT_HORIZON:
                 self.__offset = self.__l_down_point.x() - now_pos.x()
             else:
                 self.__offset = self.__l_down_point.y() - now_pos.y()
@@ -481,8 +496,8 @@ class TimeAxis(QWidget):
         self.__width = wnd_size.width()
         self.__height = wnd_size.height()
 
-        self.__axis_width = self.__height if self.__horizon else self.__width
-        self.__axis_length = self.__width if self.__horizon else self.__height
+        self.__axis_width = self.__height if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__width
+        self.__axis_length = self.__width if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__height
         self.__axis_length -= self.DEFAULT_MARGIN_PIXEL * 2
 
         self.update_pixel_per_scale()
@@ -491,7 +506,7 @@ class TimeAxis(QWidget):
 
         self.paint_background(qp)
 
-        if self.__horizon:
+        if self.__layout == TimeAxis.LAYOUT_HORIZON:
             self.paint_horizon(qp)
         else:
             self.paint_vertical(qp)
@@ -564,7 +579,7 @@ class TimeAxis(QWidget):
         return None
 
     def calc_point_to_paint_start_offset(self, point):
-        if self.__horizon:
+        if self.__layout == TimeAxis.LAYOUT_HORIZON:
             return point.x() - TimeAxis.DEFAULT_MARGIN_PIXEL
         else:
             return point.y() - TimeAxis.DEFAULT_MARGIN_PIXEL
@@ -612,7 +627,7 @@ class TimeAxis(QWidget):
         # Vertical -> Horizon : Left rotate
         for i in range(0, threads_count):
             thread = self.__history_threads[i]
-            if self.__horizon:
+            if self.__layout == TimeAxis.LAYOUT_HORIZON:
                 pass
             else:
                 top = TimeAxis.DEFAULT_MARGIN_PIXEL

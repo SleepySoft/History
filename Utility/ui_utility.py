@@ -238,21 +238,45 @@ class CommonMainWindow(QMainWindow):
 # =========================================== EasyQTableWidget ===========================================
 
 class WrapperQDialog(QDialog):
-    def __init__(self, wrapped_wnd: QWidget):
+    def __init__(self, wrapped_wnd: QWidget, has_button: bool = False):
         super(WrapperQDialog, self).__init__()
 
         self.__wrapped_wnd = wrapped_wnd
+        self.__has_button = has_button
+        self.__is_ok = False
 
-        layout = QHBoxLayout()
+        self.__button_ok = QPushButton('OK')
+        self.__button_cancel = QPushButton('Cancel')
+
+        layout = QVBoxLayout()
         layout.addWidget(self.__wrapped_wnd)
+
+        if has_button:
+            line = QHBoxLayout()
+            line.addWidget(QLabel(), 100)
+            line.addWidget(self.__button_ok, 0)
+            line.addWidget(self.__button_cancel, 0)
+            self.__button_ok.clicked.connect(self.on_button_ok)
+            self.__button_cancel.clicked.connect(self.on_button_cancel)
+            layout.addLayout(line)
 
         self.setLayout(layout)
         self.setWindowFlags(int(self.windowFlags()) |
                             Qt.WindowMinMaxButtonsHint |
                             QtCore.Qt.WindowSystemMenuHint)
 
+    def is_ok(self):
+        return self.__is_ok
+
     def get_wrapped_wnd(self) -> QWidget:
         return self.__wrapped_wnd
+
+    def on_button_ok(self):
+        self.__is_ok = True
+        self.close()
+
+    def on_button_cancel(self):
+        self.close()
 
 
 # =========================================== EasyQTableWidget ===========================================
