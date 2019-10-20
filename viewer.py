@@ -68,6 +68,11 @@ class TimeAxis(QWidget):
     class Thread:
         REFERENCE_TRACK_WIDTH = 50
 
+        class PaintInfo:
+            def __init__(self):
+                historical_index = None
+                track = -1
+                
         def __init__(self):
             self.__event_indexes = []
             self.__paint_indexes = []
@@ -76,7 +81,9 @@ class TimeAxis(QWidget):
 
             self.__since = 0.0
             self.__until = 0.0
+            self.__align = TimeAxis.ALIGN_RIGHT
             self.__layout = TimeAxis.LAYOUT_VERTICAL
+            self.__min_track_width = TimeAxis.Thread.REFERENCE_TRACK_WIDTH
             self.__thread_width = 0
             self.__thread_length = 0
             self.__thread_track_count = 0
@@ -97,9 +104,24 @@ class TimeAxis(QWidget):
 
         # -------------------------------------------------- Methods ---------------------------------------------------
 
-        def set_thread_color(self, color):
+        def set_thread_area(self, area: QRect):
+            self.__paint_area = area
+            self.calc_paint_parameters()
+
+        def set_thread_color(self, color: QColor):
             self.__paint_color = color
 
+        def set_thread_align(self, align: int):
+            self.__align = align
+
+        def set_thread_layout(self, layout: int):
+            self.__layout = layout
+            self.calc_paint_parameters()
+
+        def set_thread_min_track_width(self, width: int):
+            self.__min_track_width = width
+
+        # Deprecated
         def set_thread_horizon(self, horizon: bool):
             self.__layout = TimeAxis.LAYOUT_HORIZON if horizon else TimeAxis.LAYOUT_VERTICAL
             self.calc_paint_parameters()
@@ -116,11 +138,9 @@ class TimeAxis(QWidget):
 
         # ---------------------------------------------- Paint Parameters ----------------------------------------------
 
+        # Deprecated
         def on_paint_canvas_size_update(self, area: QRect):
-            self.__paint_area = area
-            # Reserved space
-            self.__paint_area.setLeft(self.__paint_area.left() + 20)
-            self.calc_paint_parameters()
+            self.set_thread_area(area)
 
         def on_paint_scale_range_updated(self, since: float, until: float):
             self.__since = since
@@ -139,21 +159,23 @@ class TimeAxis(QWidget):
             self.__indexes_layout.clear()
             self.__indexes_adapt_rect.clear()
 
-            if self.__thread_width < TimeAxis.Thread.REFERENCE_TRACK_WIDTH * 0.3:
+            if self.__thread_width < self.__min_track_width * 0.3:
                 return
 
             # Adjust track count
-            self.__thread_track_count = self.__thread_width / TimeAxis.Thread.REFERENCE_TRACK_WIDTH
+            self.__thread_track_count = self.__thread_width / self.__min_track_width
             self.__thread_track_count = int(self.__thread_track_count + 0.5)
             self.__thread_track_width = self.__thread_width / self.__thread_track_count
 
             for index in self.__event_indexes:
                 if index.period_adapt(self.__since, self.__until):
+                    # Pick the paint indexes and sort by its period length
                     self.__paint_indexes.append(index)
                     # Pre-allocation
                     self.__indexes_layout.append(-1)
                     self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
-            self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
+            # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
+            self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
 
             self.layout_event_to_track()
 
@@ -165,8 +187,10 @@ class TimeAxis(QWidget):
             # Track 1 is reserved for events
             # Layout the low level track first
 
+            # self.__align
+
             for i in range(1, self.__thread_track_count):
-                track_place = None
+                track_space = []
                 for j in range(0, len(self.__paint_indexes)):
                     # Already layout
                     if self.__indexes_layout[j] >= 0:
@@ -218,11 +242,15 @@ class TimeAxis(QWidget):
                 track = self.__indexes_layout[i]
 
                 top = self.__paint_area.top() + self.value_to_pixel(index.since())
-                left = self.__paint_area.left() + track * self.__thread_track_width
-                right = left + self.__thread_track_width
+                if self.__align == TimeAxis.ALIGN_RIGHT:
+                    left = self.__paint_area.left() + track * self.__thread_track_width
+                    right = left + self.__thread_track_width
+                else:
+                    right = self.__paint_area.right() - track * self.__thread_track_width
+                    left = right - self.__thread_track_width
 
                 if index.since() == index.until():
-                    diagonal = right - left
+                    diagonal = abs(right - left)
                     half_diagonal = diagonal / 2
                     # v_mid = top
                     # h_mid = left + half_diagonal
@@ -243,7 +271,7 @@ class TimeAxis(QWidget):
                 self.__indexes_adapt_rect[i] = index_rect
 
                 if index.since() == index.until():
-                    TimeAxis.Thread.paint_event_bar(qp, index_rect, self.__event_bk)
+                    TimeAxis.Thread.paint_event_bar(qp, index_rect, self.__event_bk, self.__align)
                     TimeAxis.Thread.paint_index_text(qp, index, index_rect, self.__event_font)
                 else:
                     TimeAxis.Thread.paint_period_bar(qp, index_rect, self.__story_bk)
@@ -257,10 +285,20 @@ class TimeAxis(QWidget):
             return area
 
         @staticmethod
-        def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor):
-            arrow_points = [QPoint(index_rect.left() - 10, index_rect.center().y()),
-                            index_rect.topLeft(), index_rect.topRight(),
-                            index_rect.bottomRight(), index_rect.bottomLeft()]
+        def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
+            if align == TimeAxis.ALIGN_RIGHT:
+                rect = index_rect
+                rect.setLeft(rect.left() + 10)
+                arrow_points = [QPoint(rect.left() - 10, rect.center().y()),
+                                rect.topLeft(), rect.topRight(),
+                                rect.bottomRight(), rect.bottomLeft()]
+            else:
+                rect = index_rect
+                rect.setRight(rect.right() - 10)
+                arrow_points = [QPoint(rect.right() + 10, rect.center().y()),
+                                rect.bottomRight(), rect.bottomLeft(),
+                                rect.topLeft(), rect.topRight()]
+
             qp.setBrush(back_ground)
             qp.drawPolygon(QPolygon(arrow_points))
 
@@ -310,7 +348,12 @@ class TimeAxis(QWidget):
         self.__axis_width = 0
         self.__axis_length = 0
 
+        self.__axis_area = QRect(0, 0, 0, 0)
+        self.__paint_area = QRect(0, 0, 0, 0)
+
         self.__axis_mid = 0
+        self.__axis_left = 0
+        self.__axis_right = 0
         self.__axis_space_w = 30
         self.__axis_align_offset = 0.3
 
@@ -360,6 +403,8 @@ class TimeAxis(QWidget):
         self.__history_core = None
         self.__history_editor = None
         self.__history_threads = []
+        self.__left_history_threads = []
+        self.__right_history_threads = []
 
     # ----------------------------------------------------- Method -----------------------------------------------------
 
@@ -368,7 +413,7 @@ class TimeAxis(QWidget):
 
     def set_offset(self, offset: float):
         if 0.0 <= offset <= 1.0:
-            self.__offset = offset
+            self.__axis_align_offset = offset
         self.repaint()
 
     def set_horizon(self):
@@ -386,19 +431,31 @@ class TimeAxis(QWidget):
     def set_history_core(self, history: History):
         self.__history_core = history
 
-    def get_history_threads(self) -> list:
-        return self.__history_threads
+    def get_history_threads(self, align: int = ALIGN_RIGHT) -> list:
+        return self.__left_history_threads if align == TimeAxis.ALIGN_LEFT else self.__right_history_threads
 
-    def add_history_thread(self, thread):
+    def add_history_thread(self, thread, align: int = ALIGN_RIGHT):
         if thread not in self.__history_threads:
+            if align == TimeAxis.ALIGN_LEFT:
+                self.__left_history_threads.append(thread)
+            else:
+                self.__right_history_threads.append(thread)
             self.__history_threads.append(thread)
+        self.repaint()
 
     def remove_history_threads(self, thread):
         if thread in self.__history_threads:
             self.__history_threads.remove(thread)
+        if thread in self.__left_history_threads:
+            self.__left_history_threads.remove(thread)
+        if thread in self.__right_history_threads:
+            self.__right_history_threads.remove(thread)
+        self.repaint()
 
     def remove_all_history_threads(self):
         self.__history_threads.clear()
+        self.__left_history_threads.clear()
+        self.__right_history_threads.clear()
         self.repaint()
 
     def enable_real_time_tips(self, enable: bool):
@@ -492,14 +549,7 @@ class TimeAxis(QWidget):
         qp = QPainter()
         qp.begin(self)
 
-        wnd_size = self.size()
-        self.__width = wnd_size.width()
-        self.__height = wnd_size.height()
-
-        self.__axis_width = self.__height if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__width
-        self.__axis_length = self.__width if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__height
-        self.__axis_length -= self.DEFAULT_MARGIN_PIXEL * 2
-
+        self.update_paint_area()
         self.update_pixel_per_scale()
         self.calc_paint_parameters()
         self.calc_paint_layout()
@@ -584,6 +634,16 @@ class TimeAxis(QWidget):
         else:
             return point.y() - TimeAxis.DEFAULT_MARGIN_PIXEL
 
+    def update_paint_area(self):
+        wnd_size = self.size()
+        self.__width = wnd_size.width()
+        self.__height = wnd_size.height()
+        self.__paint_area.setRect(0, 0, self.__width, self.__width)
+
+        self.__axis_width = self.__height if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__width
+        self.__axis_length = self.__width if self.__layout == TimeAxis.LAYOUT_HORIZON else self.__height
+        self.__axis_length -= self.DEFAULT_MARGIN_PIXEL * 2
+
     def update_pixel_per_scale(self):
         self.__pixel_per_scale = self.__axis_length / self.__scale_per_page
         self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
@@ -602,44 +662,43 @@ class TimeAxis(QWidget):
                                                 self.__paint_until_scale * self.__main_step)
 
     def calc_paint_layout(self):
+        era_text_width = 80
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
+        self.__axis_left = int(self.__axis_mid - self.__axis_space_w / 2 - 10) - era_text_width
+        self.__axis_right = int(self.__axis_mid + self.__axis_space_w / 2 + 10)
 
-        threads_count = len(self.__history_threads)
-        if threads_count == 0:
-            return
+        left_thread_count = len(self.__left_history_threads)
+        right_thread_count = len(self.__right_history_threads)
 
-        left_thread_count = int(threads_count * self.__axis_align_offset + 0.5)
-        right_thread_count = threads_count - left_thread_count
-
-        axis_left_margin = self.__axis_mid - self.__axis_space_w / 2
-        axis_right_margin = self.__axis_mid + self.__axis_space_w / 2
-
-        if left_thread_count > 0:
-            left_thread_width = axis_left_margin / left_thread_count
-        else:
-            left_thread_width = 0
-
-        if right_thread_count > 0:
-            right_thread_width = (self.__axis_width - axis_right_margin) / right_thread_count
-        else:
-            right_thread_width = 0
+        left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
+        right_thread_width = (self.__axis_width - self.__axis_right) / right_thread_count \
+            if right_thread_count > 0 else 0
 
         # Vertical -> Horizon : Left rotate
-        for i in range(0, threads_count):
-            thread = self.__history_threads[i]
+
+        for i in range(0, left_thread_count):
+            thread = self.__left_history_threads[i]
             if self.__layout == TimeAxis.LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
                 pass
             else:
                 top = TimeAxis.DEFAULT_MARGIN_PIXEL
                 bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
-                if i < left_thread_count:
-                    left = i * left_thread_width
-                    area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area)
-                else:
-                    left = axis_right_margin + (i - left_thread_count) * right_thread_width
-                    area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
-                    thread.on_paint_canvas_size_update(area)
+                left = i * left_thread_width
+                area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
+                thread.on_paint_canvas_size_update(area)
+
+        for i in range(0, right_thread_count):
+            thread = self.__right_history_threads[i]
+            if self.__layout == TimeAxis.LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
+                pass
+            else:
+                top = TimeAxis.DEFAULT_MARGIN_PIXEL
+                bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+                left = self.__axis_right + i * right_thread_width
+                area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
+                thread.on_paint_canvas_size_update(area)
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
 

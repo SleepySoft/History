@@ -97,6 +97,9 @@ TODO
 
 ## TODO:
 
+Thread Config界面优化（Load，Check）
+Thread放在坐标轴左边
+
 如何优化一年内多起事件的显示（重叠的问题）  
 同一时代人物太多经常导致显示空间不足，如何处理  
   

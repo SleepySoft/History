@@ -47,6 +47,7 @@ class ThreadEditor(QWidget):
         self.setLayout(self.__layout)
 
     def __config_ui(self):
+        self.__radio_right.setChecked(True)
         self.__button_browse.clicked.connect(self.on_button_browse)
         self.__button_remove.clicked.connect(self.on_button_remove)
 
@@ -311,14 +312,16 @@ class HistoryUi(QMainWindow):
         self.__time_axis.remove_all_history_threads()
 
         thread_index = 0
-        for layout, track_width, track_index in thread_config:
+        for align, track_width, track_index in thread_config:
             indexer = HistoricalRecordIndexer()
             indexer.load_from_file(track_index)
 
             thread = TimeAxis.Thread()
             thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
             thread.set_thread_event_indexes(indexer.get_indexes())
-            self.__time_axis.add_history_thread(thread)
+            thread.set_thread_align(align)
+            thread.set_thread_layout(layout)
+            self.__time_axis.add_history_thread(thread, align)
 
             thread_index += 1
 
