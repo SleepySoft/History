@@ -47,6 +47,7 @@ class ThreadEditor(QWidget):
         self.setLayout(self.__layout)
 
     def __config_ui(self):
+        self.__line_width.setText('50')
         self.__radio_right.setChecked(True)
         self.__button_browse.clicked.connect(self.on_button_browse)
         self.__button_remove.clicked.connect(self.on_button_remove)
@@ -130,6 +131,7 @@ class AppearanceEditor(QWidget):
         self.__radio_vertical.setChecked(True)
         self.__radio_horizon.setEnabled(False)
         self.__button_thread_add.clicked.connect(self.append_thread)
+        self.__slider_position.valueChanged.connect(self.__on_slider_value_changed)
 
     # ------------------------------------------------------------------------------------------------
 
@@ -141,8 +143,15 @@ class AppearanceEditor(QWidget):
 
     # ------------------------------------------------------------------------------------------------
 
+    # Interface of ThreadEditor agent
     def on_thread_remove(self, thread: ThreadEditor):
         self.remove_thread(thread)
+
+    def __on_slider_value_changed(self):
+        value = self.__slider_position.value()
+        self.__label_position.setText(str(value))
+
+    # ------------------------------------------------------------------------------------------------
 
     def remove_thread(self, thread: ThreadEditor):
         self.__thread_editor.remove(thread)
@@ -319,6 +328,7 @@ class HistoryUi(QMainWindow):
             thread = TimeAxis.Thread()
             thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
             thread.set_thread_event_indexes(indexer.get_indexes())
+            thread.set_thread_min_track_width(track_width)
             thread.set_thread_align(align)
             thread.set_thread_layout(layout)
             self.__time_axis.add_history_thread(thread, align)
