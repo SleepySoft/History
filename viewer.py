@@ -142,7 +142,7 @@ class TimeAxisThreadCommon:
         self.__since = 0.0
         self.__until = 0.0
         self.__align = ALIGN_RIGHT
-        self.__layout = TimeAxis.LAYOUT_VERTICAL
+        self.__layout = LAYOUT_VERTICAL
         self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
         self.__thread_width = 0
         self.__thread_length = 0
@@ -452,7 +452,7 @@ class TimeAxis(QWidget):
         self.__mouse_on_coordinate = QPoint(0, 0)
 
         self.__era = ''
-        self.__layout = TimeAxis.LAYOUT_VERTICAL
+        self.__layout = LAYOUT_VERTICAL
 
         self.__step_selection = 0
         self.__main_step = 0
@@ -486,7 +486,7 @@ class TimeAxis(QWidget):
         self.repaint()
 
     def set_vertical(self):
-        self.__layout = TimeAxis.LAYOUT_VERTICAL
+        self.__layout = LAYOUT_VERTICAL
         self.repaint()
 
     def set_time_range(self, since: float, until: float):
