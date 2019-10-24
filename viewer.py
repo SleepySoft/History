@@ -104,6 +104,75 @@ class TimeTrackBar:
     def paint(self, qp: QPainter):
         pass
 
+    def calc_paint_parameters(self):
+        if self.__layout == LAYOUT_HORIZON:
+            self.__thread_width = self.__paint_area.height()
+            self.__thread_length = self.__paint_area.width()
+        else:
+            self.__thread_width = self.__paint_area.width()
+            self.__thread_length = self.__paint_area.height()
+
+        self.__paint_indexes.clear()
+        self.__indexes_layout.clear()
+        self.__indexes_adapt_rect.clear()
+
+        if self.__thread_width < self.__min_track_width * 0.3:
+            return
+
+        # Adjust track count
+        self.__thread_track_count = self.__thread_width / self.__min_track_width
+        self.__thread_track_count = int(self.__thread_track_count + 0.5)
+        self.__thread_track_width = self.__thread_width / self.__thread_track_count
+
+        for index in self.__event_indexes:
+            if index.period_adapt(self.__since, self.__until):
+                # Pick the paint indexes and sort by its period length
+                self.__paint_indexes.append(index)
+                # Pre-allocation
+                self.__indexes_layout.append(-1)
+                self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
+        # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
+        self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
+
+        self.layout_event_to_track()
+
+    def layout_event_to_track(self):
+        # track_list = []
+        # for i in range(0, self.__thread_track_count):
+        #     track_list.append(None)
+
+        # Track 1 is reserved for events
+        # Layout the low level track first
+
+        # self.__align
+
+        for i in range(1, self.__thread_track_count):
+            track_space = []
+            for j in range(0, len(self.__paint_indexes)):
+                # Already layout
+                if self.__indexes_layout[j] >= 0:
+                    continue
+                index = self.__paint_indexes[j]
+                if index.since() == index.until():  # Event
+                    self.__indexes_layout[j] = 0
+                else:
+                    # Default layout to the last track
+                    has_space = True
+                    for since, until in track_space:
+                        if since <= index.since() <= until or since <= index.until() <= until:
+                            has_space = False
+                            break
+                    if has_space or (i == self.__thread_track_count - 1):
+                        self.__indexes_layout[j] = i
+                        track_space.append((index.since(), index.until()))
+
+            # for i in range(0, self.__thread_track_count):
+            #     # Default layout to the last track
+            #     if track_list[i] is None or index.since() > track_list[i] or (i == self.__thread_track_count - 1):
+            #         self.__indexes_layout.append(i)
+            #         track_list[i] = index.until()
+            #         break
+
 
 # -------------------------------- class TimeThreadTrack --------------------------------
 
@@ -118,6 +187,13 @@ class TimeThreadTrack:
             if exists_bar.get_bar_area().intersects(bar.get_bar_area()):
                 return False
         return True
+
+    def add_track_bar(self, bar: TimeTrackBar):
+        if not self.includes_bar(bar):
+            self.__track_bars.append(bar)
+
+    def includes_bar(self, bar: TimeTrackBar):
+        return bar in self.__track_bars
 
 
 class TimeThreadBase:
