@@ -56,11 +56,11 @@ class ThreadEditor(QWidget):
         self.__agent = agent
 
     def get_thread_config(self):
-        layout = TimeAxis.ALIGN_LEFT if self.__radio_left.isChecked() else TimeAxis.ALIGN_RIGHT
+        layout = ALIGN_LEFT if self.__radio_left.isChecked() else ALIGN_RIGHT
         try:
-            track_width = int(self.__line_width)
-            track_width = min(10, track_width)
-            track_width = max(100, track_width)
+            track_width = int(self.__line_width.text())
+            track_width = max(10, track_width)
+            track_width = min(100, track_width)
         except Exception as e:
             track_width = 50
         finally:
@@ -136,7 +136,7 @@ class AppearanceEditor(QWidget):
     # ------------------------------------------------------------------------------------------------
 
     def get_appearance_config(self) -> tuple:
-        layout = TimeAxis.LAYOUT_HORIZON if self.__radio_horizon.isChecked() else TimeAxis.LAYOUT_VERTICAL
+        layout = LAYOUT_HORIZON if self.__radio_horizon.isChecked() else TimeAxis.LAYOUT_VERTICAL
         position = int(self.__label_position.text())
         thread_config = [thread.get_thread_config() for thread in self.__thread_editor]
         return layout, position, thread_config
@@ -313,7 +313,7 @@ class HistoryUi(QMainWindow):
     # ------------------------------------------------------------------------------------------------------------------
 
     def apply_appearance_config(self, layout, position, thread_config):
-        if layout == TimeAxis.LAYOUT_HORIZON:
+        if layout == LAYOUT_HORIZON:
             self.__time_axis.set_horizon()
         else:
             self.__time_axis.set_vertical()
@@ -325,7 +325,7 @@ class HistoryUi(QMainWindow):
             indexer = HistoricalRecordIndexer()
             indexer.load_from_file(track_index)
 
-            thread = TimeAxis.Thread()
+            thread = TimeAxisThreadCommon()
             thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
             thread.set_thread_event_indexes(indexer.get_indexes())
             thread.set_thread_min_track_width(track_width)
