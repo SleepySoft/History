@@ -136,7 +136,7 @@ class AppearanceEditor(QWidget):
     # ------------------------------------------------------------------------------------------------
 
     def get_appearance_config(self) -> tuple:
-        layout = LAYOUT_HORIZON if self.__radio_horizon.isChecked() else TimeAxis.LAYOUT_VERTICAL
+        layout = LAYOUT_HORIZON if self.__radio_horizon.isChecked() else LAYOUT_VERTICAL
         position = int(self.__label_position.text())
         thread_config = [thread.get_thread_config() for thread in self.__thread_editor]
         return layout, position, thread_config
