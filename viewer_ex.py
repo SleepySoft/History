@@ -130,12 +130,25 @@ class AxisMetrics:
         return self.__longitudinal_until - self.__longitudinal_since
 
     def rect(self) -> QRect:
-        return QRect(self.__transverse_left, self.__longitudinal_since,
-                     self.__transverse_right - self.__transverse_left,
-                     self.__longitudinal_until - self.__longitudinal_since) if self.__layout == LAYOUT_VERTICAL else \
-                QRect(self.__longitudinal_since, self.__transverse_right,
-                      self.__longitudinal_until - self.__longitudinal_since,
-                      self.__transverse_left - self.__transverse_right)
+        if self.__layout == LAYOUT_VERTICAL:
+            rect = QRect(self.__transverse_left, self.__longitudinal_since,
+                         self.__transverse_right - self.__transverse_left,
+                         self.__longitudinal_until - self.__longitudinal_since)
+        else:
+            rect = QRect(self.__longitudinal_since, self.__transverse_right,
+                         self.__longitudinal_until - self.__longitudinal_since,
+                         self.__transverse_left - self.__transverse_right)
+        return rect
+
+    def copy(self, rhs):
+        self.__scale_since = rhs.__scale_since
+        self.__scale_until = rhs.__scale_until
+        self.__transverse_left = rhs.__transverse_left
+        self.__transverse_right = rhs.__transverse_right
+        self.__longitudinal_since = rhs.__longitudinal_since
+        self.__longitudinal_until = rhs.__longitudinal_until
+        self.__align = rhs.__align
+        self.__layout = rhs.__layout
 
     def offset(self, long_offset: int, wide_offset: int):
         self.__longitudinal_since += long_offset
@@ -178,22 +191,6 @@ class TrackContext:
 
     def get_layout_bars(self) -> []:
         return self.__layout_bars
-
-    # def add_layout_item(self, bar):
-    #     self.__layout_bars.append(bar)
-    #
-    # def get_event_front(self) -> QFont:
-    #     return self.__event_font
-    #
-    # def get_period_font(self) -> QFont:
-    #     return self.__period_font
-
-    # def get_transverse_limit(self) -> (int, int):
-    #     return self.__left, self.__right
-    #
-    # def set_transverse_limit(self, left: int, right: int):
-    #         self.__left = left
-    #         self.__right = right
 
     def has_space(self, since: int, until: int) -> bool:
         for bar in self.__layout_bars:
@@ -260,24 +257,25 @@ class TimeTrackBar:
         elif self.__thread_metrics.get_layout() == LAYOUT_VERTICAL:
             self.__paint_vertical(qp)
 
-    def calc_layout(self, track_contexts: [TrackContext]):
-        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
-        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
-        for i in range(0, len(track_contexts)):
-            track = track_contexts[i]
-            # If this index is a single time event, it should layout at the first track
-            # If track has space for this index, layout on it
-            # If it's the last track, we have to layout on it
-            if self.__index.since() == self.__index.until() or \
-                track.has_space(since_pixel, until_pixel) or \
-                    (i == len(track_contexts) - 1):
-                track.take_space_for(self)
-                self.__calc_metrics(since_pixel, until_pixel, track)
-                break
+    # def calc_layout(self, track_contexts: [TrackContext]):
+    #     since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
+    #     until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
+    #     for i in range(0, len(track_contexts)):
+    #         track = track_contexts[i]
+    #         # If this index is a single time event, it should layout at the first track
+    #         # If track has space for this index, layout on it
+    #         # If it's the last track, we have to layout on it
+    #         if self.__index.since() == self.__index.until() or \
+    #             track.has_space(since_pixel, until_pixel) or \
+    #                 (i == len(track_contexts) - 1):
+    #             track.take_space_for(self)
+    #             self.__calc_metrics(since_pixel, until_pixel, track)
+    #             break
 
-    def __calc_metrics(self, since_pixel: int, until_pixel: int, track: TrackContext):
+    def layout_to_track(self, track: TrackContext):
         track_left, track_right = track.get_metrics().get_transverse_limit()
         track_since, track_until = track.get_metrics().get_longitudinal_range()
+        since_pixel, until_pixel = self.get_longitudinal_space()
 
         self.__bar_metrics.set_scale_range(self.__index.since(), self.__index.until())
         self.__bar_metrics.set_transverse_limit(track_left, track_right)
@@ -287,7 +285,7 @@ class TimeTrackBar:
             half_diagonal = diagonal / 2
             since_pixel -= half_diagonal
             until_pixel += half_diagonal
-        self.__bar_metrics.set_longitudinal_range(max(since_pixel, track_since), min(since_pixel, track_until))
+        self.__bar_metrics.set_longitudinal_range(max(since_pixel, track_since), min(until_pixel, track_until))
 
         # if self.__index.since() == self.__index.until():
         #     diagonal = abs(right - left)
@@ -375,6 +373,7 @@ class TimeThreadBase:
     def __init__(self):
         self.__event_indexes = []
         self.__paint_indexes = []
+        self.__index_bar_table = {}
 
         self.__thread_track = []
         self.__thread_track_bars = []
@@ -412,19 +411,28 @@ class TimeThreadBase:
         return self.__metrics
 
     def set_thread_metrics(self, metrics: AxisMetrics):
-        self.__metrics = metrics
+        self.__metrics.copy(metrics)
 
     def set_thread_min_track_width(self, width: int):
         self.__min_track_width = width
 
     def set_thread_event_indexes(self, indexes: list):
         self.__event_indexes = indexes
+        self.__index_bar_table.clear()
 
     def index_from_point(self, point: QPoint):
-        for bar in self.__thread_track_bars:
+        for i in range(len(self.__thread_track_bars) - 1, -1, -1):
+            bar = self.__thread_track_bars[i]
             if bar.get_adjust_metrics().rect().contains(point):
                 return bar.get_index()
         return None
+
+    def get_index_bar(self, index: HistoricalRecord) -> TimeTrackBar:
+        bar = self.__index_bar_table.get(index, None)
+        if bar is None:
+            bar = TimeTrackBar(index, self.__metrics)
+            self.__index_bar_table[index] = bar
+        return bar
 
     # ------------------------------------------------------------------------------------------
 
@@ -459,28 +467,59 @@ class TimeThreadBase:
                 track_metrics.set_transverse_limit(transverse_left + track_index * self.__thread_track_width,
                                                    transverse_left + (track_index + 1) * self.__thread_track_width)
             else:
-                track_metrics.set_transverse_limit(transverse_right - track_index * self.__thread_track_width,
-                                                   transverse_right - (track_index + 1) * self.__thread_track_width)
+                track_metrics.set_transverse_limit(transverse_right - (track_index + 1) * self.__thread_track_width,
+                                                   transverse_right - track_index * self.__thread_track_width)
             track = TrackContext()
             track.set_metrics(track_metrics)
             self.__thread_track.append(track)
 
     def __layout_bars(self):
         self.__thread_track_bars.clear()
+        layout_indexes = self.__paint_indexes.copy()
 
-        # Layout single point event first
-        for index in self.__paint_indexes:
-            if index.since() == index.until():
-                bar = TimeTrackBar(index, self.__metrics)
-                bar.calc_layout(self.__thread_track)
-                self.__thread_track_bars.append(bar)
+        overlap_count = 0
+        prev_index_area = None
 
-        # Then layout period event
-        for index in self.__paint_indexes:
-            if index.since() != index.until():
-                bar = TimeTrackBar(index, self.__metrics)
-                bar.calc_layout(self.__thread_track)
-                self.__thread_track_bars.append(bar)
+        for i in range(0, len(self.__thread_track)):
+            track = self.__thread_track[i]
+
+            processing_indexes = layout_indexes.copy()
+            for index in processing_indexes:
+                bar = self.get_index_bar(index)
+                # If this index is a single time event, it should layout at the first track
+                # If track has space for this index, layout on it
+                # If it's the last track, we have to layout on it
+                if i == 0 and index.since() != index.until():
+                    continue
+                if (index.since() == index.until()) or \
+                        track.has_space(*bar.get_longitudinal_space()) or \
+                        (i == len(self.__thread_track) - 1):
+                    track.take_space_for(bar)
+                    bar.layout_to_track(track)
+                    layout_indexes.remove(index)
+                    self.__thread_track_bars.append(bar)
+
+                    index_rect = bar.get_bar_metrics().rect()
+                    if prev_index_area is not None and index_rect == prev_index_area:
+                        overlap_count += 1
+                    else:
+                        overlap_count = 0
+                    prev_index_area = index_rect
+                    bar.set_offset(-3 * overlap_count, 0)
+
+        # # Layout single point event first
+        # for index in self.__paint_indexes:
+        #     if index.since() == index.until():
+        #         bar = self.get_index_bar(index)
+        #         bar.calc_layout(self.__thread_track)
+        #         self.__thread_track_bars.append(bar)
+        #
+        # # Then layout period event
+        # for index in self.__paint_indexes:
+        #     if index.since() != index.until():
+        #         bar = TimeTrackBar(index, self.__metrics)
+        #         bar.calc_layout(self.__thread_track)
+        #         self.__thread_track_bars.append(bar)
 
     def __paint_horizon(self, qp: QPainter):
         pass
@@ -488,318 +527,6 @@ class TimeThreadBase:
     def __paint_vertical(self, qp: QPainter):
         for bar in self.__thread_track_bars:
             bar.paint(qp)
-
-        # if len(sel  f.__indexes_layout) != len(self.__paint_indexes):
-        #     print('Index and layout mismatch. Something wrong in the layout calculation.')
-        #     return
-        #
-        # overlap_count = 0
-        # prev_index_area = None
-        #
-        # for i in range(0, len(self.__paint_indexes)):
-        #     index = self.__paint_indexes[i]
-        #     track = self.__indexes_layout[i]
-        #
-        #     top = self.__paint_area.top() + self.value_to_pixel(index.since())
-        #     if self.__align == ALIGN_RIGHT:
-        #         left = self.__paint_area.left() + track * self.__thread_track_width
-        #         right = left + self.__thread_track_width
-        #     else:
-        #         right = self.__paint_area.right() - track * self.__thread_track_width
-        #         left = right - self.__thread_track_width
-        #
-        #     if index.since() == index.until():
-        #         diagonal = abs(right - left)
-        #         half_diagonal = diagonal / 2
-        #         # v_mid = top
-        #         # h_mid = left + half_diagonal
-        #         index_rect = QRect(left, top - half_diagonal, diagonal, diagonal)
-        #         self.adjust_shape_area(index_rect)
-        #     else:
-        #         bottom = self.__paint_area.top() + self.value_to_pixel(index.until())
-        #         index_rect = QRect(left, top, right - left, bottom - top)
-        #
-        #     if prev_index_area is not None and index_rect == prev_index_area:
-        #         overlap_count += 1
-        #     else:
-        #         overlap_count = 0
-        #     prev_index_area = index_rect
-        #
-        #     self.adjust_shape_area(index_rect)
-        #     index_rect = index_rect.translated(0, -3 * overlap_count)
-        #     self.__indexes_adapt_rect[i] = index_rect
-        #
-        #     if index.since() == index.until():
-        #         TimeAxisThreadCommon.paint_event_bar(qp, index_rect, self.__event_bk, self.__align)
-        #         TimeAxisThreadCommon.paint_index_text(qp, index, index_rect, self.__event_font)
-        #     else:
-        #         TimeAxisThreadCommon.paint_period_bar(qp, index_rect, self.__story_bk)
-        #         TimeAxisThreadCommon.paint_index_text(qp, index, index_rect, self.__period_font)
-
-
-# ------------------------------------------------ TimeAxisThreadCommon ------------------------------------------------
-
-class TimeAxisThreadCommon:
-    def __init__(self):
-        self.__event_indexes = []
-        self.__paint_indexes = []
-        self.__indexes_layout = []
-        self.__indexes_adapt_rect = []
-
-        self.__since = 0.0
-        self.__until = 0.0
-        self.__align = ALIGN_RIGHT
-        self.__layout = LAYOUT_VERTICAL
-        self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
-        self.__thread_width = 0
-        self.__thread_length = 0
-        self.__thread_track_count = 0
-        self.__thread_track_width = 50
-        self.__paint_area = QRect(0, 0, 0, 0)
-
-        self.__event_font = QFont()
-        self.__event_font.setFamily("微软雅黑")
-        self.__event_font.setPointSize(6)
-
-        self.__period_font = QFont()
-        self.__period_font.setFamily("微软雅黑")
-        self.__period_font.setPointSize(8)
-
-        self.__event_bk = QColor(243, 244, 246)
-        self.__story_bk = QColor(185, 227, 217)
-        self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-
-    # -------------------------------------------------- Methods ---------------------------------------------------
-
-    def set_thread_area(self, area: QRect):
-        self.__paint_area = area
-        self.calc_paint_parameters()
-
-    def set_thread_color(self, color: QColor):
-        self.__paint_color = color
-
-    def set_thread_align(self, align: int):
-        self.__align = align
-
-    def set_thread_layout(self, layout: int):
-        self.__layout = layout
-        self.calc_paint_parameters()
-
-    def set_thread_min_track_width(self, width: int):
-        self.__min_track_width = width
-
-    # Deprecated
-    def set_thread_horizon(self, horizon: bool):
-        self.__layout = LAYOUT_HORIZON if horizon else TimeAxis.LAYOUT_VERTICAL
-        self.calc_paint_parameters()
-
-    def set_thread_event_indexes(self, indexes: list):
-        self.__event_indexes = indexes
-        self.calc_paint_parameters()
-
-    def index_from_point(self, point: QPoint):
-        for i in reversed(range(0, len(self.__indexes_adapt_rect))):
-            if self.__indexes_adapt_rect[i].contains(point):
-                return self.__paint_indexes[i] if i < len(self.__paint_indexes) else None
-        return None
-
-    # ---------------------------------------------- Paint Parameters ----------------------------------------------
-
-    # Deprecated
-    def on_paint_canvas_size_update(self, area: QRect):
-        self.set_thread_area(area)
-
-    def on_paint_scale_range_updated(self, since: float, until: float):
-        self.__since = since
-        self.__until = until
-        self.calc_paint_parameters()
-
-    def calc_paint_parameters(self):
-        if self.__layout == LAYOUT_HORIZON:
-            self.__thread_width = self.__paint_area.height()
-            self.__thread_length = self.__paint_area.width()
-        else:
-            self.__thread_width = self.__paint_area.width()
-            self.__thread_length = self.__paint_area.height()
-
-        self.__paint_indexes.clear()
-        self.__indexes_layout.clear()
-        self.__indexes_adapt_rect.clear()
-
-        if self.__thread_width < self.__min_track_width * 0.3:
-            return
-
-        # Adjust track count
-        self.__thread_track_count = self.__thread_width / self.__min_track_width
-        self.__thread_track_count = int(self.__thread_track_count + 0.5)
-        self.__thread_track_width = self.__thread_width / self.__thread_track_count
-
-        for index in self.__event_indexes:
-            if index.period_adapt(self.__since, self.__until):
-                # Pick the paint indexes and sort by its period length
-                self.__paint_indexes.append(index)
-                # Pre-allocation
-                self.__indexes_layout.append(-1)
-                self.__indexes_adapt_rect.append(QRect(0, 0, 0, 0))
-        # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
-        self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
-
-        self.layout_event_to_track()
-
-    def layout_event_to_track(self):
-        # track_list = []
-        # for i in range(0, self.__thread_track_count):
-        #     track_list.append(None)
-
-        # Track 1 is reserved for events
-        # Layout the low level track first
-
-        # self.__align
-
-        for i in range(1, self.__thread_track_count):
-            track_space = []
-            for j in range(0, len(self.__paint_indexes)):
-                # Already layout
-                if self.__indexes_layout[j] >= 0:
-                    continue
-                index = self.__paint_indexes[j]
-                if index.since() == index.until():  # Event
-                    self.__indexes_layout[j] = 0
-                else:
-                    # Default layout to the last track
-                    has_space = True
-                    for since, until in track_space:
-                        if since <= index.since() <= until or since <= index.until() <= until:
-                            has_space = False
-                            break
-                    if has_space or (i == self.__thread_track_count - 1):
-                        self.__indexes_layout[j] = i
-                        track_space.append((index.since(), index.until()))
-
-            # for i in range(0, self.__thread_track_count):
-            #     # Default layout to the last track
-            #     if track_list[i] is None or index.since() > track_list[i] or (i == self.__thread_track_count - 1):
-            #         self.__indexes_layout.append(i)
-            #         track_list[i] = index.until()
-            #         break
-
-    def value_to_pixel(self, value: float):
-        if self.__until - self.__since == 0:
-            return 0
-        return self.__thread_length * (value - self.__since) / (self.__until - self.__since)
-
-    def repaint(self, qp: QPainter):
-
-        qp.setBrush(self.__paint_color)
-        qp.drawRect(self.__paint_area)
-
-        if self.__layout == LAYOUT_HORIZON:
-            self.paint_horizon(qp)
-        else:
-            self.paint_vertical(qp)
-
-    def paint_horizon(self):
-        pass
-
-    def paint_vertical(self, qp: QPainter):
-        if len(self.__indexes_layout) != len(self.__paint_indexes):
-            print('Index and layout mismatch. Something wrong in the layout calculation.')
-            return
-
-        overlap_count = 0
-        prev_index_area = None
-
-        for i in range(0, len(self.__paint_indexes)):
-            index = self.__paint_indexes[i]
-            track = self.__indexes_layout[i]
-
-            top = self.__paint_area.top() + self.value_to_pixel(index.since())
-            if self.__align == ALIGN_RIGHT:
-                left = self.__paint_area.left() + track * self.__thread_track_width
-                right = left + self.__thread_track_width
-            else:
-                right = self.__paint_area.right() - track * self.__thread_track_width
-                left = right - self.__thread_track_width
-
-            if index.since() == index.until():
-                diagonal = abs(right - left)
-                half_diagonal = diagonal / 2
-                # v_mid = top
-                # h_mid = left + half_diagonal
-                index_rect = QRect(left, top - half_diagonal, diagonal, diagonal)
-                self.adjust_shape_area(index_rect)
-            else:
-                bottom = self.__paint_area.top() + self.value_to_pixel(index.until())
-                index_rect = QRect(left, top, right - left, bottom - top)
-
-            if prev_index_area is not None and index_rect == prev_index_area:
-                overlap_count += 1
-            else:
-                overlap_count = 0
-            prev_index_area = index_rect
-
-            self.adjust_shape_area(index_rect)
-            index_rect = index_rect.translated(0, -3 * overlap_count)
-            self.__indexes_adapt_rect[i] = index_rect
-
-            if index.since() == index.until():
-                TimeAxisThreadCommon.paint_event_bar(qp, index_rect, self.__event_bk, self.__align)
-                TimeAxisThreadCommon.paint_index_text(qp, index, index_rect, self.__event_font)
-            else:
-                TimeAxisThreadCommon.paint_period_bar(qp, index_rect, self.__story_bk)
-                TimeAxisThreadCommon.paint_index_text(qp, index, index_rect, self.__period_font)
-
-    def adjust_shape_area(self, area: QRect) -> QRect:
-        if area.top() < self.__paint_area.top():
-            area.setTop(self.__paint_area.top())
-        if area.bottom() > self.__paint_area.bottom():
-            area.setBottom(self.__paint_area.bottom())
-        return area
-
-    @staticmethod
-    def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
-        if align == ALIGN_RIGHT:
-            rect = index_rect
-            rect.setLeft(rect.left() + 10)
-            arrow_points = [QPoint(rect.left() - 10, rect.center().y()),
-                            rect.topLeft(), rect.topRight(),
-                            rect.bottomRight(), rect.bottomLeft()]
-        else:
-            rect = index_rect
-            rect.setRight(rect.right() - 10)
-            arrow_points = [QPoint(rect.right() + 10, rect.center().y()),
-                            rect.bottomRight(), rect.bottomLeft(),
-                            rect.topLeft(), rect.topRight()]
-
-        qp.setBrush(back_ground)
-        qp.drawPolygon(QPolygon(arrow_points))
-
-        # diamond_points = [QPoint(left, v_mid), QPoint(h_mid, v_mid - half_diagonal),
-        #                   QPoint(right, v_mid), QPoint(h_mid, v_mid + half_diagonal)]
-        # qp.setBrush(self.__event_bk)
-        # qp.drawPolygon(QPolygon(diamond_points))
-
-    @staticmethod
-    def paint_period_bar(qp: QPainter, index_rect: QRect, back_ground: QColor):
-        qp.setBrush(back_ground)
-        qp.drawRect(index_rect)
-
-    @staticmethod
-    def paint_index_text(qp: QPainter, index: HistoricalRecord, index_rect: QRect, font: QFont):
-        # qp.save()
-        # qp.translate(rect.center())
-        # qp.rotate(-90)
-        # text_rect = QRect(rect)
-        # if text_rect.top() < 0:
-        #     text_rect.setTop(0)
-        qp.setPen(Qt.SolidLine)
-        qp.setPen(QPen(Qt.black, 1))
-        qp.setFont(font)
-
-        abstract_tags = index.get_tags('abstract')
-        abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
-        qp.drawText(index_rect, Qt.AlignHCenter | Qt.AlignVCenter | Qt.TextWordWrap, abstract)
-        # qp.restore()
 
 
 # --------------------------------------------------- class TimeAxis ---------------------------------------------------
@@ -1161,6 +888,8 @@ class TimeAxis(QWidget):
                 left = i * left_thread_width
 
                 metrics = AxisMetrics()
+                metrics.set_align(ALIGN_LEFT)
+                metrics.set_layout(LAYOUT_VERTICAL)
                 metrics.set_transverse_limit(left, left + left_thread_width)
                 metrics.set_longitudinal_range(top, bottom)
                 metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
@@ -1182,6 +911,8 @@ class TimeAxis(QWidget):
                 left = self.__axis_right + i * right_thread_width
 
                 metrics = AxisMetrics()
+                metrics.set_align(ALIGN_RIGHT)
+                metrics.set_layout(LAYOUT_VERTICAL)
                 metrics.set_transverse_limit(left, left + right_thread_width)
                 metrics.set_longitudinal_range(top, bottom)
                 metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
