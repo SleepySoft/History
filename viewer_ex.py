@@ -1,5 +1,6 @@
 import copy
 import random
+import time
 import traceback, math
 
 from PyQt5.QtCore import QRect, QPoint, QSize
@@ -385,7 +386,7 @@ class TimeThreadBase:
 
         self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
-    # -------------------------------------------------- Methods ---------------------------------------------------
+    # ------------------------------------------- Operations -------------------------------------------
 
     def paint(self, qp: QPainter):
         qp.setBrush(self.__paint_color)
@@ -399,18 +400,25 @@ class TimeThreadBase:
             assert False
 
     def refresh(self):
+        # When scale updated
         self.__pickup_paint_indexes()
+        # When metrics updated
         self.__calc_paint_parameters()
         self.__layout_track()
         self.__layout_bars()
 
-    def set_thread_color(self, color: QColor):
-        self.__paint_color = color
+    def index_from_point(self, point: QPoint):
+        for i in range(len(self.__thread_track_bars) - 1, -1, -1):
+            bar = self.__thread_track_bars[i]
+            if bar.get_adjust_metrics().rect().contains(point):
+                return bar.get_index()
+        return None
 
-    def get_thread_metrics(self) -> AxisMetrics:
-        return self.__metrics
+    # ------------------------------------------ Sets ------------------------------------------
 
     def set_thread_metrics(self, metrics: AxisMetrics):
+        # Use copy instead of assignment.
+        # # So the reference in bar also updated.
         self.__metrics.copy(metrics)
 
     def set_thread_min_track_width(self, width: int):
@@ -420,12 +428,13 @@ class TimeThreadBase:
         self.__event_indexes = indexes
         self.__index_bar_table.clear()
 
-    def index_from_point(self, point: QPoint):
-        for i in range(len(self.__thread_track_bars) - 1, -1, -1):
-            bar = self.__thread_track_bars[i]
-            if bar.get_adjust_metrics().rect().contains(point):
-                return bar.get_index()
-        return None
+    # ------------------------------------------ Gets ------------------------------------------
+
+    def set_thread_color(self, color: QColor):
+        self.__paint_color = color
+
+    def get_thread_metrics(self) -> AxisMetrics:
+        return self.__metrics
 
     def get_index_bar(self, index: HistoricalRecord) -> TimeTrackBar:
         bar = self.__index_bar_table.get(index, None)
@@ -532,6 +541,14 @@ class TimeThreadBase:
 # --------------------------------------------------- class TimeAxis ---------------------------------------------------
 
 class TimeAxis(QWidget):
+
+    class Agent:
+        def __init__(self):
+            pass
+
+        def on_r_button_up(self, pos: QPoint):
+            pass
+
     STEP_LIST = [
         10000, 5000, 2500, 2000, 1000, 500, 250, 200, 100, 50, 25, 20, 10, 5, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01
     ]
@@ -660,7 +677,7 @@ class TimeAxis(QWidget):
     def enable_real_time_tips(self, enable: bool):
         self.__enable_real_time_tips = enable
 
-    # --------------------------------------------------- UI Action ----------------------------------------------------
+    # --------------------------------------------------- UI Event ----------------------------------------------------
 
     def mousePressEvent(self,  event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -673,6 +690,8 @@ class TimeAxis(QWidget):
             self.__scroll += self.__offset
             self.__offset = 0
             self.repaint()
+        elif event.button() == QtCore.Qt.RightButton:
+            pass
 
     def mouseDoubleClickEvent(self,  event):
         now_pos = event.pos()
@@ -745,6 +764,8 @@ class TimeAxis(QWidget):
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paintEvent(self, event):
+        start = time.process_time()
+
         qp = QPainter()
         qp.begin(self)
 
@@ -763,6 +784,9 @@ class TimeAxis(QWidget):
         self.paint_real_time_tips(qp)
 
         qp.end()
+
+        end = time.process_time()
+        print('Axis paint spends time: %s s' % (end - start))
 
     def paint_background(self, qp: QPainter):
         qp.setBrush(AXIS_BACKGROUND_COLORS[2])
