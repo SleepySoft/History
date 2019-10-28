@@ -1,6 +1,6 @@
 import sys
 import traceback
-from PyQt5.QtWidgets import QApplication, QScrollBar, QSlider
+from PyQt5.QtWidgets import QApplication, QScrollBar, QSlider, QMenu
 
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt
@@ -13,9 +13,9 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QTableWidget, QHBoxLayout
 
 from core import *
 from editor import *
-from viewer import *
 from filter import *
 from indexer import *
+from viewer_ex import *
 from Utility.ui_utility import *
 
 
@@ -180,11 +180,14 @@ class HistoryUi(QMainWindow):
     def __init__(self):
         super(HistoryUi, self).__init__()
 
+        self.__thread_color_selection = 0
+
         self.__menu_file = None
         self.__menu_view = None
         self.__menu_help = None
 
         self.__time_axis = TimeAxis()
+        self.__time_axis.set_agent(self)
 
         self.__init_ui()
         self.__init_menu()
@@ -248,6 +251,11 @@ class HistoryUi(QMainWindow):
         about_action.triggered.connect(self.on_menu_about)
         self.__menu_help.addAction(about_action)
 
+        # ------------------ Right Button Menu ------------------
+
+        self.__time_axis.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.__time_axis.customContextMenuRequested.connect(self.on_custom_menu)
+
     # ----------------------------- UI Events -----------------------------
 
     def on_menu_record_editor(self):
@@ -295,6 +303,49 @@ class HistoryUi(QMainWindow):
             else:
                 docker.show()
 
+    # ------------------------------ Right Click Menu ------------------------------
+
+    def on_custom_menu(self, pos: QPoint):
+        align = self.__time_axis.align_from_point(pos)
+        thread = self.__time_axis.thread_from_point(pos)
+
+        opt_load_file = None
+        opt_load_index = None
+        opt_open_filter = None
+        opt_add_thread = None
+        opt_add_thread_left = None
+        opt_add_thread_right = None
+        opt_remove_thread = None
+
+        menu = QMenu()
+        if thread is None:
+            opt_add_thread = menu.addAction("Add Thread")
+        else:
+            opt_load_index = menu.addAction("Load Index")
+            opt_load_file = menu.addAction("Load File")
+            opt_open_filter = menu.addAction("Use Filter")
+            opt_remove_thread = menu.addAction("Remove Thread")
+            opt_add_thread_left = menu.addAction("Add Thread On Left")
+            opt_add_thread_right = menu.addAction("Add Thread On Right")
+
+        action = menu.exec_(self.table_widget.mapToGlobal(pos))
+        if action == opt_add_thread or \
+                action == opt_add_thread_left or \
+                action == opt_add_thread_right:
+            thread = TimeThreadBase()
+            self.__thread_color_selection += 1
+            thread.set_thread_color(THREAD_BACKGROUND_COLORS[self.__thread_color_selection %
+                                                             len(THREAD_BACKGROUND_COLORS)])
+            thread.set_thread_event_indexes([])
+            thread.set_thread_min_track_width(TimeThreadBase.REFERENCE_TRACK_WIDTH)
+            self.__time_axis.add_history_thread(thread, align)
+
+        elif action == opt2:
+            # do something
+            return
+        else:
+            return
+
     def closeEvent(self, event):
         """Generate 'question' dialog on clicking 'X' button in title bar.
         Reimplement the closeEvent() event handler to include a 'Question'
@@ -325,15 +376,20 @@ class HistoryUi(QMainWindow):
             indexer = HistoricalRecordIndexer()
             indexer.load_from_file(track_index)
 
-            thread = TimeAxisThreadCommon()
+            thread = TimeThreadBase()
             thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
             thread.set_thread_event_indexes(indexer.get_indexes())
             thread.set_thread_min_track_width(track_width)
-            thread.set_thread_align(align)
-            thread.set_thread_layout(layout)
+            # thread.set_thread_align(align)
+            # thread.set_thread_layout(layout)
             self.__time_axis.add_history_thread(thread, align)
 
             thread_index += 1
+
+    # ------------------------------- TimeAxis.Agent -------------------------------
+
+    def on_r_button_up(self, pos: QPoint):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
