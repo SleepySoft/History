@@ -328,21 +328,47 @@ class HistoryUi(QMainWindow):
             opt_add_thread_left = menu.addAction("Add Thread On Left")
             opt_add_thread_right = menu.addAction("Add Thread On Right")
 
-        action = menu.exec_(self.table_widget.mapToGlobal(pos))
+        action = menu.exec_(self.__time_axis.mapToGlobal(pos))
+        if action is None:
+            return
+
         if action == opt_add_thread or \
                 action == opt_add_thread_left or \
                 action == opt_add_thread_right:
-            thread = TimeThreadBase()
+            if action == opt_add_thread_left:
+                align = ALIGN_LEFT
+            elif action == opt_add_thread_right:
+                align = ALIGN_RIGHT
+            new_thread = TimeThreadBase()
             self.__thread_color_selection += 1
-            thread.set_thread_color(THREAD_BACKGROUND_COLORS[self.__thread_color_selection %
-                                                             len(THREAD_BACKGROUND_COLORS)])
-            thread.set_thread_event_indexes([])
-            thread.set_thread_min_track_width(TimeThreadBase.REFERENCE_TRACK_WIDTH)
-            self.__time_axis.add_history_thread(thread, align)
+            new_thread.set_thread_color(THREAD_BACKGROUND_COLORS[self.__thread_color_selection %
+                                                                 len(THREAD_BACKGROUND_COLORS)])
+            new_thread.set_thread_event_indexes([])
+            new_thread.set_thread_min_track_width(TimeThreadBase.REFERENCE_TRACK_WIDTH)
+            self.__time_axis.add_history_thread(new_thread, align, thread)
 
-        elif action == opt2:
-            # do something
-            return
+        elif action == opt_remove_thread:
+            self.__time_axis.remove_history_thread(thread)
+
+        elif action == opt_load_index:
+            file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Index',
+                                                                 HistoricalRecordLoader.get_local_depot_root(),
+                                                                 'Filter Files (*.index)')
+            if file_choose != '':
+                pass
+
+        elif action == opt_load_file:
+            file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Filter',
+                                                                 HistoricalRecordLoader.get_local_depot_root(),
+                                                                 'Filter Files (*.his)')
+            if file_choose != '':
+                pass
+
+        elif action == opt_open_filter:
+            wnd = FilterEditor()
+            dlg = WrapperQDialog(wnd)
+            dlg.exec()
+
         else:
             return
 

@@ -654,16 +654,31 @@ class TimeAxis(QWidget):
     def get_history_threads(self, align: int = ALIGN_RIGHT) -> list:
         return self.__left_history_threads if align == ALIGN_LEFT else self.__right_history_threads
 
-    def add_history_thread(self, thread, align: int = ALIGN_RIGHT):
-        if thread not in self.__history_threads:
+    def add_history_thread(self, thread: TimeThreadBase, align: int = ALIGN_RIGHT,
+                           base_thread: TimeThreadBase = None):
+        self.remove_history_thread(thread)
+        if base_thread is None or base_thread not in self.__history_threads:
             if align == ALIGN_LEFT:
                 self.__left_history_threads.append(thread)
             else:
                 self.__right_history_threads.append(thread)
-            self.__history_threads.append(thread)
+        else:
+            for i in range(0, len(self.__left_history_threads)):
+                if self.__left_history_threads[i] == base_thread:
+                    if align == ALIGN_LEFT:
+                        self.__left_history_threads.insert(i, thread)
+                    else:
+                        self.__left_history_threads.insert(i + 1, thread)
+            for i in range(0, len(self.__right_history_threads)):
+                if self.__right_history_threads[i] == base_thread:
+                    if align == ALIGN_LEFT:
+                        self.__right_history_threads.insert(i, thread)
+                    else:
+                        self.__right_history_threads.insert(i + 1, thread)
+        self.__history_threads.append(thread)
         self.repaint()
 
-    def remove_history_threads(self, thread):
+    def remove_history_thread(self, thread):
         if thread in self.__history_threads:
             self.__history_threads.remove(thread)
         if thread in self.__left_history_threads:
@@ -683,9 +698,9 @@ class TimeAxis(QWidget):
 
     def align_from_point(self, pos: QPoint) -> ALIGN_TYPE:
         if self.__layout == LAYOUT_HORIZON:
-            return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
-        else:
             return ALIGN_LEFT if pos.y() >= self.__axis_mid else ALIGN_RIGHT
+        else:
+            return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
 
     def thread_from_point(self, pos: QPoint) -> TimeThreadBase:
         for thread in self.__left_history_threads:
