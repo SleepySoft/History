@@ -1001,34 +1001,48 @@ class HistoricalRecordIndexer:
 class History:
     def __init__(self):
         self.__records = []
+        self.__uuid_records = []
+        # Deprecated
         self.__indexes = []
 
-    # ----------------------------------------------------------------------------
+    # ----------------------------------- Deprecated :Index -----------------------------------
 
-    def set_records(self, records:[HistoricalRecord]):
-        self.__records = records
-
-    def get_record(self, _uuid: str) -> HistoricalRecord or None:
-        for record in self.__records:
-            if record.uuid() == _uuid:
-                return record
-        return None
-
-    def get_records(self, focus_label: str = '',
-                    include_label_tags: dict = None, include_all: bool = True,
-                    exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
-        if include_label_tags is None and exclude_label_tags is None:
-            return self.__records
-        if focus_label is not None and focus_label != '':
-            records = [record for record in self.__records if record.get_focus_label() == focus_label]
-        else:
-            records = self.__records
-        records = [record for record in records if record.filter(include_label_tags, include_all,
-                                                                 exclude_label_tags, exclude_any)]
-        return records
+    def set_indexes(self, indexes: [HistoricalRecord]):
+        self.__indexes.clear()
+        self.__indexes.extend(indexes)
 
     def get_indexes(self) ->[HistoricalRecord]:
         return self.__indexes
+
+    # -------------------------------------- Gets / Sets --------------------------------------
+
+    def add_record(self, record: HistoricalRecord):
+        if record is not None and record not in self.__records:
+            self.__records.append(record)
+
+    def remove_record(self, record: HistoricalRecord):
+        if record in self.__records:
+            self.__records.remove(record)
+
+    def add_records(self, records: [HistoricalRecord]):
+        for record in records:
+            self.add_record(record)
+
+    def remove_records(self, records: [HistoricalRecord]):
+        for record in records:
+            self.remove_record(record)
+
+    def get_records(self) -> [HistoricalRecord]:
+        return self.__records
+
+    def attach_records(self, records: [HistoricalRecord]):
+        self.__records.clear()
+        self.__records.extend(records)
+
+    def clear_records(self):
+        self.__records.clear()
+
+    # --------------------------------------- Updates ---------------------------------------
 
     def update_records(self, records: [HistoricalRecord]):
         History.upsert_records(self.__records, records)
@@ -1036,24 +1050,60 @@ class History:
     def update_indexes(self, indexes: [HistoricalRecord]):
         History.upsert_records(self.__indexes, indexes)
 
-    def reset_records(self):
-        self.__records.clear()
+    # --------------------------------------- Select ---------------------------------------
 
-    def reset_indexes(self):
-        self.__indexes.clear()
+    def get_record_by_uuid(self, _uuid: str) -> HistoricalRecord or None:
+        for record in self.__records:
+            if record.uuid() == _uuid:
+                return record
+        return None
 
-    # ----------------------------------------------------------------------------
+    def get_record_by_source(self, source: str) -> HistoricalRecord or None:
+        return [record for record in self.__records if record.source() == source]
 
-    def load_source(self, source: str):
-        pass
+    def select_records(self, _uuid: str = '', source: str = '', focus_label: str = '',
+                       include_label_tags: dict = None, include_all: bool = True,
+                       exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
+        records = self.__records.copy()
 
-    def load_depot(self, depot: str):
-        pass
+        if _uuid is not None and _uuid != '':
+            records = [record for record in records if record.uuid() == _uuid]
+
+        if source is not None and source != '':
+            records = [record for record in records if record.source() == source]
+
+        if focus_label is not None and focus_label != '':
+            records = [record for record in records if record.get_focus_label() == focus_label]
+
+        if include_label_tags is not None or exclude_label_tags is not None:
+            records = [record for record in records if record.filter(include_label_tags, include_all,
+                                                                     exclude_label_tags, exclude_any)]
+        return records
+
+    # ------------------------------------- Load -------------------------------------
+
+    def load_source(self, source: str) -> bool:
+        loader = HistoricalRecordLoader()
+        result = loader.from_source(source)
+        if result:
+            self.add_records(loader.get_loaded_records())
+        return result
+
+    def load_depot(self, depot: str) -> bool:
+        loader = HistoricalRecordLoader()
+        result = loader.from_local_depot(depot)
+        if result:
+            self.add_records(loader.get_loaded_records())
+        return result != 0
 
     def load_path(self, _path: str):
-        pass
+        loader = HistoricalRecordLoader()
+        result = loader.from_directory(_path)
+        if result:
+            self.add_records(loader.get_loaded_records())
+        return result != 0
 
-    # ----------------------------------------------------------------------------
+    # ----------------------------------- Print -----------------------------------
 
     def print_records(self):
         for record in self.__records:
@@ -1063,7 +1113,7 @@ class History:
         for index in self.__indexes:
             print(index)
 
-    # ----------------------------------------------------------------------------
+    # ------------------------------- Static Methods -------------------------------
 
     @staticmethod
     def sort_records(records: [HistoricalRecord]) -> [HistoricalRecord]:
@@ -1150,28 +1200,28 @@ def test_history_filter():
     history = History()
     history.update_records(loader.get_loaded_records())
 
-    records = history.get_records(include_label_tags={'tags': ['tag1']},
-                                  include_all=True)
+    records = history.select_records(include_label_tags={'tags': ['tag1']},
+                                     include_all=True)
     assert len(records) == 1
 
-    records = history.get_records(include_label_tags={'tags': ['tag3']},
-                                  include_all=True)
+    records = history.select_records(include_label_tags={'tags': ['tag3']},
+                                     include_all=True)
     assert len(records) == 3
 
-    records = history.get_records(include_label_tags={'tags': ['tag5', 'odd']},
-                                  include_all=True)
+    records = history.select_records(include_label_tags={'tags': ['tag5', 'odd']},
+                                     include_all=True)
     assert len(records) == 3
 
-    records = history.get_records(include_label_tags={'tags': ['tag1', 'even']},
-                                  include_all=False)
+    records = history.select_records(include_label_tags={'tags': ['tag1', 'even']},
+                                     include_all=False)
     assert len(records) == 3
 
-    records = history.get_records(include_label_tags={'tags': ['tag']},
-                                  include_all=True)
+    records = history.select_records(include_label_tags={'tags': ['tag']},
+                                     include_all=True)
     assert len(records) == 0
 
-    records = history.get_records(include_label_tags={'author': ['Sleepy']},
-                                  include_all=True)
+    records = history.select_records(include_label_tags={'author': ['Sleepy']},
+                                     include_all=True)
     assert len(records) == 4
 
 
