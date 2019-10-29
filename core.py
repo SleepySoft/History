@@ -607,6 +607,11 @@ class HistoricalRecord(LabelTag):
             return
         super(HistoricalRecord, self).add_tags(label, tags)
 
+    def to_index(self):
+        record = HistoricalRecord()
+        record.index_for(self)
+        return record
+
     def index_for(self, his_record):
         self.reset()
         self.__focus_label = 'index'
@@ -1001,7 +1006,6 @@ class HistoricalRecordIndexer:
 class History:
     def __init__(self):
         self.__records = []
-        self.__uuid_records = []
         # Deprecated
         self.__indexes = []
 
@@ -1016,9 +1020,15 @@ class History:
 
     # -------------------------------------- Gets / Sets --------------------------------------
 
-    def add_record(self, record: HistoricalRecord):
-        if record is not None and record not in self.__records:
-            self.__records.append(record)
+    def add_record(self, record: HistoricalRecord) -> bool:
+        if record is None or record.uuid() is None or record.uuid() == '':
+            return False
+        _uuid = record.uuid()
+        exists_record = self.get_record_by_uuid(_uuid)
+        if exists_record is not None:
+            self.__records.remove(exists_record)
+        self.__records.append(record)
+        return True
 
     def remove_record(self, record: HistoricalRecord):
         if record in self.__records:
@@ -1082,12 +1092,12 @@ class History:
 
     # ------------------------------------- Load -------------------------------------
 
-    def load_source(self, source: str) -> bool:
+    def load_source(self, source: str) -> [HistoricalRecord]:
         loader = HistoricalRecordLoader()
         result = loader.from_source(source)
         if result:
             self.add_records(loader.get_loaded_records())
-        return result
+        return loader.get_loaded_records() if result else []
 
     def load_depot(self, depot: str) -> bool:
         loader = HistoricalRecordLoader()

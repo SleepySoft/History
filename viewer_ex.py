@@ -702,7 +702,7 @@ class TimeAxis(QWidget):
         else:
             return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
 
-    def thread_from_point(self, pos: QPoint) -> TimeThreadBase:
+    def thread_from_point(self, pos: QPoint) -> TimeThreadBase or None:
         for thread in self.__left_history_threads:
             if thread.get_thread_metrics().rect().contains(pos):
                 return thread

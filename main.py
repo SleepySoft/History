@@ -180,6 +180,7 @@ class HistoryUi(QMainWindow):
     def __init__(self):
         super(HistoryUi, self).__init__()
 
+        self.__history = History()
         self.__thread_color_selection = 0
 
         self.__menu_file = None
@@ -188,6 +189,7 @@ class HistoryUi(QMainWindow):
 
         self.__time_axis = TimeAxis()
         self.__time_axis.set_agent(self)
+        self.__time_axis.set_history_core(self.__history)
 
         self.__init_ui()
         self.__init_menu()
@@ -355,14 +357,17 @@ class HistoryUi(QMainWindow):
                                                                  HistoricalRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.index)')
             if file_choose != '':
-                pass
+                indexer = HistoricalRecordIndexer()
+                indexer.load_from_file(file_choose)
+                thread.set_thread_event_indexes(indexer.get_indexes())
 
         elif action == opt_load_file:
             file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Filter',
                                                                  HistoricalRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.his)')
             if file_choose != '':
-                pass
+                records = self.__history.load_source(file_choose)
+                thread.set_thread_event_indexes([record.to_index() for record in records])
 
         elif action == opt_open_filter:
             wnd = FilterEditor()
