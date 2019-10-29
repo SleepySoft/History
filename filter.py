@@ -107,6 +107,8 @@ class FilterEditor(QWidget):
     def __init__(self, parent: QWidget = None):
         super(FilterEditor, self).__init__(parent)
 
+        self.__history = None
+
         self.__sources = []
         self.__includes = []
         self.__excludes = []
@@ -129,6 +131,9 @@ class FilterEditor(QWidget):
 
     def set_filter(self):
         pass
+
+    def set_history_core(self, history: History):
+        self.__history = history
 
     # --------------------------------------------- Private ---------------------------------------------
 
@@ -314,15 +319,16 @@ class FilterEditor(QWidget):
         return records
 
     def load_filter_records(self) -> [HistoricalRecord]:
-        history = History()
+        history = self.__history if self.__history is not None else History()
+
         records = self.load_source_records()
         history.set_records(records)
 
         his_filter = self.ui_to_filter()
-
-        return history.get_records(his_filter.get_focus_label(),
-                                   his_filter.get_include_tags(), False,
-                                   his_filter.get_exclude_tags(), True)
+        return history.select_records(sources=his_filter.get_sources(),
+                                      focus_label=his_filter.get_focus_label(),
+                                      include_label_tags=his_filter.get_include_tags(), include_all=False,
+                                      exclude_label_tags=his_filter.get_exclude_tags(), exclude_any=True)
 
     def __label_tag_dict_to_text(self, label_tags_dict: dict):
         return [key + ': ' + ', '.join(label_tags_dict[key]) for key in label_tags_dict.keys()]

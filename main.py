@@ -118,8 +118,8 @@ class AppearanceEditor(QWidget):
         layout_appearance.addLayout(horizon_layout([QLabel('Layout  '), self.__radio_horizon, self.__radio_vertical]))
         layout_appearance.addLayout(horizon_layout([QLabel('Position'), self.__slider_position, self.__label_position]))
 
-        self.__group_thread_editor, self.__layout_thread_editor = create_v_group_box('Thread Config')
-        self.__layout_thread_editor.addWidget(self.__thread_place_holder_widget)
+        # self.__group_thread_editor, self.__layout_thread_editor = create_v_group_box('Thread Config')
+        # self.__layout_thread_editor.addWidget(self.__thread_place_holder_widget)
 
         # --------------------- Main layout ---------------------
         main_layout = QVBoxLayout()
@@ -213,6 +213,24 @@ class HistoryUi(QMainWindow):
 
         # ----------------------- File -----------------------
 
+        file_action = QAction('&Load Files', self)
+        file_action.setShortcut('Ctrl+F')
+        file_action.setStatusTip('Load a .his file')
+        file_action.triggered.connect(self.on_menu_load_files)
+        self.__menu_file.addAction(file_action)
+
+        depot_action = QAction('&Load Depot', self)
+        depot_action.setShortcut('Ctrl+D')
+        depot_action.setStatusTip('Load a depot')
+        depot_action.triggered.connect(self.on_menu_load_depot)
+        self.__menu_file.addAction(depot_action)
+
+        load_all_action = QAction('&Load All Records', self)
+        load_all_action.setShortcut('Ctrl+A')
+        load_all_action.setStatusTip('Load all depot')
+        load_all_action.triggered.connect(self.on_menu_load_all)
+        self.__menu_file.addAction(load_all_action)
+
         exit_action = QAction('&Exit', self)
         exit_action.setShortcut('Ctrl+Q')
         exit_action.setStatusTip('Exit app')
@@ -227,15 +245,15 @@ class HistoryUi(QMainWindow):
         action.triggered.connect(self.on_menu_record_editor)
         self.__menu_view.addAction(action)
 
-        action = QAction('&History Record Filter Editor', self)
+        action = QAction('&History Filter Editor', self)
         action.setShortcut('Ctrl+R')
-        action.setStatusTip('Open History Record Filter Editor')
+        action.setStatusTip('Open History Filter Editor')
         action.triggered.connect(self.on_menu_filter_editor)
         self.__menu_view.addAction(action)
 
-        action = QAction('&History Thread Editor', self)
+        action = QAction('&Axis Appearance Setting', self)
         action.setShortcut('Ctrl+T')
-        action.setStatusTip('Open History Thread Editor')
+        action.setStatusTip('Open Axis Appearance Setting')
         action.triggered.connect(self.on_menu_thread_editor)
         self.__menu_view.addAction(action)
 
@@ -259,6 +277,15 @@ class HistoryUi(QMainWindow):
         self.__time_axis.customContextMenuRequested.connect(self.on_custom_menu)
 
     # ----------------------------- UI Events -----------------------------
+
+    def on_menu_load_files(self):
+        pass
+
+    def on_menu_load_depot(self):
+        pass
+
+    def on_menu_load_all(self):
+        pass
 
     def on_menu_record_editor(self):
         editor = HistoryEditorDialog()
@@ -318,6 +345,7 @@ class HistoryUi(QMainWindow):
         opt_add_thread_left = None
         opt_add_thread_right = None
         opt_remove_thread = None
+        opt_set_track_width = None
 
         menu = QMenu()
         if thread is None:
@@ -326,6 +354,7 @@ class HistoryUi(QMainWindow):
             opt_load_index = menu.addAction("Load Index")
             opt_load_file = menu.addAction("Load File")
             opt_open_filter = menu.addAction("Use Filter")
+            opt_set_track_width = menu.addAction("Set Track Width")
             opt_remove_thread = menu.addAction("Remove Thread")
             opt_add_thread_left = menu.addAction("Add Thread On Left")
             opt_add_thread_right = menu.addAction("Add Thread On Right")
@@ -333,6 +362,8 @@ class HistoryUi(QMainWindow):
         action = menu.exec_(self.__time_axis.mapToGlobal(pos))
         if action is None:
             return
+
+        # --------------------------- Add ---------------------------
 
         if action == opt_add_thread or \
                 action == opt_add_thread_left or \
@@ -349,8 +380,19 @@ class HistoryUi(QMainWindow):
             new_thread.set_thread_min_track_width(TimeThreadBase.REFERENCE_TRACK_WIDTH)
             self.__time_axis.add_history_thread(new_thread, align, thread)
 
+        # --------------------------- Remove ---------------------------
+
         elif action == opt_remove_thread:
             self.__time_axis.remove_history_thread(thread)
+
+        # --------------------------- Config ---------------------------
+
+        elif action == opt_set_track_width:
+            width, ok = QInputDialog.getInt(self, 'Input Track Width', 'Track Width', value=50)
+            if ok:
+                thread.set_thread_min_track_width(width)
+
+        # --------------------------- Loads ---------------------------
 
         elif action == opt_load_index:
             file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Index',
@@ -371,8 +413,12 @@ class HistoryUi(QMainWindow):
 
         elif action == opt_open_filter:
             wnd = FilterEditor()
-            dlg = WrapperQDialog(wnd)
+            wnd.set_history_core(self.__history)
+            dlg = WrapperQDialog(wnd, True)
             dlg.exec()
+            if dlg.is_ok():
+                records = wnd.load_source_records()
+                thread.set_thread_event_indexes([record.to_index() for record in records])
 
         else:
             return
@@ -388,9 +434,9 @@ class HistoryUi(QMainWindow):
                                      QMessageBox.Close | QMessageBox.Cancel,
                                      QMessageBox.Cancel)
         if reply == QMessageBox.Close:
-            sys.exit(0)
+            event.accept()
         else:
-            pass
+            event.ignore()
 
     # ------------------------------------------------------------------------------------------------------------------
 
@@ -400,22 +446,22 @@ class HistoryUi(QMainWindow):
         else:
             self.__time_axis.set_vertical()
         self.__time_axis.set_offset(position / 100)
-        self.__time_axis.remove_all_history_threads()
+        # self.__time_axis.remove_all_history_threads()
 
-        thread_index = 0
-        for align, track_width, track_index in thread_config:
-            indexer = HistoricalRecordIndexer()
-            indexer.load_from_file(track_index)
-
-            thread = TimeThreadBase()
-            thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
-            thread.set_thread_event_indexes(indexer.get_indexes())
-            thread.set_thread_min_track_width(track_width)
-            # thread.set_thread_align(align)
-            # thread.set_thread_layout(layout)
-            self.__time_axis.add_history_thread(thread, align)
-
-            thread_index += 1
+        # thread_index = 0
+        # for align, track_width, track_index in thread_config:
+        #     indexer = HistoricalRecordIndexer()
+        #     indexer.load_from_file(track_index)
+        #
+        #     thread = TimeThreadBase()
+        #     thread.set_thread_color(THREAD_BACKGROUND_COLORS[thread_index])
+        #     thread.set_thread_event_indexes(indexer.get_indexes())
+        #     thread.set_thread_min_track_width(track_width)
+        #     # thread.set_thread_align(align)
+        #     # thread.set_thread_layout(layout)
+        #     self.__time_axis.add_history_thread(thread, align)
+        #
+        #     thread_index += 1
 
     # ------------------------------- TimeAxis.Agent -------------------------------
 

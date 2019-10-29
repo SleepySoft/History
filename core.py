@@ -1071,16 +1071,21 @@ class History:
     def get_record_by_source(self, source: str) -> HistoricalRecord or None:
         return [record for record in self.__records if record.source() == source]
 
-    def select_records(self, _uuid: str = '', source: str = '', focus_label: str = '',
+    def select_records(self, _uuid: str or [str] = None,
+                       sources: str or [str] = None, focus_label: str = '',
                        include_label_tags: dict = None, include_all: bool = True,
                        exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
         records = self.__records.copy()
 
-        if _uuid is not None and _uuid != '':
-            records = [record for record in records if record.uuid() == _uuid]
+        if _uuid is not None:
+            if not isinstance(_uuid, (list, tuple)):
+                _uuid = [_uuid]
+            records = [record for record in records if record.uuid() in _uuid]
 
-        if source is not None and source != '':
-            records = [record for record in records if record.source() == source]
+        if sources is not None:
+            if not isinstance(sources, (list, tuple)):
+                sources = [sources]
+            records = [record for record in records if record.source() in sources]
 
         if focus_label is not None and focus_label != '':
             records = [record for record in records if record.get_focus_label() == focus_label]
