@@ -1077,12 +1077,12 @@ class History:
                        exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
         records = self.__records.copy()
 
-        if _uuid is not None:
+        if _uuid is not None and len(_uuid) != 0:
             if not isinstance(_uuid, (list, tuple)):
                 _uuid = [_uuid]
             records = [record for record in records if record.uuid() in _uuid]
 
-        if sources is not None:
+        if sources is not None and len(sources) != 0:
             if not isinstance(sources, (list, tuple)):
                 sources = [sources]
             records = [record for record in records if record.source() in sources]

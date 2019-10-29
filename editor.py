@@ -565,7 +565,8 @@ class HistoryRecordBrowser(QWidget):
     @staticmethod
     def enumerate_local_depot() -> list:
         depot_root = HistoricalRecordLoader.get_local_depot_root()
-        return os.listdir(depot_root)
+        items = os.listdir(depot_root)
+        return [item for item in items if path.isdir(path.join(depot_root, item))]
 
     @staticmethod
     def enumerate_depot_record(depot: str) -> list:

@@ -279,13 +279,22 @@ class HistoryUi(QMainWindow):
     # ----------------------------- UI Events -----------------------------
 
     def on_menu_load_files(self):
-        pass
+        root_path = HistoricalRecordLoader.get_local_depot_root()
+        fname, ftype = QFileDialog.getOpenFileNames(self,
+                                                    'Select History Files',
+                                                    root_path,
+                                                    'History Files (*.his)')
+        sources = [f[len(root_path):] if f.startswith(root_path) else f for f in fname]
+        for source in sources:
+            self.__history.load_source(source)
 
     def on_menu_load_depot(self):
         pass
 
     def on_menu_load_all(self):
-        pass
+        depots = HistoryRecordBrowser.enumerate_local_depot()
+        for depot in depots:
+            self.__history.load_depot(depot)
 
     def on_menu_record_editor(self):
         editor = HistoryEditorDialog()
@@ -417,7 +426,12 @@ class HistoryUi(QMainWindow):
             dlg = WrapperQDialog(wnd, True)
             dlg.exec()
             if dlg.is_ok():
-                records = wnd.load_source_records()
+                his_filter = wnd.ui_to_filter()
+                records = self.__history.select_records(
+                    sources=his_filter.get_sources(),
+                    focus_label=his_filter.get_focus_label(),
+                    include_label_tags=his_filter.get_include_tags(), include_all=False,
+                    exclude_label_tags=his_filter.get_exclude_tags(), exclude_any=True)
                 thread.set_thread_event_indexes([record.to_index() for record in records])
 
         else:
