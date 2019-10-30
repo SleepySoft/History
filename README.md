@@ -1,5 +1,5 @@
 # History
-A distributed and open history time line.  
+A distributed and open source history time line tool.  
 
 # Readme CN   
 
@@ -16,11 +16,30 @@ A distributed and open history time line.
 8. 最后，布局清晰显示漂亮，自然最好。然而上面的功能优先。  
    
 我在网上找了一圈，然而并没有找到理想的软件（或网页）。对于时间线的处理，通常只能显示单点时间或时间段中的一种。无法满足需求。  
-所以还是自己动手吧。。。  
+所以还是自己动手吧。。。而且虽然很想做网页版的，然而我对web开发不熟。。。人生苦短，还是先py。  
 
 ## 设计：
 
-虽然很想做网页版的，然而我对web开发不熟。。。人生苦短，还是先py吧：  
+### 几个概念：  
+1. TimeAxis: 时间轴，即软件的主要界面。时间轴的布局（layout: 水平或垂直）及位置（align：处于中间或某一边）都可以调整，其两边可以放置Thread显示不同内容。
+2. Thread: 历史线索，用以展示历史记录。Thread可以放置在时间轴的两边，可以放置任意个，用以显示不同内容（不同文件或不同filter）。
+3. Track: 一个Thread上能显示数个Track（轨道），数量由Thread的宽度和Track最小宽度（可设置）确定。在排布历史记录的时候软件会尽量利用空间并使各个记录不会重叠。如果空间不足，其余的记录会排布到最后一个Track上。
+4. Depot: 为了管理方便，我们将所有数据放置在软件目录下的depot目录中，depot目录中的每个文件夹称为一个depot。记录文件可以按语言或内容分类放置在不同的depot（文件夹）中。
+4. Index: 软件的设计上考虑到在线和分布式的使用场景。由于空间和带宽的限制，展现给客户的不可能是完整的内容。因此软件支持将记录的时间和摘要提取出来作为索引，并指向真正内容。当用户需要查看详情的时候，主要内容才会被加载。
+5. Filter: 对于已经加载的内容而言，我们可以对其中的内容进行选择展示。主要应用在PC和移动端，以及index的编辑上。由于index包含的信息过少，所以网页及分布场景我们难以使用filter。这点或许会在以后改进。
+  
+### 界面说明：  
+* 从main.py运行，需要python3 + pyqt5支持
+* 坐标轴界面可以按左键沿轴向拖动或鼠标滚轮滑动。CTRL+滚轮可以缩放时间轴。
+* 在主界面上任意地方点击右键会弹出菜单，如果鼠标下面没有Thread，可以添加一个新的Thread。
+* 在Thread上点击右键可以为其载入文件，depot或打开filter。注意filter只能应用于已载入的记录（File -> Load xxx），而Load Index及Load File同时会载入对应的记录。
+* 此外可以调整Track宽度，删除当前Thread，以及在此Thread左右打开一个新的Thread。
+* 在展示的Record上双击，可以打开详细信息及编辑器。当前软件在编辑内容后可以不会实时更新，这点会在以后的版本改进。
+* File菜单下的Load File可以将单个文件载入内存中，载入后的信息可以通过Filter进行筛选查看。其中Load All会载入depot下所有内容，时间会比较久，界面可能存在长时间不响应的情况。这点也会在后续版本进行改进。
+* View菜单下的Historical Record Editor可以打开编辑器。编辑器的左侧下拉列表选择depot，列表选择文件，右侧编辑。点击Apply后保存到文件。
+* View菜单下的History Filter Editor可以打开Filter及Index编辑器，根据选择的Filter生成对应的index。
+  
+  
 * 关于存储：我希望编辑起来就像写文本文件一样自然，而且对于共同编辑以及Review合并而言，无疑文本文件是最好的选择。数据库虽然可能检索方便，但总归够不直观。
 * 关于格式：对于XML这种复杂的格式我向来深恶痛绝，JSON是简单，但仍然不够自然。我需要的不过是故事般的文本，最多打上一些便于检索的标签。于是我搞了一个LabelTags的格式。
 > 最基本的形式：label: tag1, tag2, tag3, ...\n  
@@ -50,6 +69,11 @@ A distributed and open history time line.
 ## Python版本的使用
 
 * 运行环境：python3 + pyqt5  
+
+* main.py
+
+程序主入口，主界面为时间轴，两侧可以添加Thread
+
 * editor.py：直接运行打开编辑器  
 > 编辑器左侧为depot和文件browser  
 > 右侧上方的combobox选择需要编辑的record  
