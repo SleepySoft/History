@@ -39,61 +39,15 @@ A distributed and open source history time line tool.
 * View菜单下的Historical Record Editor可以打开编辑器。编辑器的左侧下拉列表选择depot，列表选择文件，右侧编辑。点击Apply后保存到文件。
 * View菜单下的History Filter Editor可以打开Filter及Index编辑器，根据选择的Filter生成对应的index。
   
+### 其它内容：  
+* 请阅读Doc/Design.vsd  
   
-* 关于存储：我希望编辑起来就像写文本文件一样自然，而且对于共同编辑以及Review合并而言，无疑文本文件是最好的选择。数据库虽然可能检索方便，但总归够不直观。
-* 关于格式：对于XML这种复杂的格式我向来深恶痛绝，JSON是简单，但仍然不够自然。我需要的不过是故事般的文本，最多打上一些便于检索的标签。于是我搞了一个LabelTags的格式。
-> 最基本的形式：label: tag1, tag2, tag3, ...\n  
-> label与tags之间用冒号【:】分隔，以换行结尾。多个tag之间以逗号【,】分隔  
-> 如果需要显得紧凑，也可以使用分号【;】结尾：label1: tag1, tag2; label2: tag3, tag4; ...  
-> 支持以【#】开头并以换行【\n】结尾的注释  
-> label及tag可以用三个双引号【"""】包围，以避免其中含有的字符影响文件解析  
-* 一个历史事件的记录称为一个Historical Record，简称record  
-* 为了方便record之间的关联和检索，程序中引入了“五要素”的概念：时间(time)，地点(location)，人物(people)，组织(organization)，事件(event)。理想情况下，所有的要素应从正文中自动提取（但现阶段做不到）。  
->  对于event，为了方便展示，额外加入标题(title)和摘要(brief)的字段。
-* 为了进一步扩展描述能力，以及能在一个文件中写多个record，所以额外引入“focus label”的概念。
-> 以\[START\]作为label来标记focus label并作为一个record的开始，直到focus label的出现作为该record的结束。
-> 可以用一个record来描述某个要素，系统可以借助这个record更精确地识别文本中的各个要素，并且这种要素更容易被filter。
-> 以下record就描述了一个名为Sleepy大人物
->>  \[START\]: people  
->>  event: Sleepy is handsome  
->>  people: Sleepy  
-* 由于考虑到在线应用，因此将数据分为index和depot。
-> 使用indexer.py将depot中的数据抽取成标准的index形式，其中的内容足够viewer展示。
-> 在用户需要查看具体内容时，viewer会根据index中的source项去加载对应的文件。
-> 采用这种设计，我们可以直接利用github作为我们的depot。一切计算在客户端进行，不需要占用服务器的空间及算力。
-> 此外，用户可以使用他们自己的depot，而不会被软件的作者或网站的作者所限制。
-> 但随之而来的问题是：
-> 1. record更新后viewer无法实时更新（需要先更新index）
-> 2. 服务器做实时查询比较困难（当然也可以根据查询生成一个index并传回前端）
-
-## Python版本的使用
-
-* 运行环境：python3 + pyqt5  
-
-* main.py
-
-程序主入口，主界面为时间轴，两侧可以添加Thread
-
-* editor.py：直接运行打开编辑器  
-> 编辑器左侧为depot和文件browser  
-> 右侧上方的combobox选择需要编辑的record  
-> 点击"New Record"在当前文件中增加一个record  
-> 点击"New File"新建一个文件并在这个文件中增加一个record  
-> 任何更改在点击"apply"后生效  
-> 为防止bug导致文件损坏（一般不会），建议编辑一段后及时git add  
-> 修改完record后记得更新Index  
-* viewer.py：直接运行打开viewer  
-> 鼠标拖动或滚轮移动时间轴  
-> CTRL + 滚轮更改坐标轴的scale  
-> 双击一个record查看具体内容  
-> 当前未完成状态下默认只有一个历史线索(thread)  
-* indexer.py：直接运行默认为“China_CN”depot生成index  
 
 ## 关于开放协作（虽然应该没人会响应...）  
 
 * 有兴趣的同志们可以fork一份代码，在自己的repo上提交你的record后，再向我提交一个pull request。在record中可以增加一个名为author的label，并填上你的名字。  
 * 不知道有没有高手可以做一个网页版本的viewer...  
-
+  
 -------------------------------------------------------------------------------------------------
 
 # Readme EN  
