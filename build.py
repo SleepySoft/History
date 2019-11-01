@@ -10,7 +10,7 @@ _py_executable_path = _os.path.abspath(_os.path.dirname(py_executable))
 if platform.system() == 'Windows':
     _build_exe_args = (
         '--clean',
-        # '--i', "Doc/logo.bmp",
+        '--i', 'res/logo.ico',
         # '--paths', "{}/Lib/site-packages/PyQt5/Qt/bin".format(_py_executable_path),
         '--paths', "./",
         '-n', 'application',
@@ -20,7 +20,7 @@ if platform.system() == 'Windows':
 else:
     _build_exe_args = (
         '--clean',
-        # '--i', "application/ico/MainWindowIcon.ico",
+        '--i', 'res/logo.ico',
         '--paths', "./",
         '-n', 'application',
         '-y',
@@ -77,7 +77,7 @@ def packing_app(app_pkg_name):
         print(app_pkg_name, 'is removed')
     from zipfile import ZipFile
     with ZipFile(app_pkg_name, 'w') as zip_f:
-        __add_dir_in_zip(zip_f, 'dist/application', 'Hisotry.Sleepy')
+        __add_dir_in_zip(zip_f, 'dist/application', 'History.Sleepy')
     pass
 
 
