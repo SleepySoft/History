@@ -1,8 +1,8 @@
 # History
 A distributed and open source history time line tool.  
-
+  
 # Readme CN   
-
+  
 ## 起因:  
 
 最近对历史感兴趣，想找一个基于时间线的历史笔记，大致的需求如下：  
@@ -16,7 +16,7 @@ A distributed and open source history time line tool.
 8. 最后，布局清晰显示漂亮，自然最好。然而上面的功能优先。  
    
 我在网上找了一圈，然而并没有找到理想的软件（或网页）。对于时间线的处理，通常只能显示单点时间或时间段中的一种。无法满足需求。  
-所以还是自己动手吧。。。而且虽然很想做网页版的，然而我对web开发不熟。。。人生苦短，还是先py。  
+所以还是自己动手吧。。。而且虽然很想做网页版的，然而我对web开发不熟。。。人生苦短，还是先py  
 
 ## 设计：
 
@@ -39,14 +39,14 @@ A distributed and open source history time line tool.
 * View菜单下的Historical Record Editor可以打开编辑器。编辑器的左侧下拉列表选择depot，列表选择文件，右侧编辑。点击Apply后保存到文件。
 * View菜单下的History Filter Editor可以打开Filter及Index编辑器，根据选择的Filter生成对应的index。
   
-### 其它内容：  
+### 详细内容：  
 * 请阅读Doc/Design.vsd  
   
 
 ## 关于开放协作（虽然应该没人会响应...）  
 
 * 有兴趣的同志们可以fork一份代码，在自己的repo上提交你的record后，再向我提交一个pull request。在record中可以增加一个名为author的label，并填上你的名字。  
-* 不知道有没有高手可以做一个网页版本的viewer...  
+* 另外不知道有没有高手可以做一个JS版本的viewer...  
   
 -------------------------------------------------------------------------------------------------
 

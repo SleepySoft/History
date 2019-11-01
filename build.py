@@ -1,3 +1,4 @@
+import time
 from sys import executable as py_executable
 from PyInstaller.__main__ import run as _build_exe
 import os as _os
@@ -83,12 +84,13 @@ def packing_app(app_pkg_name):
 
 def format_app_package_name():
     from readme import VERSION as _app_version
-    name_format = 'History.Sleepy-{version}-{os_name}_{os_machine}.zip'
+    name_format = 'History-{version}-{os_name}_{os_machine}_{date}.zip'
     _os_name = platform.system() + platform.release()
     _os_machine = platform.machine()
     return name_format.format(os_name=_os_name,
                               os_machine=_os_machine,
-                              version=_app_version).lower()
+                              version=_app_version,
+                              date=time.strftime("%Y%m%d", time.localtime(time.time()))).lower()
     pass
 
 
