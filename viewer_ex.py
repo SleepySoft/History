@@ -550,7 +550,13 @@ class TimeAxis(QWidget):
             pass
 
     STEP_LIST = [
-        10000, 5000, 2500, 2000, 1000, 500, 250, 200, 100, 50, 25, 20, 10, 5, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01
+        HistoryTime.year(10000), HistoryTime.year(5000), HistoryTime.year(2500),
+        HistoryTime.year(2000), HistoryTime.year(1000), HistoryTime.year(500),
+        HistoryTime.year(250), HistoryTime.year(200), HistoryTime.year(100),
+        HistoryTime.year(50), HistoryTime.year(25), HistoryTime.year(20),
+        HistoryTime.year(10), HistoryTime.year(5), HistoryTime.year(1),
+        HistoryTime.month(6), HistoryTime.month(1),
+        HistoryTime.week(1), HistoryTime.day(1),
     ]
 
     DEFAULT_MARGIN_PIXEL = 0
@@ -1051,7 +1057,7 @@ class TimeAxis(QWidget):
     # ------------------------------------------ Art ------------------------------------------
 
     def format_real_time_tip(self) -> str:
-        tip_text = '(' + TimeParser.standard_time_to_str(self.__mouse_on_scale_value) + ')'
+        tip_text = '(' + HistoryTime.standard_time_to_str(self.__mouse_on_scale_value) + ')'
         if self.__mouse_on_index is not None:
             since = self.__mouse_on_index.since()
             until = self.__mouse_on_index.until()
@@ -1064,12 +1070,12 @@ class TimeAxis(QWidget):
                 tip_text += abstract
 
             if since == until:
-                tip_text += ' : [' + TimeParser.standard_time_to_str(since) + ']'
+                tip_text += ' : [' + HistoryTime.standard_time_to_str(since) + ']'
             else:
                 tip_text += '(' + str(math.floor(self.__mouse_on_scale_value - since + 1)) + \
                             '/' + str(math.floor(until - since)) + ') : ['
-                tip_text += TimeParser.standard_time_to_str(since) + \
-                            ' - ' + TimeParser.standard_time_to_str(until) + ']'
+                tip_text += HistoryTime.standard_time_to_str(since) + \
+                            ' - ' + HistoryTime.standard_time_to_str(until) + ']'
         return tip_text
 
     # ------------------------------------- Real Time Tips ------------------------------------

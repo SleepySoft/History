@@ -93,7 +93,7 @@ def cn_num_to_digit(cn_num: str):
     return sum_num
 
 
-pattern = re.compile(r'([零一二两三四五六七八九十百千万亿]+)')
+pattern = re.compile(r'([〇一二三四五六七八九零壹贰叁肆伍陆柒捌玖貮两十拾百佰千仟万萬亿億兆]+)')
 
 
 def text_cn_num_to_arab(text: str) -> str:

@@ -1,15 +1,23 @@
-import math
 import os
+import re
+import math
 import uuid
 import ntpath
+import requests
+import traceback
 import posixpath
 from os import sys, path, listdir
 
 
-# ------------------------------------------------------ Compare ------------------------------------------------------
-import traceback
+# ----------------------------------------------------------------------------------------------------------------------
 
-import requests
+def str_to_int(text: str, default: int=0):
+    try:
+        return int(text)
+    except Exception as e:
+        return default
+    finally:
+        pass
 
 
 def list_unique(list1: list) -> list:
@@ -71,22 +79,154 @@ def check_condition_within(conditions: dict, key: str, expects: list) -> bool:
         return compare_intersection(value, expects)
 
 
-# ---------------------------------------------------- Token Parser ----------------------------------------------------
+# -------------------------------------------------- CN Time to Digit --------------------------------------------------
+
+CN_NUM = {
+    '0': 0,
+    '1': 1,
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+
+    '〇': 0,
+    '一': 1,
+    '二': 2,
+    '三': 3,
+    '四': 4,
+    '五': 5,
+    '六': 6,
+    '七': 7,
+    '八': 8,
+    '九': 9,
+
+    '零': 0,
+    '壹': 1,
+    '贰': 2,
+    '叁': 3,
+    '肆': 4,
+    '伍': 5,
+    '陆': 6,
+    '柒': 7,
+    '捌': 8,
+    '玖': 9,
+
+    '貮': 2,
+    '两': 2,
+}
+CN_UNIT_L1 = {
+    '十': 10,
+    '拾': 10,
+    '百': 100,
+    '佰': 100,
+    '千': 1000,
+    '仟': 1000,
+}
+CN_UNIT_L2 = {
+    '万': 10000,
+    '萬': 10000,
+    '亿': 100000000,
+    '億': 100000000,
+    '兆': 1000000000000,
+}
+
+
+def cn_num_to_digit(cn_num: str):
+    """
+    Algorithm:
+        a.  The best way is parse from lower digit to upper digit.
+        b.  The Chinese number has 2 level of unit:
+                L1: 十百千; L2: 万亿兆...
+            For L1 unit, it cannot be decorated. For L2 unit, it can be decorated by the unit that less than itself.
+                Example: 一千万 is OK, but 一百千 or 一亿万 is invalid.
+                More complex Example: 五万四千三百二十一万亿 四千三百二十一万 四千三百二十一
+            We can figured out that:
+                1. The L1 unit should not composite. 四千三百二十一 -> 4 * 1000 + 3 * 100 + 2 * 10 + 1
+                2. The L2 unit should be composted. If we meet 万, the base unit should multiple with 10000.
+                3. If we meet a larger L2 unit. The base unit should reset to it.
+    :param cn_num: A single cn number string.
+    :return: The digit that comes from cn number.
+    """
+    sum_num = 0
+    unit_l1 = 1
+    unit_l2 = 1
+    unit_l2_max = 0
+    digit_missing = False
+    num_chars = list(cn_num)
+
+    while num_chars:
+        num_char = num_chars.pop()
+        if num_char in CN_UNIT_L1:
+            unit_l1 = CN_UNIT_L1.get(num_char)
+            digit_missing = True
+        elif num_char in CN_UNIT_L2:
+            unit = CN_UNIT_L2.get(num_char)
+            if unit > unit_l2_max:
+                unit_l2_max = unit
+                unit_l2 = unit
+            else:
+                unit_l2 *= unit
+            unit_l1 = 1
+            digit_missing = True
+        else:
+            digit = CN_NUM.get(num_char) * unit_l1 * unit_l2
+            # For discrete digit. It has no effect to the standard expression.
+            unit_l1 *= 10
+            sum_num += digit
+            digit_missing = False
+    if digit_missing:
+        sum_num += unit_l1 * unit_l2
+
+    print(cn_num + ' -> ' + str(sum_num))
+    return sum_num
+
+
+pattern = re.compile(r'([0123456789〇一二三四五六七八九零壹贰叁肆伍陆柒捌玖貮两十拾百佰千仟万萬亿億兆]+)')
+
+
+def text_cn_num_to_arab(text: str) -> str:
+    match_text = pattern.findall(text)
+    match_text = list(set(match_text))
+    match_text.sort(key=lambda x: len(x), reverse=True)
+    for cn_num in match_text:
+        text = text.replace(cn_num, str(cn_num_to_digit(cn_num)))
+    return text
+
+
+# ---------------------------------------------------- HistoryTime ----------------------------------------------------
 
 # TODO: Use NLP to process nature language
 
-class TimeParser:
-    def __init__(self):
-        print('Instance TimeParser is not necessary.')
+class HistoryTime:
+
+    TICK_SEC = 1000
+    TICK_MIN = TICK_SEC * 60
+    TICK_HOUR = TICK_MIN * 60
+    TICK_DAY = TICK_HOUR * 24
+    TICK_YEAR = TICK_DAY * 366
+    TICK_WEEK = int(TICK_YEAR / 52)
+    TICK_MONTH = [31, 60, 91, 121, 152, 182, 213, 244, 274, 304, 335, 366]
+
+    EFFECTIVE_TIME_DIGIT = 6
+
+    YEAR_FINDER = re.compile('(\d+年)')
+    MONTH_FINDER = re.compile('(\d+月)')
+    DAY_FINDER = re.compile('(\d+日)')
+
+    # ------------------------------------------------------------------------
 
     SEPARATOR = [
-        '-',
         ',',
         '~',
         '～',
+        '-',
         '－',
-        '―',
         '—',
+        '―',
     ]
 
     SPACE_CHAR = [
@@ -94,8 +234,9 @@ class TimeParser:
     ]
 
     REPLACE_CHAR = [
+        ('元月', '1月'),
+        ('正月', '1月'),
         ('世纪', '00'),
-        ('万', '0000'),
     ]
 
     PREFIX_CE = [
@@ -115,25 +256,142 @@ class TimeParser:
         '史前',
     ]
 
+    def __init__(self, tick: int=0):
+        self.__tick = int(tick)
+
+    # ------------------------------------------------------------------------
+
+    def set_tick(self, tick: int):
+        self.__tick = int(tick)
+
+    def add_tick(self, tick: int):
+        self.__tick += int(tick)
+
+    def get_tick(self) -> int:
+        return self.__tick
+
+    def set_decimal_year(self, year: float):
+        self.__tick = int(year * HistoryTime.TICK_YEAR)
+
+    def get_decimal_year(self) -> float:
+        return float(self.__tick) / HistoryTime.TICK_YEAR
+
+    # ------------------------------------------------------------------------
+
+    def get_year(self) -> int:
+        sign = 1 if self.__tick >= 0 else -1
+        return sign * int(abs(self.__tick) / HistoryTime.TICK_YEAR)
+
+    def get_month(self) -> int:
+        year_mod = abs(self.__tick) % HistoryTime.TICK_YEAR
+        for i in range(0, len(HistoryTime.TICK_MONTH)):
+            if year_mod <= HistoryTime.TICK_MONTH[i]:
+                return i + 1
+        return 12
+
+    # -------------------------- Time Tick Process  --------------------------
+
+    @staticmethod
+    def year(year: int=1) -> int:
+        return year * HistoryTime.TICK_YEAR
+
+    @staticmethod
+    def month(month: int=1) -> int:
+        month = max(month, 1)
+        month = min(month, 12)
+        return HistoryTime.TICK_MONTH[month - 1]
+
+    @staticmethod
+    def week(week: int=1) -> int:
+        week = max(week, 1)
+        return int((week - 1) * HistoryTime.TICK_WEEK)
+
+    @staticmethod
+    def day(day: int=1) -> int:
+        day = max(day, 1)
+        return int((day - 1) * HistoryTime.TICK_DAY)
+
+    @staticmethod
+    def round_year_digital(digital: float):
+        return round(digital, HistoryTime.EFFECTIVE_TIME_DIGIT)
+
+    @staticmethod
+    def tick_to_year_digital(tick: int) -> float:
+        return HistoryTime.round_year_digital(float(tick) / HistoryTime.TICK_YEAR)
+
+    @staticmethod
+    def compare_year_digital(digital1: float, digital2: float):
+        return abs(digital1 - digital2) < pow(1.0, -(HistoryTime.EFFECTIVE_TIME_DIGIT + 1))
+
+    @staticmethod
+    def build_history_time(year: int=0, month: int=0, day: int=0,
+                           hour: int=0, minute: int=0, second: int=0,
+                           week: int=0):
+        sign = 1 if year >= 0 else -1
+        tick = HistoryTime.year(abs(year)) + HistoryTime.month(month) + HistoryTime.day(day) + \
+            hour * HistoryTime.TICK_HOUR + minute * HistoryTime.TICK_MIN + second * HistoryTime.TICK_MIN + \
+            week * HistoryTime.TICK_WEEK
+        return HistoryTime(sign * tick)
+
+    # ------------------------------------------------------------------------
+
+    @staticmethod
+    def __get_first_item_except(items: list, execept:str):
+        return items[0].replace(execept, '') if len(items) > 0 else ''
+
+    @staticmethod
+    def time_str_to_history_time(time_str: str):
+        if time_str.lower().startswith(tuple(HistoryTime.PREFIX_BCE)):
+            sign = -1
+        elif time_str.lower().startswith(tuple(HistoryTime.PREFIX_CE)):
+            sign = 1
+        else:
+            sign = 1
+        arablized_str = text_cn_num_to_arab(time_str)
+        day = HistoryTime.__get_first_item_except(HistoryTime.DAY_FINDER.findall(arablized_str), '日')
+        year = HistoryTime.__get_first_item_except(HistoryTime.YEAR_FINDER.findall(arablized_str), '年')
+        month = HistoryTime.__get_first_item_except(HistoryTime.MONTH_FINDER.findall(arablized_str), '月')
+        return HistoryTime.build_history_time(sign * str_to_int(year), str_to_int(month), str_to_int(day))
+
+    @staticmethod
+    def time_text_to_history_times(text: str) -> []:
+        time_text_list = HistoryTime.split_normalize_time_text(text)
+        return [HistoryTime.time_str_to_history_time(time_text) for time_text in time_text_list]
+
+    @staticmethod
+    def split_normalize_time_text(text: str) -> [str]:
+        unified_time_str = text
+        for space in HistoryTime.SPACE_CHAR:
+            unified_time_str = unified_time_str.replace(space, '')
+
+        for old_char, new_char in HistoryTime.REPLACE_CHAR:
+            unified_time_str = unified_time_str.replace(old_char, new_char)
+
+        for i in range(1, len(HistoryTime.SEPARATOR)):
+            unified_time_str = unified_time_str.replace(HistoryTime.SEPARATOR[i], HistoryTime.SEPARATOR[0])
+        return unified_time_str.split(HistoryTime.SEPARATOR[0])
+
+    # ------------------------------------------------------------------------
+
     @staticmethod
     def standardize(time_str: str) -> ([float], [str]):
         unified_time_str = time_str
 
-        for space in TimeParser.SPACE_CHAR:
+        for space in HistoryTime.SPACE_CHAR:
             unified_time_str = unified_time_str.replace(space, '')
 
-        for old_char, new_char in TimeParser.REPLACE_CHAR:
+        for old_char, new_char in HistoryTime.REPLACE_CHAR:
             unified_time_str = unified_time_str.replace(old_char, new_char)
 
-        for i in range(1, len(TimeParser.SEPARATOR)):
-            unified_time_str = unified_time_str.replace(TimeParser.SEPARATOR[i], TimeParser.SEPARATOR[0])
+        for i in range(1, len(HistoryTime.SEPARATOR)):
+            unified_time_str = unified_time_str.replace(HistoryTime.SEPARATOR[i], HistoryTime.SEPARATOR[0])
 
         time_list = []
         error_list = []
-        sub_time_str_list = unified_time_str.split(TimeParser.SEPARATOR[0])
+        sub_time_str_list = unified_time_str.split(HistoryTime.SEPARATOR[0])
         for sub_time_str in sub_time_str_list:
             try:
-                num = TimeParser.parse_single_time_str(sub_time_str.strip())
+                num = HistoryTime.parse_single_time_str(sub_time_str.strip())
                 time_list.append(num)
             except Exception as e:
                 error_list.append(sub_time_str)
@@ -144,9 +402,9 @@ class TimeParser:
 
     @staticmethod
     def parse_single_time_str(time_str: str) -> float:
-        if time_str.lower().startswith(tuple(TimeParser.PREFIX_BCE)):
+        if time_str.lower().startswith(tuple(HistoryTime.PREFIX_BCE)):
             sign = -1
-        elif time_str.lower().startswith(tuple(TimeParser.PREFIX_CE)):
+        elif time_str.lower().startswith(tuple(HistoryTime.PREFIX_CE)):
             sign = 1
         else:
             sign = 1
@@ -637,7 +895,7 @@ class HistoricalRecord(LabelTag):
         :return: Error string list. The list is empty if there's no error occurs.
         """
         if label == 'time':
-            time_list, error_list = TimeParser.standardize(','.join(tags))
+            time_list, error_list = HistoryTime.standardize(','.join(tags))
             return error_list
         else:
             return []
@@ -709,7 +967,7 @@ class HistoricalRecord(LabelTag):
     #     return True
 
     def __try_parse_time_tags(self, tags: [str]) -> [str]:
-        time_list, error_list = TimeParser.standardize(','.join(tags))
+        time_list, error_list = HistoryTime.standardize(','.join(tags))
         if len(time_list) > 0:
             self.__since = min(time_list)
             self.__until = max(time_list)
@@ -1151,6 +1409,138 @@ class History:
 
 # ----------------------------------------------------- Test Code ------------------------------------------------------
 
+# --------------------------- Time Parser ------------------------------
+
+def test_cn_time_to_digit():
+    assert cn_num_to_digit('零') == 0
+    assert cn_num_to_digit('一') == 1
+    assert cn_num_to_digit('二') == 2
+    assert cn_num_to_digit('两') == 2
+    assert cn_num_to_digit('三') == 3
+    assert cn_num_to_digit('四') == 4
+    assert cn_num_to_digit('五') == 5
+    assert cn_num_to_digit('六') == 6
+    assert cn_num_to_digit('七') == 7
+    assert cn_num_to_digit('八') == 8
+    assert cn_num_to_digit('九') == 9
+
+    assert cn_num_to_digit('十') == 10
+    assert cn_num_to_digit('百') == 100
+    assert cn_num_to_digit('千') == 1000
+    assert cn_num_to_digit('万') == 10000
+    assert cn_num_to_digit('亿') == 100000000
+
+    assert cn_num_to_digit('一十') == 10
+    assert cn_num_to_digit('一百') == 100
+    assert cn_num_to_digit('一千') == 1000
+    assert cn_num_to_digit('一万') == 10000
+    assert cn_num_to_digit('一亿') == 100000000
+
+    assert cn_num_to_digit('二十') == 20
+    assert cn_num_to_digit('两百') == 200
+    assert cn_num_to_digit('五千') == 5000
+    assert cn_num_to_digit('八万') == 80000
+    assert cn_num_to_digit('九亿') == 900000000
+
+    assert cn_num_to_digit('十亿') == 1000000000
+    assert cn_num_to_digit('百亿') == 10000000000
+    assert cn_num_to_digit('千亿') == 100000000000
+    assert cn_num_to_digit('万亿') == 1000000000000
+    assert cn_num_to_digit('十万亿') == 10000000000000
+    assert cn_num_to_digit('百万亿') == 100000000000000
+    assert cn_num_to_digit('千万亿') == 1000000000000000
+    assert cn_num_to_digit('万万亿') == 10000000000000000
+    assert cn_num_to_digit('亿亿') == 10000000000000000
+
+    assert cn_num_to_digit('一千一百一十一亿一千一百一十一万一千一百一十一') == 111111111111
+    assert cn_num_to_digit('九千八百七十六亿五千四百三十二万一千两百三十四') == 987654321234
+    assert cn_num_to_digit('五万四千三百二十一万亿四千三百二十一万四千三百二十一') == 54321000043214321
+    assert cn_num_to_digit('九千八百七十六万一千二百三十四亿五千四百三十二万一千两百三十四') == 9876123454321234
+
+    print(text_cn_num_to_arab('''
+    基本数字有：一，二或两，三，四及五，六，七和八，以及九共十个数字
+    支持的位数包括：最简单的十，大一点的百，还有千，更大的万和最终的亿共五个进位
+    先来点简单的：
+        一万
+        二千
+        三百
+        八亿
+    以及由此组合成的复杂数字：
+        其中有五十二个
+        或者是一百七十三只
+        试我们试试两百零六怎样
+        那么三千五百七十九呢
+        一千两百二十亿零两万零五十肯定有问题
+        再看看这个数字一千五百三十六万零四十
+        这个够复杂了吧一万八千亿三千六百五十万零七十九
+    以及离散数字
+       二九九七九二四五八
+       三点一四一五九二六
+    '''))
+
+
+# --------------------------- Time Parser ------------------------------
+
+def __verify_year_month(time_str, year_expect, month_expect):
+    times = HistoryTime.time_text_to_history_times(time_str)
+    year = times[0].get_year()
+    month = times[0].get_month()
+    assert year == year_expect and month == month_expect
+
+
+def test_history_time_year():
+    __verify_year_month('9百年', 900, 1)
+    __verify_year_month('2010年', 2010, 1)
+    __verify_year_month('二千年', 2000, 1)
+    __verify_year_month('公元3百年', 300, 1)
+    __verify_year_month('公元三百年', 300, 1)
+    __verify_year_month('一万亿年', 1000000000000, 1)
+
+    __verify_year_month('公元前1900年', -1900, 1)
+    __verify_year_month('公元前500年', -500, 1)
+    __verify_year_month('前一百万年', -1000000, 1)
+    __verify_year_month('前200万年', -2000000, 1)
+    __verify_year_month('前一万亿年', -1000000000000, 1)
+
+
+def test_history_time_year_month():
+    __verify_year_month('1900年元月', 1900, 1)
+    __verify_year_month('1900年正月', 1900, 1)
+
+    __verify_year_month('1900年一月', 1900, 1)
+    __verify_year_month('1900年二月', 1900, 2)
+    __verify_year_month('1900年三月', 1900, 3)
+    __verify_year_month('1900年四月', 1900, 4)
+    __verify_year_month('1900年五月', 1900, 5)
+    __verify_year_month('1900年六月', 1900, 6)
+    __verify_year_month('1900年七月', 1900, 7)
+    __verify_year_month('1900年八月', 1900, 8)
+    __verify_year_month('1900年九月', 1900, 9)
+    __verify_year_month('1900年十月', 1900, 10)
+    __verify_year_month('1900年十一月', 1900, 11)
+    __verify_year_month('1900年十二月', 1900, 12)
+
+    # --------------------------------------------------
+
+    __verify_year_month('公元前200年', -200, 1)
+
+    __verify_year_month('公元前200年元月', -200, 1)
+    __verify_year_month('公元前200年正月', -200, 1)
+
+    __verify_year_month('公元前200年一月', -200, 1)
+    __verify_year_month('公元前200年二月', -200, 2)
+    __verify_year_month('公元前200年三月', -200, 3)
+    __verify_year_month('公元前200年四月', -200, 4)
+    __verify_year_month('公元前200年五月', -200, 5)
+    __verify_year_month('公元前200年六月', -200, 6)
+    __verify_year_month('公元前200年七月', -200, 7)
+    __verify_year_month('公元前200年八月', -200, 8)
+    __verify_year_month('公元前200年九月', -200, 9)
+    __verify_year_month('公元前200年十月', -200, 10)
+    __verify_year_month('公元前200年十一月', -200, 11)
+    __verify_year_month('公元前200年十二月', -200, 12)
+
+
 # ---------------------------- Token & Parser ----------------------------
 
 def test_token_parser(text: str, expects: [str], tokens: list, wrappers: list, escape_symbols: list):
@@ -1257,15 +1647,22 @@ def test_load_index():
     history.print_indexes()
 
 
+def test_history_time_basic():
+    HistoryTime.year()
+
+
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    test_token_parser_case_normal()
-    test_token_parser_case_escape_symbol()
-    test_history_basic()
-    test_history_filter()
-    test_generate_index()
-    test_load_index()
+    test_history_time_year()
+    test_history_time_year_month()
+    # test_cn_time_to_digit()
+    # test_token_parser_case_normal()
+    # test_token_parser_case_escape_symbol()
+    # test_history_basic()
+    # test_history_filter()
+    # test_generate_index()
+    # test_load_index()
     print('All test passed.')
 
 

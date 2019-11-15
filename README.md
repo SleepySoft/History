@@ -1,6 +1,9 @@
 # History
 A distributed and open source history time line tool.  
   
+# Contact me
+sleepy_history#163.com
+  
 # Readme CN   
   
 ## 起因:  
