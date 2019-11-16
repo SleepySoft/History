@@ -174,12 +174,14 @@ def cn_num_to_digit(cn_num: str):
                 unit_l2 *= unit
             unit_l1 = 1
             digit_missing = True
-        else:
+        elif num_char in CN_NUM:
             digit = CN_NUM.get(num_char) * unit_l1 * unit_l2
             # For discrete digit. It has no effect to the standard expression.
             unit_l1 *= 10
             sum_num += digit
             digit_missing = False
+        else:
+            continue
     if digit_missing:
         sum_num += unit_l1 * unit_l2
 
@@ -203,7 +205,6 @@ def text_cn_num_to_arab(text: str) -> str:
 
 # TODO: Use NLP to process nature language
 
-@total_ordering
 class HistoryTime:
 
     TICK = int
@@ -260,100 +261,105 @@ class HistoryTime:
         '史前',
     ]
 
-    def __init__(self, tick: int = 0):
-        self.__tick = int(tick)
+    def __init__(self):
+        print("Create HistoryTime instance is not necessary.")
 
-    def __str__(self) -> str:
-        return str(self.__tick)
-
-    def __lt__(self, obj):
-        return self.get_tick() < obj.get_tick()
-
-    def __eq__(self, obj):
-        return self.get_tick() == obj.get_tick()
-
-    # ------------------------------------------------------------------------
-
-    def set_tick(self, tick: int):
-        self.__tick = int(tick)
-
-    def add_tick(self, tick: int):
-        self.__tick += int(tick)
-
-    def get_tick(self) -> int:
-        return self.__tick
-
-    def set_decimal_year(self, year: float):
-        self.__tick = int(year * HistoryTime.TICK_YEAR)
-
-    def get_decimal_year(self) -> float:
-        return float(self.__tick) / HistoryTime.TICK_YEAR
-
-    # ------------------------------------------------------------------------
-
-    def get_year(self) -> int:
-        sign = 1 if self.__tick >= 0 else -1
-        return sign * int(abs(self.__tick) / HistoryTime.TICK_YEAR)
-
-    def get_month(self) -> int:
-        year_mod = abs(self.__tick) % HistoryTime.TICK_YEAR
-        for i in range(0, len(HistoryTime.TICK_MONTH)):
-            if year_mod <= HistoryTime.TICK_MONTH[i]:
-                return i + 1
-        return 12
-
-    # -------------------------- Time Tick Process  --------------------------
+    # ------------------------------- Constant -------------------------------
 
     @staticmethod
-    def year(year: int=1) -> int:
+    def year(year: int = 1) -> TICK:
         return year * HistoryTime.TICK_YEAR
 
     @staticmethod
-    def month(month: int=1) -> int:
+    def month(month: int = 1) -> TICK:
         month = max(month, 1)
         month = min(month, 12)
         return HistoryTime.TICK_MONTH[month - 1]
 
     @staticmethod
-    def week(week: int=1) -> int:
+    def week(week: int = 1) -> TICK:
         week = max(week, 1)
         return int((week - 1) * HistoryTime.TICK_WEEK)
 
     @staticmethod
-    def day(day: int=1) -> int:
+    def day(day: int = 1) -> TICK:
         day = max(day, 1)
         return int((day - 1) * HistoryTime.TICK_DAY)
 
-    @staticmethod
-    def round_year_digital(digital: float):
-        return round(digital, HistoryTime.EFFECTIVE_TIME_DIGIT)
+    # ------------------------------- Convert -------------------------------
 
     @staticmethod
-    def tick_to_year_digital(tick: int) -> float:
-        return HistoryTime.round_year_digital(float(tick) / HistoryTime.TICK_YEAR)
+    def year_of_tick(tick: TICK) -> int:
+        return HistoryTime.date_of_tick(tick)[0]
 
     @staticmethod
-    def compare_year_digital(digital1: float, digital2: float):
+    def month_of_tick(tick: TICK) -> int:
+        return HistoryTime.date_of_tick(tick)[1]
+
+    @staticmethod
+    def day_of_tick(tick: TICK) -> int:
+        return HistoryTime.date_of_tick(tick)[2]
+
+    @staticmethod
+    def date_of_tick(tick: TICK) -> (int, int, int):
+        sign = 1 if tick >= 0 else -1
+        day = 0
+        year = sign * int(abs(tick) / HistoryTime.TICK_YEAR)
+        month = 12
+        year_mod = abs(tick) % HistoryTime.TICK_YEAR
+        for i in range(0, len(HistoryTime.TICK_MONTH)):
+            if year_mod <= HistoryTime.TICK_MONTH[i]:
+                day = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
+                month = i + 1
+                break
+        return year, month, day
+
+    @staticmethod
+    def decimal_year_to_tick(year: float) -> TICK:
+        return int(year * HistoryTime.TICK_YEAR)
+
+    @staticmethod
+    def tick_to_decimal_year(tick: TICK) -> float:
+        return HistoryTime.round_decimal_year(float(tick) / HistoryTime.TICK_YEAR)
+
+    @staticmethod
+    def tick_to_standard_string(tick: TICK) -> str:
+        year, month, day = HistoryTime.date_of_tick(tick)
+        if year < 0:
+            text = str(-year) + ' BCE'
+        else:
+            text = str(year) + ' CE'
+        text += '/' + str(month) + '/' + str(day)
+        return text
+
+    # ------------------------------- Calculation -------------------------------
+
+    @staticmethod
+    def round_decimal_year(year: float):
+        return round(year, HistoryTime.EFFECTIVE_TIME_DIGIT)
+
+    @staticmethod
+    def decimal_year_equal(digital1: float, digital2: float):
         return abs(digital1 - digital2) < pow(1.0, -(HistoryTime.EFFECTIVE_TIME_DIGIT + 1))
 
     @staticmethod
-    def build_history_time(year: int=0, month: int=0, day: int=0,
-                           hour: int=0, minute: int=0, second: int=0,
-                           week: int=0):
+    def build_history_time_tick(year: int = 0, month: int = 0, day: int = 0,
+                                hour: int = 0, minute: int = 0, second: int = 0,
+                                week: int = 0) -> TICK:
         sign = 1 if year >= 0 else -1
         tick = HistoryTime.year(abs(year)) + HistoryTime.month(month) + HistoryTime.day(day) + \
             hour * HistoryTime.TICK_HOUR + minute * HistoryTime.TICK_MIN + second * HistoryTime.TICK_MIN + \
             week * HistoryTime.TICK_WEEK
-        return HistoryTime(sign * tick)
+        return sign * tick
 
     # ------------------------------------------------------------------------
 
     @staticmethod
-    def __get_first_item_except(items: list, execept:str):
-        return items[0].replace(execept, '') if len(items) > 0 else ''
+    def __get_first_item_except(items: list, expect: str):
+        return items[0].replace(expect, '') if len(items) > 0 else ''
 
     @staticmethod
-    def time_str_to_history_time(time_str: str):
+    def time_str_to_history_time(time_str: str) -> TICK:
         if time_str.lower().startswith(tuple(HistoryTime.PREFIX_BCE)):
             sign = -1
         elif time_str.lower().startswith(tuple(HistoryTime.PREFIX_CE)):
@@ -364,10 +370,15 @@ class HistoryTime:
         day = HistoryTime.__get_first_item_except(HistoryTime.DAY_FINDER.findall(arablized_str), '日')
         year = HistoryTime.__get_first_item_except(HistoryTime.YEAR_FINDER.findall(arablized_str), '年')
         month = HistoryTime.__get_first_item_except(HistoryTime.MONTH_FINDER.findall(arablized_str), '月')
-        return HistoryTime.build_history_time(sign * str_to_int(year), str_to_int(month), str_to_int(day))
+
+        if year == '':
+            number_str = int("".join(filter(str.isdigit, arablized_str)))
+            return HistoryTime.build_history_time_tick(sign * int(number_str))
+        else:
+            return HistoryTime.build_history_time_tick(sign * str_to_int(year), str_to_int(month), str_to_int(day))
 
     @staticmethod
-    def time_text_to_history_times(text: str) -> []:
+    def time_text_to_history_times(text: str) -> [TICK]:
         time_text_list = HistoryTime.split_normalize_time_text(text)
         return [HistoryTime.time_str_to_history_time(time_text) for time_text in time_text_list]
 
@@ -798,8 +809,8 @@ class HistoricalRecord(LabelTag):
     def __init__(self, source: str = ''):
         super(HistoricalRecord, self).__init__()
         self.__uuid = str(uuid.uuid4())
-        self.__since = HistoryTime()
-        self.__until = HistoryTime()
+        self.__since = HistoryTime.TICK(0)
+        self.__until = HistoryTime.TICK(0)
         self.__focus_label = ''
         self.__record_source = source
 
@@ -808,10 +819,10 @@ class HistoricalRecord(LabelTag):
     def uuid(self) -> str:
         return self.__uuid
 
-    def since(self) -> HistoryTime:
+    def since(self) -> HistoryTime.TICK:
         return self.__since
 
-    def until(self) -> HistoryTime:
+    def until(self) -> HistoryTime.TICK:
         return self.__until
 
     def source(self) -> str:
@@ -864,14 +875,14 @@ class HistoricalRecord(LabelTag):
         if label == 'uuid':
             self.__uuid = str(tags[0])
         elif label == 'time':
-            error_list = self.__try_parse_time_tags(tags)
-            if len(error_list) > 0:
-                print('Warning: Cannot parse the time tag - ' + str(error_list))
+            self.__try_parse_time_tags(tags)
+            # if len(error_list) > 0:
+            #     print('Warning: Cannot parse the time tag - ' + str(error_list))
         elif label == 'since':
-            self.__since.set_tick(int(tags[0]))
+            self.__since = HistoryTime.TICK(tags[0])
             return
         elif label == 'until':
-            self.__until.set_tick(int(tags[0]))
+            self.__until = HistoryTime.TICK(tags[0])
             return
         elif label == 'source':
             self.__record_source = str(tags[0])
@@ -896,9 +907,8 @@ class HistoricalRecord(LabelTag):
         abstract = LabelTagParser.tags_to_text(his_record.event()) if abstract == '' else abstract
         self.set_label_tags('abstract', abstract.strip()[:50])
 
-    def period_adapt(self, since: float, until: float):
-        return (since <= self.__since.get_decimal_year() <= until) or \
-               (since <= self.__until.get_decimal_year() <= until)
+    def period_adapt(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
+        return (since <= self.__since <= until) or (since <= self.__until <= until)
 
     @staticmethod
     def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
@@ -980,14 +990,14 @@ class HistoricalRecord(LabelTag):
     #             return expected_tags in history_event_tags
     #     return True
 
-    def __try_parse_time_tags(self, tags: [str]) -> [str]:
+    def __try_parse_time_tags(self, tags: [str]):
         his_times = HistoryTime.time_text_to_history_times(','.join(tags))
         if len(his_times) > 0:
-            self.__since = min(his_times, key=lambda x: x.get_tick())
-            self.__until = max(his_times, key=lambda x: x.get_tick())
+            self.__since = min(his_times)
+            self.__until = max(his_times)
         else:
-            self.__since.set_tick(0)
-            self.__until.set_tick(0)
+            self.__since = HistoryTime.TICK(0)
+            self.__until = HistoryTime.TICK(0)
 
         # time_list, error_list = HistoryTime.standardize(','.join(tags))
         # if len(time_list) > 0:
@@ -1505,8 +1515,7 @@ def test_cn_time_to_digit():
 
 def __verify_year_month(time_str, year_expect, month_expect):
     times = HistoryTime.time_text_to_history_times(time_str)
-    year = times[0].get_year()
-    month = times[0].get_month()
+    year, month, day = HistoryTime.date_of_tick(times[0])
     assert year == year_expect and month == month_expect
 
 
@@ -1561,6 +1570,11 @@ def test_history_time_year_month():
     __verify_year_month('公元前200年十月', -200, 10)
     __verify_year_month('公元前200年十一月', -200, 11)
     __verify_year_month('公元前200年十二月', -200, 12)
+
+
+def test_time_text_to_history_times():
+    times = HistoryTime.time_text_to_history_times('220 - 535')
+    assert HistoryTime.year_of_tick(times[0]) == 220 and HistoryTime.year_of_tick(times[1]) == 535
 
 
 # ---------------------------- Token & Parser ----------------------------
@@ -1678,13 +1692,14 @@ def test_history_time_basic():
 def main():
     test_history_time_year()
     test_history_time_year_month()
-    # test_cn_time_to_digit()
-    # test_token_parser_case_normal()
-    # test_token_parser_case_escape_symbol()
-    # test_history_basic()
-    # test_history_filter()
-    # test_generate_index()
-    # test_load_index()
+    test_cn_time_to_digit()
+    test_time_text_to_history_times()
+    test_token_parser_case_normal()
+    test_token_parser_case_escape_symbol()
+    test_history_basic()
+    test_history_filter()
+    test_generate_index()
+    test_load_index()
     print('All test passed.')
 
 
