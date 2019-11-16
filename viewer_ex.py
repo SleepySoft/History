@@ -76,8 +76,8 @@ def scale_round(num: float, scale: float):
 
 class AxisMetrics:
     def __init__(self):
-        self.__scale_since = 0.0
-        self.__scale_until = 0.0
+        self.__scale_since = HistoryTime.TICK(0)
+        self.__scale_until = HistoryTime.TICK(0)
         self.__transverse_left = 0
         self.__transverse_right = 0
         self.__longitudinal_since = 0
@@ -93,7 +93,7 @@ class AxisMetrics:
     def get_layout(self) -> LAYOUT_TYPE:
         return self.__layout
 
-    def get_scale_range(self) -> (float, float):
+    def get_scale_range(self) -> (HistoryTime.TICK, HistoryTime.TICK):
         return self.__scale_since, self.__scale_until
 
     def get_transverse_limit(self) -> (int, int):
@@ -110,7 +110,7 @@ class AxisMetrics:
     def set_layout(self, layout: LAYOUT_TYPE):
         self.__layout = layout
 
-    def set_scale_range(self, since: float, until: float):
+    def set_scale_range(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         self.__scale_since = since
         self.__scale_until = until
 
@@ -118,9 +118,9 @@ class AxisMetrics:
         self.__transverse_left = left
         self.__transverse_right = right
 
-    def set_longitudinal_range(self, since: int, range: int):
+    def set_longitudinal_range(self, since: int, _range: int):
         self.__longitudinal_since = since
-        self.__longitudinal_until = range
+        self.__longitudinal_until = _range
 
     # ------------------- Parse -------------------
 
@@ -170,7 +170,7 @@ class AxisMetrics:
                 area.setRight(self.__longitudinal_until)
         return area
 
-    def value_to_pixel(self, value: float):
+    def value_to_pixel(self, value: HistoryTime.TICK):
         scale_delta = self.__scale_until - self.__scale_since
         if scale_delta == 0:
             return 0
@@ -246,8 +246,8 @@ class TimeTrackBar:
         return metrics
 
     def get_longitudinal_space(self) -> (int, int):
-        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since().get_decimal_year().get_decimal_year())
-        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until().get_decimal_year().get_decimal_year())
+        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
+        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
         return since_pixel, until_pixel
 
     # -----------------------------------------------------------------------
@@ -278,8 +278,7 @@ class TimeTrackBar:
         track_since, track_until = track.get_metrics().get_longitudinal_range()
         since_pixel, until_pixel = self.get_longitudinal_space()
 
-        self.__bar_metrics.set_scale_range(self.__index.since().get_decimal_year(),
-                                           self.__index.until().get_decimal_year())
+        self.__bar_metrics.set_scale_range(self.__index.since(), self.__index.until())
         self.__bar_metrics.set_transverse_limit(track_left, track_right)
 
         if since_pixel == until_pixel:
@@ -458,8 +457,7 @@ class TimeThreadBase:
         # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
 
         # Sort method2: The longer index has higher priority -> The bar layout should be more stable.
-        self.__paint_indexes.sort(key=lambda item: item.until().get_decimal_year() -
-                                                   item.since().get_decimal_year(), reverse=True)
+        self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
 
     def __calc_paint_parameters(self):
         # Adjust track count
@@ -621,7 +619,7 @@ class TimeAxis(QWidget):
         self.setMinimumWidth(400)
         self.setMinimumHeight(500)
 
-        self.set_time_range(0, 2000)
+        self.set_time_range(0, HistoryTime.year(2000))
 
         self.setMouseTracking(True)
 
@@ -867,7 +865,7 @@ class TimeAxis(QWidget):
             y_main = int(self.__pixel_per_scale * i) - self.__paint_start_offset + TimeAxis.DEFAULT_MARGIN_PIXEL
             time_main = (self.__paint_start_scale + i) * self.__main_step
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
-            qp.drawText(main_scale_end - 100, y_main, str(time_main))
+            qp.drawText(main_scale_end - 100, y_main, str(HistoryTime.year_of_tick(time_main)))
             for j in range(0, 10):
                 y_sub = int(y_main + self.__pixel_per_scale * j / 10)
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
@@ -1014,12 +1012,12 @@ class TimeAxis(QWidget):
         delta_scale_offset = delta_pixel_offset / self.__pixel_per_scale
         return (self.__paint_start_scale + delta_scale_offset) * self.__main_step
 
-    def auto_scale(self, since: float, until: float):
-        since_rough = lower_rough(since)
-        until_rough = upper_rough(until)
-        delta = until_rough - since_rough
-        delta_rough = upper_rough(delta)
-        step_rough = delta_rough / 10
+    def auto_scale(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
+        # since_rough = lower_rough(since)
+        # until_rough = upper_rough(until)
+        # delta = until_rough - since_rough
+        # delta_rough = upper_rough(delta)
+        step_rough = abs(until - since) / 10
 
         step_index = 1
         while step_index < len(TimeAxis.STEP_LIST):
@@ -1029,7 +1027,7 @@ class TimeAxis(QWidget):
         self.select_step_scale(step_index - 1)
 
         self.update_pixel_per_scale()
-        self.__scroll = since_rough * self.__pixel_per_scale
+        self.__scroll = since * self.__pixel_per_scale
 
     def select_step_scale(self, step_index: int):
         self.__step_selection = step_index
@@ -1059,10 +1057,10 @@ class TimeAxis(QWidget):
     # ------------------------------------------ Art ------------------------------------------
 
     def format_real_time_tip(self) -> str:
-        tip_text = '(' + HistoryTime.standard_time_to_str(self.__mouse_on_scale_value) + ')'
+        tip_text = '(' + str(HistoryTime.year_of_tick(self.__mouse_on_scale_value)) + ')'
         if self.__mouse_on_index is not None:
-            since = self.__mouse_on_index.since().get_decimal_year()
-            until = self.__mouse_on_index.until().get_decimal_year()
+            since = self.__mouse_on_index.since()
+            until = self.__mouse_on_index.until()
             abstract_tags = self.__mouse_on_index.get_tags('abstract')
             abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
             abstract = abstract.strip()
