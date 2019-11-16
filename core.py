@@ -3,6 +3,8 @@ import re
 import math
 import uuid
 import ntpath
+from functools import total_ordering
+
 import requests
 import traceback
 import posixpath
@@ -201,21 +203,23 @@ def text_cn_num_to_arab(text: str) -> str:
 
 # TODO: Use NLP to process nature language
 
+@total_ordering
 class HistoryTime:
 
+    TICK = int
     TICK_SEC = 1000
     TICK_MIN = TICK_SEC * 60
     TICK_HOUR = TICK_MIN * 60
     TICK_DAY = TICK_HOUR * 24
     TICK_YEAR = TICK_DAY * 366
-    TICK_WEEK = int(TICK_YEAR / 52)
+    TICK_WEEK = TICK(TICK_YEAR / 52)
     TICK_MONTH = [31, 60, 91, 121, 152, 182, 213, 244, 274, 304, 335, 366]
 
     EFFECTIVE_TIME_DIGIT = 6
 
-    YEAR_FINDER = re.compile('(\d+年)')
-    MONTH_FINDER = re.compile('(\d+月)')
-    DAY_FINDER = re.compile('(\d+日)')
+    YEAR_FINDER = re.compile(r'(\d+年)')
+    MONTH_FINDER = re.compile(r'(\d+月)')
+    DAY_FINDER = re.compile(r'(\d+日)')
 
     # ------------------------------------------------------------------------
 
@@ -256,8 +260,17 @@ class HistoryTime:
         '史前',
     ]
 
-    def __init__(self, tick: int=0):
+    def __init__(self, tick: int = 0):
         self.__tick = int(tick)
+
+    def __str__(self) -> str:
+        return str(self.__tick)
+
+    def __lt__(self, obj):
+        return self.get_tick() < obj.get_tick()
+
+    def __eq__(self, obj):
+        return self.get_tick() == obj.get_tick()
 
     # ------------------------------------------------------------------------
 
@@ -785,8 +798,8 @@ class HistoricalRecord(LabelTag):
     def __init__(self, source: str = ''):
         super(HistoricalRecord, self).__init__()
         self.__uuid = str(uuid.uuid4())
-        self.__since = 0.0
-        self.__until = 0.0
+        self.__since = HistoryTime()
+        self.__until = HistoryTime()
         self.__focus_label = ''
         self.__record_source = source
 
@@ -795,10 +808,10 @@ class HistoricalRecord(LabelTag):
     def uuid(self) -> str:
         return self.__uuid
 
-    def since(self) -> float:
+    def since(self) -> HistoryTime:
         return self.__since
 
-    def until(self) -> float:
+    def until(self) -> HistoryTime:
         return self.__until
 
     def source(self) -> str:
@@ -855,10 +868,10 @@ class HistoricalRecord(LabelTag):
             if len(error_list) > 0:
                 print('Warning: Cannot parse the time tag - ' + str(error_list))
         elif label == 'since':
-            self.__since = float(tags[0])
+            self.__since.set_tick(int(tags[0]))
             return
         elif label == 'until':
-            self.__until = float(tags[0])
+            self.__until.set_tick(int(tags[0]))
             return
         elif label == 'source':
             self.__record_source = str(tags[0])
@@ -884,7 +897,8 @@ class HistoricalRecord(LabelTag):
         self.set_label_tags('abstract', abstract.strip()[:50])
 
     def period_adapt(self, since: float, until: float):
-        return (self.__since < until) and (since < self.__until)
+        return (since <= self.__since.get_decimal_year() <= until) or \
+               (since <= self.__until.get_decimal_year() <= until)
 
     @staticmethod
     def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
@@ -967,14 +981,22 @@ class HistoricalRecord(LabelTag):
     #     return True
 
     def __try_parse_time_tags(self, tags: [str]) -> [str]:
-        time_list, error_list = HistoryTime.standardize(','.join(tags))
-        if len(time_list) > 0:
-            self.__since = min(time_list)
-            self.__until = max(time_list)
+        his_times = HistoryTime.time_text_to_history_times(','.join(tags))
+        if len(his_times) > 0:
+            self.__since = min(his_times, key=lambda x: x.get_tick())
+            self.__until = max(his_times, key=lambda x: x.get_tick())
         else:
-            self.__since = 0.0
-            self.__until = 0.0
-        return error_list
+            self.__since.set_tick(0)
+            self.__until.set_tick(0)
+
+        # time_list, error_list = HistoryTime.standardize(','.join(tags))
+        # if len(time_list) > 0:
+        #     self.__since = min(time_list)
+        #     self.__until = max(time_list)
+        # else:
+        #     self.__since = 0.0
+        #     self.__until = 0.0
+        # return error_list
 
     def __get_sorted_labels(self) -> [str]:
         dump_list = []

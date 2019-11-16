@@ -182,7 +182,7 @@ class HistoryRecordEditor(QWidget):
 
         for i in range(0, len(sorted_records)):
             record = sorted_records[i]
-            self.__combo_records.addItem('[' + str(record.since()) + '] ' + record.uuid())
+            self.__combo_records.addItem('[' + str(record.since().get_decimal_year()) + '] ' + record.uuid())
             self.__combo_records.setItemData(i, record.uuid())
             if record == self.__current_record:
                 index = i

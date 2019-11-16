@@ -246,8 +246,8 @@ class TimeTrackBar:
         return metrics
 
     def get_longitudinal_space(self) -> (int, int):
-        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
-        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
+        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since().get_decimal_year().get_decimal_year())
+        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until().get_decimal_year().get_decimal_year())
         return since_pixel, until_pixel
 
     # -----------------------------------------------------------------------
@@ -278,7 +278,8 @@ class TimeTrackBar:
         track_since, track_until = track.get_metrics().get_longitudinal_range()
         since_pixel, until_pixel = self.get_longitudinal_space()
 
-        self.__bar_metrics.set_scale_range(self.__index.since(), self.__index.until())
+        self.__bar_metrics.set_scale_range(self.__index.since().get_decimal_year(),
+                                           self.__index.until().get_decimal_year())
         self.__bar_metrics.set_transverse_limit(track_left, track_right)
 
         if since_pixel == until_pixel:
@@ -457,7 +458,8 @@ class TimeThreadBase:
         # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
 
         # Sort method2: The longer index has higher priority -> The bar layout should be more stable.
-        self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
+        self.__paint_indexes.sort(key=lambda item: item.until().get_decimal_year() -
+                                                   item.since().get_decimal_year(), reverse=True)
 
     def __calc_paint_parameters(self):
         # Adjust track count
@@ -1059,8 +1061,8 @@ class TimeAxis(QWidget):
     def format_real_time_tip(self) -> str:
         tip_text = '(' + HistoryTime.standard_time_to_str(self.__mouse_on_scale_value) + ')'
         if self.__mouse_on_index is not None:
-            since = self.__mouse_on_index.since()
-            until = self.__mouse_on_index.until()
+            since = self.__mouse_on_index.since().get_decimal_year()
+            until = self.__mouse_on_index.until().get_decimal_year()
             abstract_tags = self.__mouse_on_index.get_tags('abstract')
             abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
             abstract = abstract.strip()
