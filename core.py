@@ -208,7 +208,7 @@ def text_cn_num_to_arab(text: str) -> str:
 class HistoryTime:
 
     TICK = int
-    TICK_SEC = 1000
+    TICK_SEC = 1
     TICK_MIN = TICK_SEC * 60
     TICK_HOUR = TICK_MIN * 60
     TICK_DAY = TICK_HOUR * 24
