@@ -768,15 +768,15 @@ class TimeAxis(QWidget):
         if modifiers == QtCore.Qt.ControlModifier:
             # Get the value before step update
             current_pos = event.pos()
-            current_pos_offset = self.calc_point_to_paint_start_offset(current_pos)
-            current_pos_scale_value = self.pixel_offset_to_scale_value(current_pos_offset)
+            pixel = current_pos.y() if self.__layout == LAYOUT_HORIZON else current_pos.x()
+            current_pos_value = self.pixel_to_value(pixel)
 
             self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
+            self.calc_paint_parameters()
 
             # Make the value under mouse keep the same place on the screen
-            total_pixel_offset = self.__pixel_per_scale * current_pos_scale_value / self.__main_step
-            total_pixel_offset -= current_pos_offset
-            self.__scroll = total_pixel_offset - self.__offset
+            value_new_offset = self.value_to_pixel(current_pos_value, True)
+            self.__scroll = value_new_offset - pixel
         else:
             self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
 
@@ -1022,8 +1022,9 @@ class TimeAxis(QWidget):
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
 
-    def value_to_pixel(self, value: int) -> float:
-        return float(value - self.__total_tick_offset) / self.__main_step * self.__pixel_per_scale
+    def value_to_pixel(self, value: int, from_origin: bool = False) -> float:
+        return float(value - self.__total_tick_offset) / self.__main_step * self.__pixel_per_scale \
+               if not from_origin else value / self.__main_step * self.__pixel_per_scale
 
     def pixel_to_value(self, pixel: int) -> float:
         if pixel in self.__optimise_pixel.keys():
