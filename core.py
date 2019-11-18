@@ -278,13 +278,11 @@ class HistoryTime:
 
     @staticmethod
     def week(week: int = 1) -> TICK:
-        week = max(week, 1)
-        return int((week - 1) * HistoryTime.TICK_WEEK)
+        return int(week * HistoryTime.TICK_WEEK)
 
     @staticmethod
     def day(day: int = 1) -> TICK:
-        day = max(day, 1)
-        return int((day - 1) * HistoryTime.TICK_DAY)
+        return int(day * HistoryTime.TICK_DAY)
 
     # ------------------------------- Convert -------------------------------
 

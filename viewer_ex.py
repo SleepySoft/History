@@ -620,7 +620,7 @@ class TimeAxis(QWidget):
         self.__layout = LAYOUT_VERTICAL
 
         self.__step_selection = 0
-        self.__main_step = 0
+        self.__main_step = TimeAxis.STEP_LIST[0]
         self.__sub_step = 0
 
         self.setMinimumWidth(400)
@@ -726,6 +726,36 @@ class TimeAxis(QWidget):
 
     # --------------------------------------------------- UI Event ----------------------------------------------------
 
+    def wheelEvent(self, event):
+        angle = event.angleDelta() / 8
+        angle_x = angle.x()
+        angle_y = angle.y()
+
+        modifiers = QApplication.keyboardModifiers()
+
+        if modifiers == QtCore.Qt.ControlModifier:
+            # Get the value before step update
+            current_pos = event.pos()
+            pixel = current_pos.y() if self.__layout == LAYOUT_HORIZON else current_pos.x()
+            current_pos_value = self.pixel_to_value(pixel)
+
+            old_main_step = self.__main_step
+            old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_step
+
+            self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
+            # Make the value under mouse keep the same place on the screen
+            value_new_offset = current_pos_value * self.__pixel_per_scale / self.__main_step
+            self.__scroll = int(value_new_offset - pixel)
+            self.__offset = 0
+
+            print('Val = ' + str(current_pos_value) + '; Pixel = ' + str(pixel))
+            print('Step: ' + str(old_main_step) + ' -> ' + str(self.__main_step))
+            print('Offset: ' + str(old_pixel_offset) + ' -> ' + str(value_new_offset))
+        else:
+            self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
+
+        self.repaint()
+
     def mousePressEvent(self,  event):
         if event.button() == QtCore.Qt.LeftButton:
             self.__l_pressing = True
@@ -757,47 +787,6 @@ class TimeAxis(QWidget):
             self.repaint()
         else:
             self.on_pos_updated(now_pos)
-
-    def wheelEvent(self, event):
-        angle = event.angleDelta() / 8
-        angle_x = angle.x()
-        angle_y = angle.y()
-
-        modifiers = QApplication.keyboardModifiers()
-
-        if modifiers == QtCore.Qt.ControlModifier:
-            # Get the value before step update
-            current_pos = event.pos()
-            pixel = current_pos.y() if self.__layout == LAYOUT_HORIZON else current_pos.x()
-            current_pos_value = self.pixel_to_value(pixel)
-
-            self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
-            self.calc_paint_parameters()
-
-            # Make the value under mouse keep the same place on the screen
-            value_new_offset = self.value_to_pixel(current_pos_value, True)
-            self.__scroll = value_new_offset - pixel
-        else:
-            self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
-
-        self.repaint()
-
-    # ---------------------------------------- Menu ----------------------------------------
-
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        # Example
-        # menu = QMenu()
-        # openAction = menu.addAction("Open")
-        # deleAction = menu.addAction("Delete")
-        # renaAction = menu.addAction("Rename")
-        # action = menu.exec_(self.mapToGlobal(event.pos()))
-        # if action == openAction:
-        #     print('openAction')
-        # if action == deleAction:
-        #     print('deleAction')
-        # if action == openAction:
-        #     print('renaAction')
-        pass
 
     # ----------------------------------------------------- Action -----------------------------------------------------
 
