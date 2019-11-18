@@ -75,28 +75,28 @@ TODO
 (DONE) | 如何处理相同时间（约）中发生的事，如前12世纪廪辛康丁，武乙，文丁等人发动的各场战争  
 (DONE) | 文件重命名
 (DONE) | 文event combobox显示时间并按时间排序  
+(DONE) | Thread放在坐标轴左边
+(DONE) | Thread编辑  
+(DONE) |     界面支持配置1-10个thread，包括enable，focus label，depot，filter  
+(DONE) |     界面根据用户配置生成不同的Index供不同的thread载入  
+(DONE) |     在LabelTags层面上支持filter功能  
+(DONE) | viewer可以直接载入event而不仅仅只是index  
+(DONE) | 优化zoom in和zoom out功能使之更加自然  
 
 ## TODO:
 
 Thread Config界面优化（Load，Check）
-Thread放在坐标轴左边
 
 如何优化一年内多起事件的显示（重叠的问题）  
 同一时代人物太多经常导致显示空间不足，如何处理  
   
-Thread编辑  
-    界面支持配置1-10个thread，包括enable，focus label，depot，filter  
-    界面根据用户配置生成不同的Index供不同的thread载入  
-    在LabelTags层面上支持filter功能  
     
 合并文件功能：可以将多个小文件合并成一个大文件  
 
 五要素外其它tags的编辑功能  
-viewer可以直接载入event而不仅仅只是index  
 改变窗口大小的操作会触发mouse event的问题  
 
 坐标轴的改进：  
-	优化zoom in和zoom out功能使之更加自然  
 	main scale为年时sub scale应为月（12格），同理月之下为周，周之下为日，日之下为时  
 	更好的取整及显示时间单位  
 
