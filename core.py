@@ -531,12 +531,7 @@ class TokenParser:
     def source_len(self) -> int:
         return len(self.__text)
 
-    xcount = 0
     def reaches_end(self, offset: int = 0) -> bool:
-        self.xcount += 1
-        if self.xcount > 2000:
-            _len = self.source_len()
-            print('len = ' + str(_len))
         return self.__parse_idx + offset >= self.source_len()
 
     def peek(self, offset: int = 0, count: int = 1) -> str:
@@ -818,8 +813,8 @@ class HistoricalRecord(LabelTag):
     def __init__(self, source: str = ''):
         super(HistoricalRecord, self).__init__()
         self.__uuid = str(uuid.uuid4())
-        self.__since = HistoryTime.TICK(0)
-        self.__until = HistoryTime.TICK(0)
+        self.__since = 0.0
+        self.__until = 0.0
         self.__focus_label = ''
         self.__record_source = source
 
@@ -888,10 +883,10 @@ class HistoricalRecord(LabelTag):
             # if len(error_list) > 0:
             #     print('Warning: Cannot parse the time tag - ' + str(error_list))
         elif label == 'since':
-            self.__since = HistoryTime.TICK(tags[0])
+            self.__since = HistoryTime.decimal_year_to_tick(float(tags[0]))
             return
         elif label == 'until':
-            self.__until = HistoryTime.TICK(tags[0])
+            self.__until = HistoryTime.decimal_year_to_tick(float(tags[0]))
             return
         elif label == 'source':
             self.__record_source = str(tags[0])
@@ -916,8 +911,8 @@ class HistoricalRecord(LabelTag):
         abstract = LabelTagParser.tags_to_text(his_record.event()) if abstract == '' else abstract
         self.set_label_tags('abstract', abstract.strip()[:50])
 
-    def period_adapt(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
-        return (since <= self.__since <= until) or (since <= self.__until <= until)
+    def period_adapt(self, since: float, until: float):
+        return (self.__since <= until) and (self.__until >= since)
 
     @staticmethod
     def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
@@ -962,8 +957,8 @@ class HistoricalRecord(LabelTag):
         text += super(HistoricalRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
-            text += LabelTagParser.label_tags_to_text('since', self.since(), new_line)
-            text += LabelTagParser.label_tags_to_text('until', self.until(), new_line)
+            text += LabelTagParser.label_tags_to_text('since', HistoryTime.tick_to_decimal_year(self.since()), new_line)
+            text += LabelTagParser.label_tags_to_text('until', HistoryTime.tick_to_decimal_year(self.until()), new_line)
             text += LabelTagParser.label_tags_to_text('source', self.source(), new_line)
 
         # If the focus label missing, add it with 'end' tag
@@ -1005,8 +1000,8 @@ class HistoricalRecord(LabelTag):
             self.__since = min(his_times)
             self.__until = max(his_times)
         else:
-            self.__since = HistoryTime.TICK(0)
-            self.__until = HistoryTime.TICK(0)
+            self.__since = 0.0
+            self.__until = 0.0
 
         # time_list, error_list = HistoryTime.standardize(','.join(tags))
         # if len(time_list) > 0:
@@ -1698,16 +1693,16 @@ def test_load_index():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    # test_history_time_year()
-    # test_history_time_year_month()
-    # test_cn_time_to_digit()
+    test_history_time_year()
+    test_history_time_year_month()
+    test_cn_time_to_digit()
     test_time_text_to_history_times()
-    # test_token_parser_case_normal()
-    # test_token_parser_case_escape_symbol()
-    # test_history_basic()
-    # test_history_filter()
-    # test_generate_index()
-    # test_load_index()
+    test_token_parser_case_normal()
+    test_token_parser_case_escape_symbol()
+    test_history_basic()
+    test_history_filter()
+    test_generate_index()
+    test_load_index()
     print('All test passed.')
 
 
