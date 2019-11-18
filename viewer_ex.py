@@ -736,7 +736,7 @@ class TimeAxis(QWidget):
         if modifiers == QtCore.Qt.ControlModifier:
             # Get the value before step update
             current_pos = event.pos()
-            pixel = current_pos.y() if self.__layout == LAYOUT_HORIZON else current_pos.x()
+            pixel = current_pos.y() if self.__layout == LAYOUT_VERTICAL else current_pos.x()
             current_pos_value = self.pixel_to_value(pixel)
 
             old_main_step = self.__main_step
@@ -748,9 +748,9 @@ class TimeAxis(QWidget):
             self.__scroll = int(value_new_offset - pixel)
             self.__offset = 0
 
-            print('Val = ' + str(current_pos_value) + '; Pixel = ' + str(pixel))
-            print('Step: ' + str(old_main_step) + ' -> ' + str(self.__main_step))
-            print('Offset: ' + str(old_pixel_offset) + ' -> ' + str(value_new_offset))
+            # print('Val = ' + str(current_pos_value) + '; Pixel = ' + str(pixel))
+            # print('Step: ' + str(old_main_step) + ' -> ' + str(self.__main_step))
+            # print('Offset: ' + str(old_pixel_offset) + ' -> ' + str(value_new_offset))
         else:
             self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
 
@@ -840,6 +840,10 @@ class TimeAxis(QWidget):
         qp.end()
 
         end = time.process_time()
+
+        # print('Offset = %s, Step = %s; Pixel = %s, Value = %s' %
+        #       (self.__scroll + self.__offset, self.__main_step,
+        #        self.__mouse_on_coordinate.y(), self.__mouse_on_scale_value))
         print('Axis paint spends time: %s s' % (end - start))
 
     def paint_background(self, qp: QPainter):
