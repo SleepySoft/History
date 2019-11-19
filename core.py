@@ -221,7 +221,9 @@ class HistoryTime:
     TICK_DAY = TICK_HOUR * 24
     TICK_YEAR = TICK_DAY * 366
     TICK_WEEK = TICK(TICK_YEAR / 52)
-    TICK_MONTH = [31, 60, 91, 121, 152, 182, 213, 244, 274, 304, 335, 366]
+    TICK_MONTH = [31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
+                  152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
+                  274 * TICK_DAY, 304 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY]
 
     EFFECTIVE_TIME_DIGIT = 10
 
@@ -314,10 +316,11 @@ class HistoryTime:
         year_mod = abs(tick) % HistoryTime.TICK_YEAR
         for i in range(0, len(HistoryTime.TICK_MONTH)):
             if year_mod <= HistoryTime.TICK_MONTH[i]:
-                day = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
+                day_tick = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
+                day = day_tick / HistoryTime.day()
                 month = i + 1
                 break
-        return year, month, day
+        return int(year), int(month), int(day)
 
     @staticmethod
     def decimal_year_to_tick(year: float) -> TICK:
@@ -328,13 +331,16 @@ class HistoryTime:
         return HistoryTime.round_decimal_year(float(tick) / HistoryTime.TICK_YEAR)
 
     @staticmethod
-    def tick_to_standard_string(tick: TICK) -> str:
+    def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
         year, month, day = HistoryTime.date_of_tick(tick)
         if year < 0:
             text = str(-year) + ' BCE'
         else:
             text = str(year) + ' CE'
-        text += '/' + str(month) + '/' + str(day)
+        if show_date:
+            text += ' ' + str(month) + '/' + str(day)
+        if show_time:
+            pass
         return text
 
     # ------------------------------- Calculation -------------------------------

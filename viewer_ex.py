@@ -558,6 +558,15 @@ class TimeAxis(QWidget):
         HistoryTime.month(6), HistoryTime.month(1),
         HistoryTime.week(1), HistoryTime.day(1),
     ]
+    SUB_STEP_COUNT = [
+        10, 10, 10,
+        10, 10, 10,
+        10, 10, 10,
+        10, 5, 10,
+        10, 5, 12,
+        6, 4,
+        7, 12,
+    ]
 
     DEFAULT_MARGIN_PIXEL = 0
     MAIN_SCALE_MIN_PIXEL = 50
@@ -621,7 +630,7 @@ class TimeAxis(QWidget):
 
         self.__step_selection = 0
         self.__main_step = TimeAxis.STEP_LIST[0]
-        self.__sub_step = 0
+        self.__sub_step_count = 10
 
         self.setMinimumWidth(400)
         self.setMinimumHeight(500)
@@ -875,10 +884,16 @@ class TimeAxis(QWidget):
             # print(str(time_main) + '(' + str(original_year) + ') -> ' + str(y_main) + ' -> ' +
             #       str(retrieve_tick) + '(' + str(retrieve_year) + ')')
 
+            if self.__main_step >= HistoryTime.year(1):
+                main_scale_text = HistoryTime.tick_to_standard_string(time_main)
+            else:
+                main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
-            qp.drawText(main_scale_end - 100, y_main, str(HistoryTime.year_of_tick(time_main)))
-            for j in range(0, 10):
-                time_sub = time_main + self.__main_step * j / 10
+            qp.drawText(main_scale_end - 100, y_main, main_scale_text)
+
+            for j in range(0, self.__sub_step_count):
+                time_sub = time_main + self.__main_step * j / self.__sub_step_count
                 y_sub = int(self.value_to_pixel(int(time_sub)))
                 self.__optimise_pixel[y_sub] = time_sub
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
@@ -1056,7 +1071,7 @@ class TimeAxis(QWidget):
         self.__step_selection = min(self.__step_selection, len(TimeAxis.STEP_LIST) - 1)
 
         self.__main_step = TimeAxis.STEP_LIST[self.__step_selection]
-        self.__sub_step = self.__main_step / 10
+        self.__sub_step_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
 
         # abs_num = abs(num)
         # if abs_num >= 100:
