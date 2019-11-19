@@ -82,6 +82,9 @@ TODO
 (DONE) |     在LabelTags层面上支持filter功能  
 (DONE) | viewer可以直接载入event而不仅仅只是index  
 (DONE) | 优化zoom in和zoom out功能使之更加自然  
+(DONE) | 坐标轴的改进：  
+(DONE) | 	main scale为年时sub scale应为月（12格），同理月之下为周，周之下为日，日之下为时  
+(DONE) | 	更好的取整及显示时间单位  
 
 ## TODO:
 
@@ -95,10 +98,6 @@ Thread Config界面优化（Load，Check）
 
 五要素外其它tags的编辑功能  
 改变窗口大小的操作会触发mouse event的问题  
-
-坐标轴的改进：  
-	main scale为年时sub scale应为月（12格），同理月之下为周，周之下为日，日之下为时  
-	更好的取整及显示时间单位  
 
 多thread的界面设计  
 	使用label:tags格式作为filter  
