@@ -1093,7 +1093,10 @@ class TimeAxis(QWidget):
     # ------------------------------------------ Art ------------------------------------------
 
     def format_real_time_tip(self) -> str:
+        # Show The Time From Mouse Position
         tip_text = '(' + str(HistoryTime.year_of_tick(self.__mouse_on_scale_value)) + ')'
+
+        # Index information
         if self.__mouse_on_index is not None:
             since = self.__mouse_on_index.since()
             until = self.__mouse_on_index.until()
@@ -1106,15 +1109,21 @@ class TimeAxis(QWidget):
                 tip_text += abstract
 
             if since == until:
+                # If it's a single time event
+                # Show Event Year
                 tip_text += ' : [' + str(HistoryTime.year_of_tick(since)) + ']'
             else:
+                # If it's a period event.
                 since_year = HistoryTime.year_of_tick(since)
                 current_year = HistoryTime.year_of_tick(self.__mouse_on_scale_value)
                 until_year = HistoryTime.year_of_tick(until)
 
+                # Show Current Year / Total Year
                 tip_text += '(' + str(current_year - since_year)
-                tip_text += '/' + str(HistoryTime.year_of_tick(until - since)) + ') : ['
-                tip_text += str(since_year) + ' - ' + str(until_year) + ']'
+                tip_text += '/' + str(HistoryTime.year_of_tick(until - since)) + ')'
+
+                # Show Period
+                tip_text += ' : [' + str(since_year) + ' - ' + str(until_year) + ']'
         return tip_text
 
     # ------------------------------------- Real Time Tips ------------------------------------
