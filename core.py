@@ -221,7 +221,8 @@ class HistoryTime:
     TICK_DAY = TICK_HOUR * 24
     TICK_YEAR = TICK_DAY * 366
     TICK_WEEK = TICK(TICK_YEAR / 52)
-    TICK_MONTH = [31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
+    TICK_MONTH = [1,
+                  31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
                   152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
                   274 * TICK_DAY, 304 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY]
 
@@ -405,7 +406,11 @@ class HistoryTime:
 
         for i in range(1, len(HistoryTime.SEPARATOR)):
             unified_time_str = unified_time_str.replace(HistoryTime.SEPARATOR[i], HistoryTime.SEPARATOR[0])
-        return unified_time_str.split(HistoryTime.SEPARATOR[0])
+
+        time_str_list = unified_time_str.split(HistoryTime.SEPARATOR[0])
+        time_str_list = [time_str.strip() for time_str in time_str_list if time_str.strip() != '']
+
+        return time_str_list
 
     # ------------------------------------------------------------------------
 

@@ -187,11 +187,16 @@ class HistoryRecordEditor(QWidget):
             self.__combo_records.setItemData(i, record.uuid())
             if record == self.__current_record:
                 index = i
+        self.__ignore_combo = False
+
         if index >= 0:
             self.__combo_records.setCurrentIndex(index)
+            self.on_combo_records()
         else:
-            print('Cannot find the current record in combobox.')
-        self.__ignore_combo = False
+            if self.__combo_records.count() > 0:
+                self.__combo_records.setCurrentIndex(0)
+                self.on_combo_records()
+            print('Cannot find the current record in combobox - use index 0.')
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 
