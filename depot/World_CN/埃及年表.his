@@ -366,7 +366,7 @@ event: end
 [START]: event
 uuid: 6e116977-9ffa-4687-bd7b-1895c1f584e3
 time: 公元前31年9月2日
-people: 阿格里帕, 克里奥佩特拉, 安东尼
+people: 克里奥佩特拉, 阿格里帕, 安东尼
 location: 希腊西海岸
 organization: 埃及, 罗马
 title: 阿克提姆海战爆发
@@ -386,3 +386,43 @@ event: """阿克提乌姆海战(Battle of Actium)发生于公元前31年9月2日
     第二天，没能逃走的安东尼的一些战船全部投降。安东尼的陆军看到海军大败，也都投奔了屋大维。
     阿克提姆海战灭亡了曾经无比发达的埃及王朝，从此埃及不再是一个独立的国家，这种局面一直延续到近代。而由于屋大维的胜利，他顺理成章地成为了罗马的救星，以后更建立了罗马大帝国。罗马帝国北起多瑙河，南到非洲（包括埃及在内的北非一带），西起比利牛斯半岛，东到两河流域和小亚细亚半岛，形成了古代史上一个最庞大的帝国，地中海都成了罗马帝国的内湖。
     阿克提姆海战，实际上是以屋大维为首的西方文明与以安东尼为首的东方帝国的较量。屋大维的取胜，使埃及沦为罗马帝国的一个行省，而罗马才是帝国的中心。如果在阿克提姆海战中安东尼取胜，或许罗马和埃及的地位就要交换一下，安东尼会把首都建在亚历山大城，而罗马则只是安东尼帝国的一个行省。"""
+[START]: event
+uuid: 0eb6afd3-11fd-4a4c-b605-de7cb0b5c9c8
+time: 约公元前5450年—前4400年
+title: 下埃及-法尤姆A文化
+event: end
+[START]: event
+uuid: 6e29f622-0257-4705-a5bd-55d8ce3322e4
+time: 约公元前5000年—前4100年
+title: 下埃及-迈瑞姆达文化
+event: end
+[START]: event
+uuid: cf5537bb-9623-4e64-aa00-3d323be0f53e
+time: 约公元前4600年—前4350年
+title: 下埃及-奥玛瑞文化
+event: end
+[START]: event
+uuid: cc090132-bc62-4a6e-b4dc-4c45e8b726ee
+time: 约公元前4000年—前3200年
+title: 下埃及-马阿迪文化
+event: end
+[START]: event
+uuid: f59ccaa2-8034-4824-a6f8-ace203db0c9f
+time: 约公元前4500年—前4000年
+title: 上埃及-塔斯亚巴达里文化
+event: end
+[START]: event
+uuid: 13fef51d-596d-45d8-b0ff-381f8d559652
+time: 约公元前4500年—前4000年
+title: 上埃及-涅伽达一期阿姆拉特文化
+event: end
+[START]: event
+uuid: 79cfafdb-c16f-4b95-8c29-ca576bf540d6
+time: 约公元前3500年—前3300年
+title: 上埃及-涅伽达二期格尔塞文化
+event: end
+[START]: event
+uuid: c68e6f10-0b20-4f4c-b955-ac680615f321
+time: 约公元前3300年—前3100年
+title: 上埃及-涅伽达三期塞梅尼文化或前王朝时期
+event: end
