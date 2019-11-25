@@ -1,6 +1,7 @@
 import os
 import re
 import math
+import time
 import uuid
 import ntpath
 from functools import total_ordering
@@ -210,7 +211,11 @@ def text_cn_num_to_arab(text: str) -> str:
 
 # ---------------------------------------------------- HistoryTime ----------------------------------------------------
 
+def now_cn_str() -> str:
+    return time.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
+
 # TODO: Use NLP to process nature language
+
 
 class HistoryTime:
 
@@ -255,6 +260,7 @@ class HistoryTime:
         ('元月', '1月'),
         ('正月', '1月'),
         ('世纪', '00'),
+        ('至今', now_cn_str()),
     ]
 
     PREFIX_CE = [
@@ -277,6 +283,10 @@ class HistoryTime:
     def __init__(self):
         print("Create HistoryTime instance is not necessary.")
 
+    @staticmethod
+    def now_tick() -> TICK:
+        return HistoryTime.pytime_to_tick(time.localtime(time.time()))
+
     # ------------------------------- Constant -------------------------------
 
     @staticmethod
@@ -298,6 +308,11 @@ class HistoryTime:
         return int(day * HistoryTime.TICK_DAY)
 
     # ------------------------------- Convert -------------------------------
+
+    @staticmethod
+    def pytime_to_tick(ts: time.struct_time) -> TICK:
+        return HistoryTime.build_history_time_tick(ts.tm_year, ts.tm_mon, ts.tm_mday,
+                                                   ts.tm_hour, ts.tm_min, ts.tm_sec)
 
     @staticmethod
     def year_of_tick(tick: TICK) -> int:
@@ -466,6 +481,17 @@ class HistoryTime:
         else:
             text = str(year) + ' CE'
         return text
+
+    @staticmethod
+    def tick_to_cn_date_text(his_tick: TICK) -> str:
+        year = HistoryTime.year_of_tick(his_tick)
+        month = HistoryTime.month_of_tick(his_tick)
+        day = HistoryTime.day_of_tick(his_tick)
+        if year < 0:
+            text = '公元前' + str(-year) + '年'
+        else:
+            text = '公元' + str(-year) + '年'
+        return text + str(month) + '月' + str(day) + '日'
 
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
