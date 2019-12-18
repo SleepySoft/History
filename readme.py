@@ -9,7 +9,7 @@ ABOUT = '''
 '''
 
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 
 HISTORY = '''
@@ -18,4 +18,6 @@ HISTORY = '''
   Optimise the CN time text to digit.
 20191118
   Optimise the axis display. Show different scale in different zooming level.
+20191218
+  Fix some little bug. And add more history record.
 '''
