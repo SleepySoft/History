@@ -77,6 +77,14 @@ sleepy_history#163.com
 过段时间继续把中国的朝代兴衰补全。。。  
 历史真是个大坑。
   
+### 0.4.0计划
+* 优化绘制过程，将所有绘制内容的Layout在内容改变/窗口大小改变/设置改变时计算好，在Repaint的时候不需要重新计算。
+* Front/Back：完成History Record编辑器的Label Tag Editor功能，将Event Editor和Label Tag Editor分别更名为Front及Back，意为卡片的两面。
+* 支持在一个Thread中打多个文件
+* 支持关闭一个Thread
+* 支持内容改变后实时更新绘制，并在右键中增加刷新功能
+* 注：以上三个改进，是因为在初期的设计中，Thread应该导入Index而非直接导入文件；而这种设计在本地浏览时会带来麻烦。
+  
 ## 关于开放协作（虽然应该没人会响应...）  
 
 * 有兴趣的同志们可以fork一份代码，在自己的repo上提交你的record后，再向我提交一个pull request。在record中可以增加一个名为author的label，并填上你的名字。  
