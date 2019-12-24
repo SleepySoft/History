@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import pandas as pd
 from functools import partial
 from types import SimpleNamespace
 
@@ -13,7 +14,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QHBoxLayout, QWidget, QPu
     QTableWidgetItem, QTabWidget, QLayout, QTextEdit, QListWidget, QListWidgetItem
 
 
-# -------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 def horizon_layout(widgets: list) -> QHBoxLayout:
     layout = QHBoxLayout()
@@ -50,7 +51,25 @@ def restore_text_editor(editor: QTextEdit):
     editor.setTextBackgroundColor(Qt.white)
 
 
-# =========================================== InfoDialog ===========================================
+# Takes a df and writes it to a qtable provided. df headers become qtable headers
+# From: https://stackoverflow.com/a/57225144
+
+def write_df_to_qtable(df: pd.DataFrame, table: QTableWidget):
+    headers = list(df)
+    table.setRowCount(df.shape[0])
+    table.setColumnCount(df.shape[1])
+    table.setHorizontalHeaderLabels(headers)
+
+    # getting data from df is computationally costly so convert it to array first
+    df_array = df.values
+    for row in range(df.shape[0]):
+        for col in range(df.shape[1]):
+            table.setItem(row, col, QTableWidgetItem(str(df_array[row, col])))
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                   InfoDialog
+# ----------------------------------------------------------------------------------------------------------------------
 
 class InfoDialog(QDialog):
     def __init__(self, title, text):
@@ -72,7 +91,9 @@ class InfoDialog(QDialog):
         self.close()
 
 
-# =========================================== CommonMainWindow ===========================================
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                   CommonMainWindow
+# ----------------------------------------------------------------------------------------------------------------------
 
 class CommonMainWindow(QMainWindow):
 
@@ -225,8 +246,8 @@ class CommonMainWindow(QMainWindow):
         dialog with options on how to proceed - Save, Close, Cancel buttons
         """
         reply = QMessageBox.question(self,
-                                     QtCore.QCoreApplication.translate('main', "退出"),
-                                     QtCore.QCoreApplication.translate('main', "是否确认退出？"),
+                                     QtCore.QCoreApplication.translate('main', 'Quit'),
+                                     QtCore.QCoreApplication.translate('main', 'Are you sure to quit'),
                                      QMessageBox.Close | QMessageBox.Cancel,
                                      QMessageBox.Cancel)
         if reply == QMessageBox.Close:
@@ -235,9 +256,16 @@ class CommonMainWindow(QMainWindow):
             pass
 
 
-# =========================================== EasyQTableWidget ===========================================
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                   WrapperQDialog
+# ----------------------------------------------------------------------------------------------------------------------
 
 class WrapperQDialog(QDialog):
+    """
+    Wrap a QWidget in a QDialog which has 'OK' and 'Cancel' button as default
+    :param wrapped_wnd: The Widget you want to warp
+    :param has_button: Show 'OK' and 'Cancel' button or not.
+    """
     def __init__(self, wrapped_wnd: QWidget, has_button: bool = False):
         super(WrapperQDialog, self).__init__()
 
@@ -266,6 +294,10 @@ class WrapperQDialog(QDialog):
                             QtCore.Qt.WindowSystemMenuHint)
 
     def is_ok(self):
+        """
+        Check whether user clicking the 'OK' button.
+        :return: True if user close the Dialog by clicking 'OK' button else False
+        """
         return self.__is_ok
 
     def get_wrapped_wnd(self) -> QWidget:
@@ -279,9 +311,14 @@ class WrapperQDialog(QDialog):
         self.close()
 
 
-# =========================================== EasyQTableWidget ===========================================
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                   EasyQTableWidget
+# ----------------------------------------------------------------------------------------------------------------------
 
 class EasyQTableWidget(QTableWidget):
+    """
+    QTableWidget assistance class
+    """
     def __init__(self, *__args):
         super(EasyQTableWidget, self).__init__(*__args)
 
@@ -301,9 +338,14 @@ class EasyQTableWidget(QTableWidget):
         return self.selectionModel().currentIndex().row() if self.selectionModel().hasSelection() else -1
 
 
-# =========================================== EasyQListSuite ===========================================
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                    EasyQListSuite
+# ----------------------------------------------------------------------------------------------------------------------
 
 class EasyQListSuite(QWidget):
+    """
+    Provide a window that has a QListWidget with 'Add' and 'Remove' button.
+    """
     def __init__(self, *__args):
         super(EasyQListSuite, self).__init__(*__args)
 
@@ -317,6 +359,13 @@ class EasyQListSuite(QWidget):
         self.__config_ui()
 
     def update_item(self, items: [(str, any)]):
+        """
+        Specify a (key, value) tuple list.
+            Key will be displayed as list item.
+            Value can be retrieved by get_select_items()
+        :param items: Specify a (key, value) tuple list.
+        :return: None
+        """
         self.__item_list.clear()
         for item in items:
             if isinstance(item, (list, tuple)):
@@ -331,12 +380,26 @@ class EasyQListSuite(QWidget):
         self.__update_list()
 
     def get_select_items(self) -> [any]:
+        """
+        Get the value of the items that user selected.
+        :return: The value of the items that user selected.
+        """
         return [item.data(Qt.UserRole) for item in self.__list_main.selectedItems()]
 
     def set_add_handler(self, handler):
+        """
+        Add a handler for 'Add' button clicking
+        :param handler: The handler that connects to the button clicked signal
+        :return:
+        """
         self.__button_add.clicked.connect(handler)
 
     def set_remove_handler(self, handler):
+        """
+        Add a handler for 'Remove' button clicking
+        :param handler: The handler that connects to the button clicked signal
+        :return:
+        """
         self.__button_remove.clicked.connect(handler)
 
     # ---------------------------------------- Private ----------------------------------------
@@ -354,8 +417,6 @@ class EasyQListSuite(QWidget):
 
     def __config_ui(self):
         pass
-        # self.__button_add.clicked.connect(self.__on_btn_click_add)
-        # self.__button_remove.clicked.connect(self.__on_btn_click_remove)
 
     def __update_list(self):
         self.__list_main.clear()
@@ -365,14 +426,76 @@ class EasyQListSuite(QWidget):
             item.setData(Qt.UserRole, obj)
             self.__list_main.addItem(item)
 
-    def __on_btn_click_add(self):
-        pass
 
-    def __on_btn_click_remove(self):
-        pass
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                   DataFrameModel
+# ----------------------------------------------------------------------------------------------------------------------
 
+class DataFrameModel(QtCore.QAbstractTableModel):
+    """
+    From: https://stackoverflow.com/a/44605011
+        Use with QTableView.setModel()
+    """
+    DtypeRole = QtCore.Qt.UserRole + 1000
+    ValueRole = QtCore.Qt.UserRole + 1001
 
+    def __init__(self, df=pd.DataFrame(), parent=None):
+        super(DataFrameModel, self).__init__(parent)
+        self._dataframe = df
 
+    def setDataFrame(self, dataframe):
+        self.beginResetModel()
+        self._dataframe = dataframe.copy()
+        self.endResetModel()
+
+    def dataFrame(self):
+        return self._dataframe
+
+    dataFrame = QtCore.pyqtProperty(pd.DataFrame, fget=dataFrame, fset=setDataFrame)
+
+    @QtCore.pyqtSlot(int, QtCore.Qt.Orientation, result=str)
+    def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole):
+        if role == QtCore.Qt.DisplayRole:
+            if orientation == QtCore.Qt.Horizontal:
+                return self._dataframe.columns[section]
+            else:
+                return str(self._dataframe.index[section])
+        return QtCore.QVariant()
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        if parent.isValid():
+            return 0
+        return len(self._dataframe.index)
+
+    def columnCount(self, parent=QtCore.QModelIndex()):
+        if parent.isValid():
+            return 0
+        return self._dataframe.columns.size
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if not index.isValid() or not (0 <= index.row() < self.rowCount()
+                                       and 0 <= index.column() < self.columnCount()):
+            return QtCore.QVariant()
+        row = self._dataframe.index[index.row()]
+        col = self._dataframe.columns[index.column()]
+        dt = self._dataframe[col].dtype
+
+        val = self._dataframe.iloc[row][col]
+        if role == QtCore.Qt.DisplayRole:
+            return str(val)
+        elif role == DataFrameModel.ValueRole:
+            return val
+        if role == DataFrameModel.DtypeRole:
+            return dt
+        return QtCore.QVariant()
+
+    def roleNames(self):
+        roles = {
+            QtCore.Qt.DisplayRole: b'display',
+            DataFrameModel.DtypeRole: b'dtype',
+            DataFrameModel.ValueRole: b'value'
+        }
+        return roles
 
 
 
