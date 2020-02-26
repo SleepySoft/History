@@ -2,9 +2,14 @@
 A distributed and open source history time line tool.  
   
 # Contact me
-sleepy_history#163.com
+sleepy_history##163.com
   
 # Readme CN   
+  
+##最近情况
+由于最近在做StockAnalysisSystem这个项目，所以暂停此项目的更新。但这个项目会随着本人的历史学习继续下去，所以不存在弃坑的问题。  
+此外，StockAnalysisSystem在未来将会依赖于这个项目，届时会有大的更新。  
+如果有任何意见和建议，或者对此项目感兴趣，请给我发送邮件：sleepy_history##163.com  
   
 ## 起因:  
 
