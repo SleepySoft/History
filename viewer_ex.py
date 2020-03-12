@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox
 
 from core import *
 from editor import *
+from Utility.his_pub import *
 from Utility.ui_utility import *
 
 
@@ -34,42 +35,6 @@ THREAD_BACKGROUND_COLORS = [QColor(182, 194, 154), QColor(138, 151, 123), QColor
                             QColor(178, 200, 187), QColor(69, 137, 148), QColor(117, 121, 74), QColor(114, 83, 52),
                             QColor(130, 57, 53), QColor(137, 190, 178), QColor(201, 211, 140), QColor(222, 156, 83),
                             QColor(160, 90, 124), QColor(101, 147, 74), QColor(64, 116, 52), QColor(222, 125, 44)]
-
-
-# ------------------------------------------------------ Functions -----------------------------------------------------
-
-def upper_rough(num):
-    abs_num = abs(num)
-    index_10 = math.log(abs_num, 10)
-    round_index_10 = math.floor(index_10)
-    scale = math.pow(10, round_index_10)
-    if num >= 0:
-        integer = math.ceil(abs_num / scale)
-    else:
-        integer = math.floor(abs_num / scale)
-    rough = integer * scale
-    result = rough if num >= 0 else -rough
-    return result
-
-
-def lower_rough(num):
-    abs_num = abs(num)
-    if abs_num == 0:
-        return 0
-    index_10 = math.log(abs_num, 10)
-    round_index_10 = math.floor(index_10)
-    scale = math.pow(10, round_index_10)
-    if num >= 0:
-        integer = math.floor(abs_num / scale)
-    else:
-        integer = math.ceil(abs_num / scale)
-    rough = integer * scale
-    result = rough if num >= 0 else -rough
-    return result
-
-
-def scale_round(num: float, scale: float):
-    return (round(num / scale) + 1) * scale
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1200,52 +1165,9 @@ class HistoryViewerDialog(QDialog):
         return self.time_axis
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-# ---------------------------------------------------- Test ------------------------------------------------------------
-# ----------------------------------------------------------------------------------------------------------------------
-
-def test_upper_rough():
-    assert math.isclose(upper_rough(10001), 20000)
-    assert math.isclose(upper_rough(10000), 10000)
-    assert math.isclose(upper_rough(9999), 10000)
-    assert math.isclose(upper_rough(9001), 10000)
-    assert math.isclose(upper_rough(8999),  9000)
-    assert math.isclose(upper_rough(1.1), 2)
-    # assert math.isclose(upper_rough(0.07), 0.07)
-
-    assert math.isclose(upper_rough(-10001), -10000)
-    assert math.isclose(upper_rough(-10000), -10000)
-    assert math.isclose(upper_rough(-9999), -9000)
-    assert math.isclose(upper_rough(-9001), -9000)
-    assert math.isclose(upper_rough(-8999), -8000)
-    assert math.isclose(upper_rough(-1.1), -1.0)
-    # assert math.isclose(upper_rough(-0.07), 0.07)
-
-
-def test_lower_rough():
-    assert math.isclose(lower_rough(10001), 10000)
-    assert math.isclose(lower_rough(10000), 10000)
-    assert math.isclose(lower_rough(9999), 9000)
-    assert math.isclose(lower_rough(9001), 9000)
-    assert math.isclose(lower_rough(8999),  8000)
-    assert math.isclose(lower_rough(1.1), 1.0)
-    # assert math.isclose(lower_rough(0.07), 0.07)
-
-    assert math.isclose(lower_rough(-10001), -20000)
-    assert math.isclose(lower_rough(-10000), -10000)
-    assert math.isclose(lower_rough(-9999), -10000)
-    assert math.isclose(lower_rough(-9001), -10000)
-    assert math.isclose(lower_rough(-8999), -9000)
-    assert math.isclose(lower_rough(-1.1), -2.0)
-    # assert math.isclose(upper_rough(-0.07), 0.07)
-
-
-# ------------------------------------------------ File Entry : main() -------------------------------------------------
+# ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    test_upper_rough()
-    test_lower_rough()
-
     app = QApplication(sys.argv)
 
     # Indexer
@@ -1291,22 +1213,6 @@ if __name__ == "__main__":
         exit()
     finally:
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
