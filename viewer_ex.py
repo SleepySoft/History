@@ -12,6 +12,53 @@ from Utility.viewer_utility import *
 from Utility.history_public import *
 
 
+# ------------------------------------------------------ AxisItem ------------------------------------------------------
+
+class AxisItem:
+    def __init__(self, index: HistoricalRecord, extra: dict):
+        self.extra = extra
+        self.index = index
+        self.item_metrics = AxisMetrics()
+        self.outer_metrics = AxisMetrics()
+
+    # ---------------------------------------------------------
+
+    def get_index(self) ->HistoricalRecord:
+        return self.index
+
+    def get_item_metrics(self) -> AxisMetrics:
+        return self.item_metrics
+
+    def get_outer_metrics(self) -> AxisMetrics:
+        return self.outer_metrics
+
+    # ---------------------------------------------------------
+
+    def shift_item(self, longitudinal: int, transverse: int):
+        self.item_metrics.offset(longitudinal, transverse)
+
+    def arrange_item(self, outer_metrics: AxisMetrics):
+        self.outer_metrics = outer_metrics
+        self.item_metrics = copy.deepcopy(outer_metrics)
+
+        since_pixel = outer_metrics.value_to_pixel(self.index.since())
+        until_pixel = outer_metrics.value_to_pixel(self.index.until())
+        self.item_metrics.set_scale_range(self.index.since(), self.index.until())
+
+        if since_pixel == until_pixel:
+            outer_left, outer_right = outer_metrics.get_metrics().get_transverse_limit()
+            diagonal = abs(outer_right - outer_left)
+            half_diagonal = diagonal / 2
+            since_pixel -= abs(half_diagonal)
+            until_pixel += abs(half_diagonal)
+
+        outer_since, outer_until = outer_metrics.get_longitudinal_range()
+        self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
+
+    def paint(self, qp: QPainter):
+        assert False
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 #                                                  class TimeTrackBar
 # ----------------------------------------------------------------------------------------------------------------------
@@ -25,106 +72,46 @@ period_font.setFamily("微软雅黑")
 period_font.setPointSize(8)
 
 
-class TimeTrackBar:
-    def __init__(self, index: HistoricalRecord, thread_metrics: AxisMetrics):
-        self.__index = index
-        self.__thread_metrics = thread_metrics
-        self.__bar_metrics = copy.deepcopy(thread_metrics)
-        self.__offset = QPoint(0, 0)
+class TimeTrackBar(AxisItem):
+    def __init__(self, index: HistoricalRecord, extra: dict = {}):
+        super(TimeTrackBar, self).__init__(index, extra)
         self.__event_bk = QColor(243, 244, 246)
         self.__story_bk = QColor(185, 227, 217)
-
-    def get_index(self) ->HistoricalRecord:
-        return self.__index
-
-    def set_offset(self, long_offset: int, wide_offset: int):
-        self.__offset.setX(long_offset)
-        self.__offset.setY(wide_offset)
-
-    def get_bar_metrics(self) -> AxisMetrics:
-        return self.__bar_metrics
-
-    def get_adjust_metrics(self) -> AxisMetrics:
-        metrics = copy.deepcopy(self.__bar_metrics)
-        metrics.offset(self.__offset.x(), self.__offset.y())
-        return metrics
-
-    def get_longitudinal_space(self) -> (int, int):
-        since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
-        until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
-        return since_pixel, until_pixel
 
     # -----------------------------------------------------------------------
 
     def paint(self, qp: QPainter):
-        if self.__thread_metrics.get_layout() == LAYOUT_HORIZON:
+        if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
             self.__paint_horizon(qp)
-        elif self.__thread_metrics.get_layout() == LAYOUT_VERTICAL:
+        elif self.get_thread_metrics().get_layout() == LAYOUT_VERTICAL:
             self.__paint_vertical(qp)
-
-    # def calc_layout(self, track_contexts: [TrackContext]):
-    #     since_pixel = self.__thread_metrics.value_to_pixel(self.__index.since())
-    #     until_pixel = self.__thread_metrics.value_to_pixel(self.__index.until())
-    #     for i in range(0, len(track_contexts)):
-    #         track = track_contexts[i]
-    #         # If this index is a single time event, it should layout at the first track
-    #         # If track has space for this index, layout on it
-    #         # If it's the last track, we have to layout on it
-    #         if self.__index.since() == self.__index.until() or \
-    #             track.has_space(since_pixel, until_pixel) or \
-    #                 (i == len(track_contexts) - 1):
-    #             track.take_space_for(self)
-    #             self.__calc_metrics(since_pixel, until_pixel, track)
-    #             break
 
     def layout_to_track(self, track: TrackContext):
         track_left, track_right = track.get_metrics().get_transverse_limit()
         track_since, track_until = track.get_metrics().get_longitudinal_range()
         since_pixel, until_pixel = self.get_longitudinal_space()
 
-        self.__bar_metrics.set_scale_range(self.__index.since(), self.__index.until())
-        self.__bar_metrics.set_transverse_limit(track_left, track_right)
+        self.get_item_metrics().set_scale_range(self.get_index().since(), self.get_index().until())
+        self.get_item_metrics().set_transverse_limit(track_left, track_right)
 
         if since_pixel == until_pixel:
             diagonal = abs(track_right - track_left)
             half_diagonal = diagonal / 2
             since_pixel -= half_diagonal
             until_pixel += half_diagonal
-        self.__bar_metrics.set_longitudinal_range(max(since_pixel, track_since), min(until_pixel, track_until))
-
-        # if self.__index.since() == self.__index.until():
-        #     diagonal = abs(right - left)
-        #     half_diagonal = diagonal / 2
-        #     # v_mid = top
-        #     # h_mid = left + half_diagonal
-        #     index_rect = QRect(left, since_pixel - int(half_diagonal), diagonal, diagonal)
-        # else:
-        #     index_rect = QRect(left, since_pixel, right - left, since_pixel + until_pixel)
-        #
-        # # Adjust over range and overlapped area
-        # index_rect = track.get_metrics().adjust_area(index_rect)
-        #
-        # self.__bar_metrics.set_longitudinal_range(index_rect.top(), index_rect.bottom())
-
-        # while True:
-        #     for bar in track.get_layout_bars():
-        #         if index_rect == bar.get_bar_area():
-        #             index_rect.translated(0, -3)
-        #             continue
-        #     break
-        # self.__area = index_rect
+        self.get_item_metrics().set_longitudinal_range(max(since_pixel, track_since), min(until_pixel, track_until))
 
     def __paint_horizon(self, qp: QPainter):
         pass
 
     def __paint_vertical(self, qp: QPainter):
         metrics = self.get_adjust_metrics()
-        if self.__index.since() == self.__index.until():
+        if self.get_index().since() == self.get_index().until():
             TimeTrackBar.paint_event_bar(qp, metrics.rect(), self.__event_bk, metrics.get_align())
-            TimeTrackBar.paint_index_text(qp, self.__index, metrics.rect(), event_font)
+            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
         else:
             TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
-            TimeTrackBar.paint_index_text(qp, self.__index, metrics.rect(), period_font)
+            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
 
     @staticmethod
     def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
@@ -323,20 +310,6 @@ class TimeThreadBase:
                         overlap_count = 0
                     prev_index_area = index_rect
                     bar.set_offset(-3 * overlap_count, 0)
-
-        # # Layout single point event first
-        # for index in self.__paint_indexes:
-        #     if index.since() == index.until():
-        #         bar = self.get_index_bar(index)
-        #         bar.calc_layout(self.__thread_track)
-        #         self.__thread_track_bars.append(bar)
-        #
-        # # Then layout period event
-        # for index in self.__paint_indexes:
-        #     if index.since() != index.until():
-        #         bar = TimeTrackBar(index, self.__metrics)
-        #         bar.calc_layout(self.__thread_track)
-        #         self.__thread_track_bars.append(bar)
 
     def __paint_horizon(self, qp: QPainter):
         pass
