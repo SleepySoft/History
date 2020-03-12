@@ -3,6 +3,8 @@ import sys
 import traceback
 
 
+# ----------------------------------------------------- Functions ------------------------------------------------------
+
 def str_to_int(text: str, default: int=0):
     try:
         return int(text)

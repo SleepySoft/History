@@ -8,11 +8,11 @@ root_path = path.dirname(path.dirname(path.abspath(__file__)))
 
 try:
     from Utility.to_arab import *
-    from Utility.his_pub import *
+    from Utility.history_public import *
 except Exception as e:
     sys.path.append(root_path)
     from Utility.to_arab import *
-    from Utility.his_pub import *
+    from Utility.history_public import *
 finally:
     pass
 

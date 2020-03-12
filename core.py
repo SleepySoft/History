@@ -12,7 +12,7 @@ import posixpath
 from os import sys, path, listdir
 
 from Utility.to_arab import *
-from Utility.his_pub import *
+from Utility.history_public import *
 from Utility.history_time import *
 
 
