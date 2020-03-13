@@ -26,6 +26,9 @@ class AxisItem:
     def get_index(self) ->HistoricalRecord:
         return self.index
 
+    def get_tip_text(self, on_tick: float) -> str:
+        return ''
+
     def get_item_metrics(self) -> AxisMetrics:
         return self.item_metrics
 
@@ -43,16 +46,8 @@ class AxisItem:
 
         since_pixel = outer_metrics.value_to_pixel(self.index.since())
         until_pixel = outer_metrics.value_to_pixel(self.index.until())
-        self.item_metrics.set_scale_range(self.index.since(), self.index.until())
-
-        if since_pixel == until_pixel:
-            outer_left, outer_right = outer_metrics.get_metrics().get_transverse_limit()
-            diagonal = abs(outer_right - outer_left)
-            half_diagonal = diagonal / 2
-            since_pixel -= abs(half_diagonal)
-            until_pixel += abs(half_diagonal)
-
         outer_since, outer_until = outer_metrics.get_longitudinal_range()
+        self.item_metrics.set_scale_range(self.index.since(), self.index.until())
         self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
 
     def paint(self, qp: QPainter):
@@ -80,32 +75,59 @@ class TimeTrackBar(AxisItem):
 
     # -----------------------------------------------------------------------
 
+    def get_tip_text(self, on_tick: float) -> str:
+        index = self.get_index()
+        if index is None:
+            return ''
+
+        since = index.since()
+        until = index.until()
+        abstract_tags = index.get_tags('abstract')
+        tip_text = abstract_tags[0] if len(abstract_tags) > 0 else ''
+        tip_text = tip_text.strip()
+
+        if since == until:
+            # If it's a single time event
+            # Show Event Year
+            tip_text += ' : [' + str(HistoryTime.year_of_tick(since)) + ']'
+        else:
+            # If it's a period event.
+            since_year = HistoryTime.year_of_tick(since)
+            current_year = HistoryTime.year_of_tick(on_tick)
+            until_year = HistoryTime.year_of_tick(until)
+
+            # Show Current Year / Total Year
+            tip_text += '(' + str(current_year - since_year)
+            tip_text += '/' + str(HistoryTime.year_of_tick(until - since)) + ')'
+
+            # Show Period
+            tip_text += ' : [' + str(since_year) + ' - ' + str(until_year) + ']'
+        return tip_text
+
     def paint(self, qp: QPainter):
-        if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
+        if self.get_outer_metrics().get_layout() == LAYOUT_HORIZON:
             self.__paint_horizon(qp)
-        elif self.get_thread_metrics().get_layout() == LAYOUT_VERTICAL:
+        elif self.get_outer_metrics().get_layout() == LAYOUT_VERTICAL:
             self.__paint_vertical(qp)
 
-    def layout_to_track(self, track: TrackContext):
-        track_left, track_right = track.get_metrics().get_transverse_limit()
-        track_since, track_until = track.get_metrics().get_longitudinal_range()
-        since_pixel, until_pixel = self.get_longitudinal_space()
+    def arrange_item(self, outer_metrics: AxisMetrics):
+        super(TimeTrackBar, self).arrange_item(outer_metrics)
 
-        self.get_item_metrics().set_scale_range(self.get_index().since(), self.get_index().until())
-        self.get_item_metrics().set_transverse_limit(track_left, track_right)
-
-        if since_pixel == until_pixel:
-            diagonal = abs(track_right - track_left)
+        if self.index.since() == self.index.until():
+            outer_left, outer_right = outer_metrics.get_transverse_limit()
+            diagonal = abs(outer_right - outer_left)
             half_diagonal = diagonal / 2
-            since_pixel -= half_diagonal
-            until_pixel += half_diagonal
-        self.get_item_metrics().set_longitudinal_range(max(since_pixel, track_since), min(until_pixel, track_until))
+            since_pixel, until_pixel = self.get_item_metrics().get_longitudinal_range()
+            since_pixel -= abs(half_diagonal)
+            until_pixel += abs(half_diagonal)
+            outer_since, outer_until = outer_metrics.get_longitudinal_range()
+            self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
 
     def __paint_horizon(self, qp: QPainter):
         pass
 
     def __paint_vertical(self, qp: QPainter):
-        metrics = self.get_adjust_metrics()
+        metrics = self.get_item_metrics()
         if self.get_index().since() == self.get_index().until():
             TimeTrackBar.paint_event_bar(qp, metrics.rect(), self.__event_bk, metrics.get_align())
             TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
@@ -202,11 +224,11 @@ class TimeThreadBase:
         self.__layout_track()
         self.__layout_bars()
 
-    def index_from_point(self, point: QPoint):
+    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
         for i in range(len(self.__thread_track_bars) - 1, -1, -1):
-            bar = self.__thread_track_bars[i]
-            if bar.get_adjust_metrics().rect().contains(point):
-                return bar.get_index()
+            axis_item = self.__thread_track_bars[i]
+            if axis_item.get_item_metrics().rect().contains(point):
+                return axis_item
         return None
 
     # ------------------------------------------ Sets ------------------------------------------
@@ -234,7 +256,7 @@ class TimeThreadBase:
     def get_index_bar(self, index: HistoricalRecord) -> TimeTrackBar:
         bar = self.__index_bar_table.get(index, None)
         if bar is None:
-            bar = TimeTrackBar(index, self.__metrics)
+            bar = TimeTrackBar(index)
             self.__index_bar_table[index] = bar
         return bar
 
@@ -296,20 +318,20 @@ class TimeThreadBase:
                 if i == 0 and index.since() != index.until():
                     continue
                 if (index.since() == index.until()) or \
-                        track.has_space(*bar.get_longitudinal_space()) or \
+                        track.has_space(*bar.get_item_metrics().get_longitudinal_range()) or \
                         (i == len(self.__thread_track) - 1):
                     track.take_space_for(bar)
-                    bar.layout_to_track(track)
+                    bar.arrange_item(track.get_metrics())
                     layout_indexes.remove(index)
                     self.__thread_track_bars.append(bar)
 
-                    index_rect = bar.get_bar_metrics().rect()
+                    index_rect = bar.get_item_metrics().rect()
                     if prev_index_area is not None and index_rect == prev_index_area:
                         overlap_count += 1
                     else:
                         overlap_count = 0
                     prev_index_area = index_rect
-                    bar.set_offset(-3 * overlap_count, 0)
+                    bar.shift_item(-3 * overlap_count, 0)
 
     def __paint_horizon(self, qp: QPainter):
         pass
@@ -402,7 +424,7 @@ class TimeAxis(QWidget):
         self.__tip_font.setPointSize(8)
 
         self.__enable_real_time_tips = True
-        self.__mouse_on_index = HistoricalRecord()
+        self.__mouse_on_item = AxisItem(None, {})
         self.__mouse_on_scale_value = 0.0
         self.__mouse_on_coordinate = QPoint(0, 0)
 
@@ -563,7 +585,8 @@ class TimeAxis(QWidget):
 
     def mouseDoubleClickEvent(self,  event):
         now_pos = event.pos()
-        index = self.index_from_point(now_pos)
+        axis_item = self.axis_item_from_point(now_pos)
+        index = axis_item.get_index()
         if index is not None:
             self.popup_editor_for_index(index)
 
@@ -711,11 +734,11 @@ class TimeAxis(QWidget):
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
-    def index_from_point(self, point: QPoint) -> HistoricalRecord:
+    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
         for thread in self.__history_threads:
-            index = thread.index_from_point(point)
-            if index is not None:
-                return index
+            axis_item = thread.axis_item_from_point(point)
+            if axis_item is not None:
+                return axis_item
         return None
 
     def calc_point_to_paint_start_offset(self, point):
@@ -877,34 +900,12 @@ class TimeAxis(QWidget):
         # Show The Time From Mouse Position
         tip_text = '(' + str(HistoryTime.year_of_tick(self.__mouse_on_scale_value)) + ')'
 
-        # Index information
-        if self.__mouse_on_index is not None:
-            since = self.__mouse_on_index.since()
-            until = self.__mouse_on_index.until()
-            abstract_tags = self.__mouse_on_index.get_tags('abstract')
-            abstract = abstract_tags[0] if len(abstract_tags) > 0 else ''
-            abstract = abstract.strip()
-
-            if len(abstract) > 0:
+        # Axis Item information
+        if self.__mouse_on_item is not None:
+            item_tip = self.__mouse_on_item.get_tip_text(self.__mouse_on_scale_value)
+            if len(item_tip) > 0:
                 tip_text += ' | '
-                tip_text += abstract
-
-            if since == until:
-                # If it's a single time event
-                # Show Event Year
-                tip_text += ' : [' + str(HistoryTime.year_of_tick(since)) + ']'
-            else:
-                # If it's a period event.
-                since_year = HistoryTime.year_of_tick(since)
-                current_year = HistoryTime.year_of_tick(self.__mouse_on_scale_value)
-                until_year = HistoryTime.year_of_tick(until)
-
-                # Show Current Year / Total Year
-                tip_text += '(' + str(current_year - since_year)
-                tip_text += '/' + str(HistoryTime.year_of_tick(until - since)) + ')'
-
-                # Show Period
-                tip_text += ' : [' + str(since_year) + ' - ' + str(until_year) + ']'
+                tip_text += item_tip
         return tip_text
 
     # ------------------------------------- Real Time Tips ------------------------------------
@@ -915,7 +916,7 @@ class TimeAxis(QWidget):
         if self.__mouse_on_coordinate != pos:
             self.__mouse_on_coordinate = pos
             self.__mouse_on_scale_value = self.pixel_to_value(pos.y())
-            self.__mouse_on_index = self.index_from_point(pos)
+            self.__mouse_on_item = self.axis_item_from_point(pos)
             self.repaint()
 
     # ------------------------------- HistoryRecordEditor.Agent -------------------------------

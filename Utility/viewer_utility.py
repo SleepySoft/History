@@ -165,7 +165,7 @@ class TrackContext:
 
     def has_space(self, since: int, until: int) -> bool:
         for bar in self.__layout_bars:
-            exist_since_pixel, exist_until_pixel = bar.get_longitudinal_space()
+            exist_since_pixel, exist_until_pixel = bar.get_item_metrics().get_longitudinal_range()
             if exist_since_pixel < since < exist_until_pixel or \
                     exist_since_pixel < until < exist_until_pixel:
                 return False
