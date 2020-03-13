@@ -129,7 +129,7 @@ class AppearanceEditor(QWidget):
 
     def __config_ui(self):
         self.__radio_vertical.setChecked(True)
-        self.__radio_horizon.setEnabled(False)
+        # self.__radio_horizon.setEnabled(False)
         self.__button_thread_add.clicked.connect(self.append_thread)
         self.__slider_position.valueChanged.connect(self.__on_slider_value_changed)
 

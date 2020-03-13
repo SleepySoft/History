@@ -124,19 +124,43 @@ class TimeTrackBar(AxisItem):
             self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
 
     def __paint_horizon(self, qp: QPainter):
-        pass
+        metrics = self.get_item_metrics()
+        if self.get_index().since() == self.get_index().until():
+            TimeTrackBar.paint_event_bar_horizon(qp, metrics.rect(), self.__event_bk, metrics.get_align())
+            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
+        else:
+            TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
+            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
 
     def __paint_vertical(self, qp: QPainter):
         metrics = self.get_item_metrics()
         if self.get_index().since() == self.get_index().until():
-            TimeTrackBar.paint_event_bar(qp, metrics.rect(), self.__event_bk, metrics.get_align())
+            TimeTrackBar.paint_event_bar_veritcal(qp, metrics.rect(), self.__event_bk, metrics.get_align())
             TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
         else:
             TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
             TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
 
     @staticmethod
-    def paint_event_bar(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
+    def paint_event_bar_horizon(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
+        if align == ALIGN_RIGHT:
+            rect = index_rect
+            rect.setBottom(rect.bottom() - 10)
+            arrow_points = [QPoint(rect.center().x(), rect.bottom() + 10),
+                            rect.bottomLeft(), rect.topLeft(),
+                            rect.topRight(), rect.bottomRight()]
+        else:
+            rect = index_rect
+            rect.setTop(rect.top() + 10)
+            arrow_points = [rect.center().x(), QPoint(rect.top() + 10),
+                            rect.topRight(), rect.bottomRight(),
+                            rect.bottomLeft(), rect.topLeft()]
+
+        qp.setBrush(back_ground)
+        qp.drawPolygon(QPolygon(arrow_points))
+
+    @staticmethod
+    def paint_event_bar_veritcal(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
         if align == ALIGN_RIGHT:
             rect = index_rect
             rect.setLeft(rect.left() + 10)
@@ -336,7 +360,8 @@ class TimeThreadBase:
                     bar.shift_item(-3 * overlap_count, 0)
 
     def __paint_horizon(self, qp: QPainter):
-        pass
+        for bar in self.__thread_track_bars:
+            bar.paint(qp)
 
     def __paint_vertical(self, qp: QPainter):
         for bar in self.__thread_track_bars:
@@ -392,7 +417,7 @@ class TimeAxis(QWidget):
         self.__axis_left = 0
         self.__axis_right = 0
         self.__axis_space_w = 30
-        self.__axis_align_offset = 0.5
+        self.__axis_align_offset = 0.2
 
         self.__thread_width = 0
         self.__thread_left_area = QRect(0, 0, 0, 0)
@@ -413,6 +438,8 @@ class TimeAxis(QWidget):
         self.__paint_start_scale = 0
         self.__paint_start_tick = 0
 
+        # self.__axis_metrics = AxisMetrics()
+
         # Strictly mapping special scale to tick
         self.__optimise_pixel = {}
 
@@ -431,7 +458,8 @@ class TimeAxis(QWidget):
         self.__mouse_on_coordinate = QPoint(0, 0)
 
         self.__era = ''
-        self.__layout = LAYOUT_VERTICAL
+        # self.__layout = LAYOUT_VERTICAL
+        self.__layout = LAYOUT_HORIZON
 
         self.__step_selection = 0
         self.__main_step = TimeAxis.STEP_LIST[0]
@@ -649,7 +677,7 @@ class TimeAxis(QWidget):
             self.paint_horizon(qp)
         else:
             self.paint_vertical(qp)
-        self.paint_threads(qp)
+        # self.paint_threads(qp)
         self.paint_real_time_tips(qp)
 
         qp.end()
@@ -666,7 +694,34 @@ class TimeAxis(QWidget):
         qp.drawRect(0, 0, self.__width, self.__height)
 
     def paint_horizon(self, qp: QPainter):
-        pass
+        qp.drawLine(0, self.__height - self.__axis_mid, self.__width, self.__height - self.__axis_mid)
+
+        main_scale_start = self.__height - int(self.__axis_mid + 15)
+        main_scale_end = self.__height - int(self.__axis_mid - 15)
+        sub_scale_start = self.__height - int(self.__axis_mid + 5)
+        sub_scale_end = self.__height - int(self.__axis_mid - 5)
+
+        self.__optimise_pixel.clear()
+
+        for i in range(0, 12):
+            time_main = self.__paint_start_tick + i * self.__main_step
+            x_main = int(self.value_to_pixel(int(time_main)))
+
+            self.__optimise_pixel[x_main] = time_main
+
+            if self.__main_step >= HistoryTime.year(1):
+                main_scale_text = HistoryTime.tick_to_standard_string(time_main)
+            else:
+                main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+
+            qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
+            qp.drawText(x_main, main_scale_end + 20, main_scale_text)
+
+            for j in range(0, self.__sub_step_count):
+                time_sub = time_main + self.__main_step * j / self.__sub_step_count
+                x_sub = int(self.value_to_pixel(int(time_sub)))
+                self.__optimise_pixel[x_sub] = time_sub
+                qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
 
     def paint_vertical(self, qp: QPainter):
         qp.drawLine(self.__axis_mid, 0, self.__axis_mid, self.__height)
@@ -776,6 +831,9 @@ class TimeAxis(QWidget):
         self.__paint_start_scale = math.floor(self.__paint_since_scale)
         self.__paint_start_tick = self.__paint_start_scale * self.__main_step
 
+        axis_metrics = AxisMetrics()
+        axis_metrics.set_scale_range(self.__paint_since_scale, self.__paint_until_scale)
+
     def calc_paint_layout(self):
         era_text_width = 80
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
@@ -793,10 +851,11 @@ class TimeAxis(QWidget):
 
         for i in range(0, left_thread_count):
             thread = self.__left_history_threads[i]
-            if self.__layout == LAYOUT_HORIZON:
-                # TODO: Can we just rotate the QPaint axis?
-                pass
-            else:
+            # if self.__layout == LAYOUT_HORIZON:
+            #     # TODO: Can we just rotate the QPaint axis?
+            #     pass
+            # else:
+            if True:
                 top = TimeAxis.DEFAULT_MARGIN_PIXEL
                 bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
                 left = i * left_thread_width
@@ -816,10 +875,11 @@ class TimeAxis(QWidget):
 
         for i in range(0, right_thread_count):
             thread = self.__right_history_threads[i]
-            if self.__layout == LAYOUT_HORIZON:
-                # TODO: Can we just rotate the QPaint axis?
-                pass
-            else:
+            # if self.__layout == LAYOUT_HORIZON:
+            #     # TODO: Can we just rotate the QPaint axis?
+            #     pass
+            # else:
+            if True:
                 top = TimeAxis.DEFAULT_MARGIN_PIXEL
                 bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
                 left = self.__axis_right + i * right_thread_width
@@ -920,7 +980,10 @@ class TimeAxis(QWidget):
             return
         if self.__mouse_on_coordinate != pos:
             self.__mouse_on_coordinate = pos
-            self.__mouse_on_scale_value = self.pixel_to_value(pos.y())
+            if self.__layout == LAYOUT_HORIZON:
+                self.__mouse_on_scale_value = self.pixel_to_value(pos.x())
+            else:
+                self.__mouse_on_scale_value = self.pixel_to_value(pos.y())
             self.__mouse_on_item = self.axis_item_from_point(pos)
             self.repaint()
 
