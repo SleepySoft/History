@@ -315,12 +315,21 @@ class TimeThreadBase:
             track_metrics = copy.deepcopy(self.__metrics)
             transverse_left, transverse_right = self.__metrics.get_transverse_limit()
 
-            if self.__metrics.get_align() == ALIGN_RIGHT:
-                track_metrics.set_transverse_limit(transverse_left + track_index * self.__thread_track_width,
-                                                   transverse_left + (track_index + 1) * self.__thread_track_width)
+            # TODO: How to do it with the same inteface
+            if self.__metrics.get_layout() == LAYOUT_HORIZON:
+                if self.__metrics.get_align() == ALIGN_RIGHT:
+                    track_metrics.set_transverse_limit(transverse_left - track_index * self.__thread_track_width,
+                                                       transverse_left - (track_index + 1) * self.__thread_track_width)
+                else:
+                    track_metrics.set_transverse_limit(transverse_right + (track_index + 1) * self.__thread_track_width,
+                                                       transverse_right + track_index * self.__thread_track_width)
             else:
-                track_metrics.set_transverse_limit(transverse_right - (track_index + 1) * self.__thread_track_width,
-                                                   transverse_right - track_index * self.__thread_track_width)
+                if self.__metrics.get_align() == ALIGN_RIGHT:
+                    track_metrics.set_transverse_limit(transverse_left + track_index * self.__thread_track_width,
+                                                       transverse_left + (track_index + 1) * self.__thread_track_width)
+                else:
+                    track_metrics.set_transverse_limit(transverse_right - (track_index + 1) * self.__thread_track_width,
+                                                       transverse_right - track_index * self.__thread_track_width)
             track = TrackContext()
             track.set_metrics(track_metrics)
             self.__thread_track.append(track)
@@ -553,7 +562,7 @@ class TimeAxis(QWidget):
 
     def align_from_point(self, pos: QPoint) -> ALIGN_TYPE:
         if self.__layout == LAYOUT_HORIZON:
-            return ALIGN_LEFT if pos.y() >= self.__axis_mid else ALIGN_RIGHT
+            return ALIGN_LEFT if pos.y() >= (self.__axis_width - self.__axis_mid) else ALIGN_RIGHT
         else:
             return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
 
@@ -677,7 +686,7 @@ class TimeAxis(QWidget):
             self.paint_horizon(qp)
         else:
             self.paint_vertical(qp)
-        # self.paint_threads(qp)
+        self.paint_threads(qp)
         self.paint_real_time_tips(qp)
 
         qp.end()
@@ -836,66 +845,82 @@ class TimeAxis(QWidget):
 
     def calc_paint_layout(self):
         era_text_width = 80
+        left_thread_count = len(self.__left_history_threads)
+        right_thread_count = len(self.__right_history_threads)
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
+
+        # TODO: Use AxisMetrics
+
         self.__axis_left = int(self.__axis_mid - self.__axis_space_w / 2 - 10) - era_text_width
         self.__axis_right = int(self.__axis_mid + self.__axis_space_w / 2 + 10)
 
-        left_thread_count = len(self.__left_history_threads)
-        right_thread_count = len(self.__right_history_threads)
+        if self.__layout == LAYOUT_HORIZON:
+            self.__axis_left = self.__axis_width - self.__axis_left
+            self.__axis_right = self.__axis_width - self.__axis_right
 
-        left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
-        right_thread_width = (self.__axis_width - self.__axis_right) / right_thread_count \
-            if right_thread_count > 0 else 0
+            left_thread_width = ((self.__axis_width - self.__axis_left) / left_thread_count) if \
+                left_thread_count > 0 else 0
+            right_thread_width = (self.__axis_right / right_thread_count) \
+                if right_thread_count > 0 else 0
+        else:
+            left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
+            right_thread_width = (self.__axis_width - self.__axis_right) / right_thread_count \
+                if right_thread_count > 0 else 0
 
         # Vertical -> Horizon : Left rotate
 
         for i in range(0, left_thread_count):
             thread = self.__left_history_threads[i]
-            # if self.__layout == LAYOUT_HORIZON:
-            #     # TODO: Can we just rotate the QPaint axis?
-            #     pass
-            # else:
-            if True:
-                top = TimeAxis.DEFAULT_MARGIN_PIXEL
-                bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+
+            metrics = AxisMetrics()
+            metrics.set_align(ALIGN_LEFT)
+            metrics.set_layout(self.__layout)
+
+            top = TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+            if self.__layout == LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
+                left = self.__axis_width - i * left_thread_width
+                right = left - left_thread_width
+            else:
                 left = i * left_thread_width
+                right = left + left_thread_width
 
-                metrics = AxisMetrics()
-                metrics.set_align(ALIGN_LEFT)
-                metrics.set_layout(LAYOUT_VERTICAL)
-                metrics.set_transverse_limit(left, left + left_thread_width)
-                metrics.set_longitudinal_range(top, bottom)
-                metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
-                                        self.__paint_until_scale * self.__main_step)
-                thread.set_thread_metrics(metrics)
-                thread.refresh()
+            metrics.set_transverse_limit(left, right)
+            metrics.set_longitudinal_range(top, bottom)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
+                                    self.__paint_until_scale * self.__main_step)
+            thread.set_thread_metrics(metrics)
+            thread.refresh()
 
-                # area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
-                # thread.on_paint_canvas_size_update(area)
+            # area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
+            # thread.on_paint_canvas_size_update(area)
 
         for i in range(0, right_thread_count):
             thread = self.__right_history_threads[i]
-            # if self.__layout == LAYOUT_HORIZON:
-            #     # TODO: Can we just rotate the QPaint axis?
-            #     pass
-            # else:
-            if True:
-                top = TimeAxis.DEFAULT_MARGIN_PIXEL
-                bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+
+            metrics = AxisMetrics()
+            metrics.set_align(ALIGN_RIGHT)
+            metrics.set_layout(self.__layout)
+
+            top = TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+            if self.__layout == LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
+                left = self.__axis_right - i * right_thread_width
+                right = left - right_thread_width
+            else:
                 left = self.__axis_right + i * right_thread_width
+                right = left + right_thread_width
+            metrics.set_transverse_limit(left, right)
+            metrics.set_longitudinal_range(top, bottom)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
+                                    self.__paint_until_scale * self.__main_step)
+            thread.set_thread_metrics(metrics)
+            thread.refresh()
 
-                metrics = AxisMetrics()
-                metrics.set_align(ALIGN_RIGHT)
-                metrics.set_layout(LAYOUT_VERTICAL)
-                metrics.set_transverse_limit(left, left + right_thread_width)
-                metrics.set_longitudinal_range(top, bottom)
-                metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
-                                        self.__paint_until_scale * self.__main_step)
-                thread.set_thread_metrics(metrics)
-                thread.refresh()
-
-                # area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
-                # thread.on_paint_canvas_size_update(area)
+            # area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
+            # thread.on_paint_canvas_size_update(area)
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
 

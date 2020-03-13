@@ -93,10 +93,10 @@ class AxisMetrics:
     # ------------------- Parse -------------------
 
     def wide(self) -> int:
-        return self.__transverse_right - self.__transverse_left
+        return abs(self.__transverse_right - self.__transverse_left)
 
     def long(self) -> int:
-        return self.__longitudinal_until - self.__longitudinal_since
+        return abs(self.__longitudinal_until - self.__longitudinal_since)
 
     def rect(self) -> QRect:
         if self.__layout == LAYOUT_VERTICAL:
