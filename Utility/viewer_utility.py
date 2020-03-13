@@ -1,7 +1,7 @@
 from os import sys, path
 
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QRect
+from PyQt5.QtCore import QRect, QPoint
 
 root_path = path.dirname(path.dirname(path.abspath(__file__)))
 
@@ -124,6 +124,9 @@ class AxisMetrics:
         self.__longitudinal_until += wide_offset
         self.__transverse_left += wide_offset
         self.__transverse_right += wide_offset
+
+    def contains(self, point: QPoint) -> bool:
+        return self.rect().contains(point)
 
     def adjust_area(self, area: QRect) -> QRect:
         if self.__layout == LAYOUT_VERTICAL:

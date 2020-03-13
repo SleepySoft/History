@@ -225,9 +225,11 @@ class TimeThreadBase:
         self.__layout_bars()
 
     def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
+        if not self.get_thread_metrics().contains(point):
+            return None
         for i in range(len(self.__thread_track_bars) - 1, -1, -1):
             axis_item = self.__thread_track_bars[i]
-            if axis_item.get_item_metrics().rect().contains(point):
+            if axis_item.get_item_metrics().contains(point):
                 return axis_item
         return None
 
@@ -529,10 +531,10 @@ class TimeAxis(QWidget):
 
     def thread_from_point(self, pos: QPoint) -> TimeThreadBase or None:
         for thread in self.__left_history_threads:
-            if thread.get_thread_metrics().rect().contains(pos):
+            if thread.get_thread_metrics().contains(pos):
                 return thread
         for thread in self.__right_history_threads:
-            if thread.get_thread_metrics().rect().contains(pos):
+            if thread.get_thread_metrics().contains(pos):
                 return thread
         return None
 
@@ -735,11 +737,14 @@ class TimeAxis(QWidget):
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
     def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
-        for thread in self.__history_threads:
-            axis_item = thread.axis_item_from_point(point)
-            if axis_item is not None:
-                return axis_item
-        return None
+        thread = self.thread_from_point(point)
+        if thread is not None:
+            return thread.axis_item_from_point(point)
+        # for thread in self.__history_threads:
+        #     axis_item = thread.axis_item_from_point(point)
+        #     if axis_item is not None:
+        #         return axis_item
+        # return None
 
     def calc_point_to_paint_start_offset(self, point):
         if self.__layout == LAYOUT_HORIZON:
