@@ -853,7 +853,9 @@ class TimeAxis(QWidget):
         axis_metrics.set_scale_range(self.__paint_since_scale, self.__paint_until_scale)
 
     def calc_paint_layout(self):
-        era_text_width = 80
+        # Reserve the text width (hori) / height (vert) of datetime
+        era_text_width = 30 if self.__layout == LAYOUT_HORIZON else 80
+
         left_thread_count = len(self.__left_history_threads)
         right_thread_count = len(self.__right_history_threads)
         self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
