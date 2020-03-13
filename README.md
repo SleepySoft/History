@@ -1,7 +1,7 @@
 # History
 A distributed and open source history time line tool.  
   
-![image](https://github.com/SleepySoft/History/blob/master/res/shapshot.png)
+![image](res/shapshot.png)
   
 # Contact me
 sleepy_history##163.com
