@@ -452,7 +452,7 @@ class TimeAxis(QWidget):
         self.__mouse_on_coordinate = QPoint(0, 0)
 
         self.__era = ''
-        self.__layout = LAYOUT_VERTICAL
+        self.__layout = LAYOUT_HORIZON
 
         self.__step_selection = 0
         self.__main_step = 0

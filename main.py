@@ -135,11 +135,25 @@ class AppearanceEditor(QWidget):
 
     # ------------------------------------------------------------------------------------------------
 
-    def get_appearance_config(self) -> tuple:
+    def set_appearance_config(self, config: dict):
+        layout = config.get('layout', LAYOUT_VERTICAL)
+        offset = config.get('offset', 0.5)
+        if layout == LAYOUT_HORIZON:
+            self.__radio_horizon.setChecked(True)
+        if layout == LAYOUT_VERTICAL:
+            self.__radio_vertical.setChecked(True)
+        self.__slider_position.setValue(int(100 * offset))
+        self.__label_position.setText(str(int(100 * offset)))
+
+    def get_appearance_config(self) -> dict:
         layout = LAYOUT_HORIZON if self.__radio_horizon.isChecked() else LAYOUT_VERTICAL
-        position = int(self.__label_position.text())
-        thread_config = [thread.get_thread_config() for thread in self.__thread_editor]
-        return layout, position, thread_config
+        offset = float(self.__label_position.text()) / 100
+        thread = [thread.get_thread_config() for thread in self.__thread_editor]
+        return {
+            'layout': layout,
+            'offset': offset,
+            'thread': thread,
+        }
 
     # ------------------------------------------------------------------------------------------------
 
@@ -307,11 +321,12 @@ class HistoryUi(QMainWindow):
 
     def on_menu_thread_editor(self):
         wnd = AppearanceEditor()
+        wnd.set_appearance_config(self.load_appearance_config())
+
         dlg = WrapperQDialog(wnd, True)
         dlg.exec()
         if dlg.is_ok():
-            layout, position, thread_config = wnd.get_appearance_config()
-            self.apply_appearance_config(layout, position, thread_config)
+            self.apply_appearance_config(wnd.get_appearance_config())
 
     def on_menu_help(self):
         try:
@@ -454,12 +469,18 @@ class HistoryUi(QMainWindow):
 
     # ------------------------------------------------------------------------------------------------------------------
 
-    def apply_appearance_config(self, layout, position, thread_config):
-        if layout == LAYOUT_HORIZON:
-            self.__time_axis.set_horizon()
-        else:
-            self.__time_axis.set_vertical()
-        self.__time_axis.set_offset(position / 100)
+    def load_appearance_config(self) -> dict:
+        return {
+            'layout': self.__time_axis.get_axis_layout(),
+            'offset': self.__time_axis.get_axis_offset(),
+        }
+
+    def apply_appearance_config(self, config: dict):
+        if 'layout' in config.keys():
+            self.__time_axis.set_axis_layout(config.get('layout'))
+        if 'offset' in config.keys():
+            self.__time_axis.set_axis_offset(config.get('offset'))
+
         # self.__time_axis.remove_all_history_threads()
 
         # thread_index = 0

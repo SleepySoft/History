@@ -135,7 +135,7 @@ class TimeTrackBar(AxisItem):
     def __paint_vertical(self, qp: QPainter):
         metrics = self.get_item_metrics()
         if self.get_index().since() == self.get_index().until():
-            TimeTrackBar.paint_event_bar_veritcal(qp, metrics.rect(), self.__event_bk, metrics.get_align())
+            TimeTrackBar.paint_event_bar_vertical(qp, metrics.rect(), self.__event_bk, metrics.get_align())
             TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
         else:
             TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
@@ -152,7 +152,7 @@ class TimeTrackBar(AxisItem):
         else:
             rect = index_rect
             rect.setTop(rect.top() + 10)
-            arrow_points = [rect.center().x(), QPoint(rect.top() + 10),
+            arrow_points = [QPoint(rect.center().x(), rect.top() - 10),
                             rect.topRight(), rect.bottomRight(),
                             rect.bottomLeft(), rect.topLeft()]
 
@@ -160,7 +160,7 @@ class TimeTrackBar(AxisItem):
         qp.drawPolygon(QPolygon(arrow_points))
 
     @staticmethod
-    def paint_event_bar_veritcal(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
+    def paint_event_bar_vertical(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
         if align == ALIGN_RIGHT:
             rect = index_rect
             rect.setLeft(rect.left() + 10)
@@ -426,7 +426,7 @@ class TimeAxis(QWidget):
         self.__axis_left = 0
         self.__axis_right = 0
         self.__axis_space_w = 30
-        self.__axis_align_offset = 0.2
+        self.__axis_align_offset = 0.4
 
         self.__thread_width = 0
         self.__thread_left_area = QRect(0, 0, 0, 0)
@@ -467,8 +467,8 @@ class TimeAxis(QWidget):
         self.__mouse_on_coordinate = QPoint(0, 0)
 
         self.__era = ''
-        # self.__layout = LAYOUT_VERTICAL
-        self.__layout = LAYOUT_HORIZON
+        self.__layout = LAYOUT_VERTICAL
+        # self.__layout = LAYOUT_HORIZON
 
         self.__step_selection = 0
         self.__main_step = TimeAxis.STEP_LIST[0]
@@ -489,28 +489,37 @@ class TimeAxis(QWidget):
 
     # ----------------------------------------------------- Method -----------------------------------------------------
 
+    # --------------------------- Sets ---------------------------
+
     def set_agent(self, agent: Agent):
         self.__agent.append(agent)
 
     def set_era(self, era: str):
         self.__era = era
 
-    def set_offset(self, offset: float):
+    def set_axis_offset(self, offset: float):
         if 0.0 <= offset <= 1.0:
             self.__axis_align_offset = offset
-        self.repaint()
-
-    def set_horizon(self):
-        self.__layout = LAYOUT_HORIZON
-        self.repaint()
-
-    def set_vertical(self):
-        self.__layout = LAYOUT_VERTICAL
         self.repaint()
 
     def set_time_range(self, since: float, until: float):
         self.auto_scale(min(since, until), max(since, until))
         self.repaint()
+
+    def set_axis_layout(self, layout: int):
+        if layout in [LAYOUT_HORIZON, LAYOUT_VERTICAL]:
+            self.__layout = layout
+            self.repaint()
+
+    # --------------------------- Gets ---------------------------
+
+    def get_axis_layout(self) -> int:
+        return self.__layout
+
+    def get_axis_offset(self) -> float:
+        return self.__axis_align_offset
+
+    # ------------------------- Resource -------------------------
 
     def set_history_core(self, history: History):
         self.__history_core = history
