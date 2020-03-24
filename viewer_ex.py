@@ -61,18 +61,28 @@ class TimeThreadBase:
 
     def __init__(self):
         self.__axis_items = []
+        self.__paint_items = []
         self.__metrics = AxisMetrics()
         self.__paint_color = QColor(255, 255, 255)
         self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
 
     def paint(self, qp: QPainter):
-        pass
+        qp.setBrush(self.get_thread_color())
+        qp.drawRect(self.get_thread_metrics().rect())
+        for item in self.__paint_items:
+            item.paint(qp)
 
     def clear(self):
         self.__axis_items.clear()
 
     def refresh(self):
-        pass
+        self.__paint_items.clear()
+        since, until = self.get_thread_metrics().get_scale_range()
+        for item in self.__axis_items:
+            item_since, item_until = item.get_item_metrics().get_scale_range()
+            if (item_since <= until) and (item_until >= since):
+                item.arrange_item(self.get_thread_metrics())
+                self.__paint_items.append(item)
 
     def add_axis_items(self, items: AxisItem or [AxisItem]):
         if isinstance(items, AxisItem):
