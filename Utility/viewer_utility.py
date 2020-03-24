@@ -1,6 +1,6 @@
 from os import sys, path
 
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtCore import QRect, QPoint
 
 root_path = path.dirname(path.dirname(path.abspath(__file__)))
@@ -14,6 +14,17 @@ except Exception as e:
     from Utility.history_public import *
 finally:
     pass
+
+
+# ------------------------------------------------------- Fonts --------------------------------------------------------
+
+event_font = QFont()
+event_font.setFamily("微软雅黑")
+event_font.setPointSize(6)
+
+period_font = QFont()
+period_font.setFamily("微软雅黑")
+period_font.setPointSize(8)
 
 
 # ------------------------------------------------------- Colors -------------------------------------------------------

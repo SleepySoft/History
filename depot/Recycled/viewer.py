@@ -70,9 +70,9 @@ def scale_round(num: float, scale: float):
     return (round(num / scale) + 1) * scale
 
 
-# -------------------------------- class TimeTrackBar --------------------------------
+# -------------------------------- class HistoryIndexBar --------------------------------
 
-class TimeTrackBar:
+class HistoryIndexBar:
     def __init__(self, layout: LAYOUT_TYPE, align: ALIGN_TYPE):
         self.__layout = layout
         self.__align = align
@@ -113,14 +113,14 @@ class TimeThreadTrack:
         self.__right_pixel = 0
         self.__track_bars = []
 
-    def has_space_for(self, bar: TimeTrackBar) -> bool:
+    def has_space_for(self, bar: HistoryIndexBar) -> bool:
         for exists_bar in self.__track_bars:
             if exists_bar.get_bar_area().intersects(bar.get_bar_area()):
                 return False
         return True
 
 
-class TimeThreadBase:
+class HistoryIndexTrack:
     REFERENCE_TRACK_WIDTH = 50
 
     def __init__(self):
@@ -143,7 +143,7 @@ class TimeAxisThreadCommon:
         self.__until = 0.0
         self.__align = ALIGN_RIGHT
         self.__layout = LAYOUT_VERTICAL
-        self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
+        self.__min_track_width = HistoryIndexTrack.REFERENCE_TRACK_WIDTH
         self.__thread_width = 0
         self.__thread_length = 0
         self.__thread_track_count = 0

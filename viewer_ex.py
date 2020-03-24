@@ -54,22 +54,75 @@ class AxisItem:
         assert False
 
 
+# --------------------------------------------------- TimeThreadBase ---------------------------------------------------
+
+class TimeThreadBase:
+    REFERENCE_TRACK_WIDTH = 50
+
+    def __init__(self):
+        self.__axis_items = []
+        self.__metrics = AxisMetrics()
+        self.__paint_color = QColor(255, 255, 255)
+        self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
+
+    def paint(self, qp: QPainter):
+        pass
+
+    def clear(self):
+        self.__axis_items.clear()
+
+    def refresh(self):
+        pass
+
+    def add_axis_items(self, items: AxisItem or [AxisItem]):
+        if isinstance(items, AxisItem):
+            self.__axis_items.append(items)
+        else:
+            self.__axis_items.extend(items)
+
+    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
+        if not self.get_thread_metrics().contains(point):
+            return None
+        for item in self.__axis_items:
+            if item.get_item_metrics().contains(point):
+                return item
+        return None
+
+    # ------------------------------------------ Sets ------------------------------------------
+
+    def set_thread_color(self, color: QColor):
+        self.__paint_color = color
+
+    def set_thread_metrics(self, metrics: AxisMetrics):
+        # Use copy instead of assignment.
+        self.__metrics.copy(metrics)
+
+    def set_thread_min_track_width(self, width: int):
+        self.__min_track_width = width
+
+    # ------------------------------------------ Gets ------------------------------------------
+
+    def get_axis_items(self) -> [AxisItem]:
+        return self.__axis_items
+
+    def get_thread_color(self) -> QColor:
+        return self.__paint_color
+
+    def get_thread_metrics(self) -> AxisMetrics:
+        return self.__metrics
+
+    def get_thread_min_track_width(self) -> int:
+        return self.__min_track_width
+
+
 # ----------------------------------------------------------------------------------------------------------------------
-#                                                  class TimeTrackBar
+#                                                  class HistoryIndexBar
 # ----------------------------------------------------------------------------------------------------------------------
 
-event_font = QFont()
-event_font.setFamily("微软雅黑")
-event_font.setPointSize(6)
 
-period_font = QFont()
-period_font.setFamily("微软雅黑")
-period_font.setPointSize(8)
-
-
-class TimeTrackBar(AxisItem):
+class HistoryIndexBar(AxisItem):
     def __init__(self, index: HistoricalRecord, extra: dict = {}):
-        super(TimeTrackBar, self).__init__(index, extra)
+        super(HistoryIndexBar, self).__init__(index, extra)
         self.__event_bk = QColor(243, 244, 246)
         self.__story_bk = QColor(185, 227, 217)
 
@@ -111,7 +164,7 @@ class TimeTrackBar(AxisItem):
             self.__paint_vertical(qp)
 
     def arrange_item(self, outer_metrics: AxisMetrics):
-        super(TimeTrackBar, self).arrange_item(outer_metrics)
+        super(HistoryIndexBar, self).arrange_item(outer_metrics)
 
         if self.index.since() == self.index.until():
             outer_left, outer_right = outer_metrics.get_transverse_limit()
@@ -126,20 +179,20 @@ class TimeTrackBar(AxisItem):
     def __paint_horizon(self, qp: QPainter):
         metrics = self.get_item_metrics()
         if self.get_index().since() == self.get_index().until():
-            TimeTrackBar.paint_event_bar_horizon(qp, metrics.rect(), self.__event_bk, metrics.get_align())
-            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
+            HistoryIndexBar.paint_event_bar_horizon(qp, metrics.rect(), self.__event_bk, metrics.get_align())
+            HistoryIndexBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
         else:
-            TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
-            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
+            HistoryIndexBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
+            HistoryIndexBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
 
     def __paint_vertical(self, qp: QPainter):
         metrics = self.get_item_metrics()
         if self.get_index().since() == self.get_index().until():
-            TimeTrackBar.paint_event_bar_vertical(qp, metrics.rect(), self.__event_bk, metrics.get_align())
-            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
+            HistoryIndexBar.paint_event_bar_vertical(qp, metrics.rect(), self.__event_bk, metrics.get_align())
+            HistoryIndexBar.paint_index_text(qp, self.get_index(), metrics.rect(), event_font)
         else:
-            TimeTrackBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
-            TimeTrackBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
+            HistoryIndexBar.paint_period_bar(qp, metrics.rect(), self.__story_bk)
+            HistoryIndexBar.paint_index_text(qp, self.get_index(), metrics.rect(), period_font)
 
     @staticmethod
     def paint_event_bar_horizon(qp: QPainter, index_rect: QRect, back_ground: QColor, align: int):
@@ -206,13 +259,15 @@ class TimeTrackBar(AxisItem):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-#                                                 class TimeThreadBase
+#                                                 class HistoryIndexTrack
 # ----------------------------------------------------------------------------------------------------------------------
 
-class TimeThreadBase:
+class HistoryIndexTrack(TimeThreadBase):
     REFERENCE_TRACK_WIDTH = 50
 
     def __init__(self):
+        super(HistoryIndexTrack, self).__init__()
+        
         self.__event_indexes = []
         self.__paint_indexes = []
         self.__index_bar_table = {}
@@ -220,22 +275,18 @@ class TimeThreadBase:
         self.__thread_track = []
         self.__thread_track_bars = []
 
-        self.__metrics = AxisMetrics()
-        self.__min_track_width = TimeThreadBase.REFERENCE_TRACK_WIDTH
         self.__thread_track_count = 0
         self.__thread_track_width = 50
-
-        self.__paint_color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
     # ------------------------------------------- Operations -------------------------------------------
 
     def paint(self, qp: QPainter):
-        qp.setBrush(self.__paint_color)
-        qp.drawRect(self.__metrics.rect())
+        qp.setBrush(self.get_thread_color())
+        qp.drawRect(self.get_thread_metrics().rect())
 
-        if self.__metrics.get_layout() == LAYOUT_HORIZON:
+        if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
             self.__paint_horizon(qp)
-        elif self.__metrics.get_layout() == LAYOUT_VERTICAL:
+        elif self.get_thread_metrics().get_layout() == LAYOUT_VERTICAL:
             self.__paint_vertical(qp)
         else:
             assert False
@@ -259,30 +310,21 @@ class TimeThreadBase:
 
     # ------------------------------------------ Sets ------------------------------------------
 
-    def set_thread_metrics(self, metrics: AxisMetrics):
-        # Use copy instead of assignment.
-        # # So the reference in bar also updated.
-        self.__metrics.copy(metrics)
-
-    def set_thread_min_track_width(self, width: int):
-        self.__min_track_width = width
-
     def set_thread_event_indexes(self, indexes: list):
         self.__event_indexes = indexes
+        self.clear()
         self.__index_bar_table.clear()
+        for index in self.__event_indexes:
+            bar = HistoryIndexBar(index)
+            self.add_axis_items(bar)
+            self.__index_bar_table[index] = bar
 
     # ------------------------------------------ Gets ------------------------------------------
 
-    def set_thread_color(self, color: QColor):
-        self.__paint_color = color
-
-    def get_thread_metrics(self) -> AxisMetrics:
-        return self.__metrics
-
-    def get_index_bar(self, index: HistoricalRecord) -> TimeTrackBar:
+    def get_index_axis_item(self, index: HistoricalRecord) -> HistoryIndexBar:
         bar = self.__index_bar_table.get(index, None)
         if bar is None:
-            bar = TimeTrackBar(index)
+            bar = HistoryIndexBar(index)
             self.__index_bar_table[index] = bar
         return bar
 
@@ -290,7 +332,7 @@ class TimeThreadBase:
 
     def __pickup_paint_indexes(self):
         self.__paint_indexes.clear()
-        since, until = self.__metrics.get_scale_range()
+        since, until = self.get_thread_metrics().get_scale_range()
         for index in self.__event_indexes:
             if index.period_adapt(since, until):
                 # Pick the paint indexes and sort by its period length
@@ -304,27 +346,27 @@ class TimeThreadBase:
 
     def __calc_paint_parameters(self):
         # Adjust track count
-        self.__thread_track_count = self.__metrics.wide() / self.__min_track_width
+        self.__thread_track_count = self.get_thread_metrics().wide() / self.get_thread_min_track_width()
         self.__thread_track_count = max(1, int(self.__thread_track_count + 0.5))
-        self.__thread_track_width = self.__metrics.wide() / self.__thread_track_count
+        self.__thread_track_width = self.get_thread_metrics().wide() / self.__thread_track_count
 
     def __layout_track(self):
         self.__thread_track.clear()
 
         for track_index in range(0, self.__thread_track_count):
-            track_metrics = copy.deepcopy(self.__metrics)
-            transverse_left, transverse_right = self.__metrics.get_transverse_limit()
+            track_metrics = copy.deepcopy(self.get_thread_metrics())
+            transverse_left, transverse_right = self.get_thread_metrics().get_transverse_limit()
 
             # TODO: How to do it with the same inteface
-            if self.__metrics.get_layout() == LAYOUT_HORIZON:
-                if self.__metrics.get_align() == ALIGN_RIGHT:
+            if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
+                if self.get_thread_metrics().get_align() == ALIGN_RIGHT:
                     track_metrics.set_transverse_limit(transverse_left - track_index * self.__thread_track_width,
                                                        transverse_left - (track_index + 1) * self.__thread_track_width)
                 else:
                     track_metrics.set_transverse_limit(transverse_right + (track_index + 1) * self.__thread_track_width,
                                                        transverse_right + track_index * self.__thread_track_width)
             else:
-                if self.__metrics.get_align() == ALIGN_RIGHT:
+                if self.get_thread_metrics().get_align() == ALIGN_RIGHT:
                     track_metrics.set_transverse_limit(transverse_left + track_index * self.__thread_track_width,
                                                        transverse_left + (track_index + 1) * self.__thread_track_width)
                 else:
@@ -346,7 +388,7 @@ class TimeThreadBase:
 
             processing_indexes = layout_indexes.copy()
             for index in processing_indexes:
-                bar = self.get_index_bar(index)
+                bar = self.get_index_axis_item(index)
                 # If this index is a single time event, it should layout at the first track
                 # If track has space for this index, layout on it
                 # If it's the last track, we have to layout on it
@@ -1087,7 +1129,7 @@ def main():
     indexer.print_indexes()
 
     # Threads
-    thread = TimeThreadBase()
+    thread = HistoryIndexTrack()
     thread.set_thread_color(THREAD_BACKGROUND_COLORS[0])
     thread.set_thread_event_indexes(indexer.get_indexes())
 
