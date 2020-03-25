@@ -487,7 +487,7 @@ class TimeAxis(QWidget):
 
         self.__offset = 0.0
         self.__scroll = 0.0
-        self.__origin_tick = 0
+        self.__seeking = None
 
         self.__scale_per_page = 10
 
@@ -498,8 +498,8 @@ class TimeAxis(QWidget):
         self.__paint_since_scale = 0
         self.__paint_until_scale = 0
 
-        self.__paint_start_scale = 0
         self.__paint_start_tick = 0
+        self.__tick_pixel_mapping = AxisMapping()
 
         # self.__axis_metrics = AxisMetrics()
 
@@ -558,8 +558,9 @@ class TimeAxis(QWidget):
             self.__axis_align_offset = offset
         self.repaint()
 
-    def set_time_range(self, since: float, until: float):
+    def set_time_range(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         self.auto_scale(min(since, until), max(since, until))
+        self.__seeking = min(since, until)
         self.repaint()
 
     def set_axis_layout(self, layout: int):
@@ -889,11 +890,6 @@ class TimeAxis(QWidget):
         thread = self.thread_from_point(point)
         if thread is not None:
             return thread.axis_item_from_point(point)
-        # for thread in self.__history_threads:
-        #     axis_item = thread.axis_item_from_point(point)
-        #     if axis_item is not None:
-        #         return axis_item
-        # return None
 
     def calc_point_to_paint_start_offset(self, point):
         if self.__layout == LAYOUT_HORIZON:
@@ -914,20 +910,22 @@ class TimeAxis(QWidget):
     def update_pixel_per_scale(self):
         self.__pixel_per_scale = self.__axis_length / self.__scale_per_page
         self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
+        # Update the ratio of history time / pixel
+        self.__tick_pixel_mapping.set_range_ref(self.__main_step, self.__pixel_per_scale)
 
     def calc_paint_parameters(self):
-        pixel_offset = self.__scroll + self.__offset
-        self.__total_tick_offset = self.__origin_tick + (pixel_offset / self.__pixel_per_scale) * self.__main_step
-        self.__total_pixel_offset = self.__total_tick_offset / self.__pixel_per_scale
+        if self.__seeking is not None:
+            self.__scroll = self.__tick_pixel_mapping.a_to_b(self.__seeking)
+            self.__offset = 0
+            self.__seeking = None
+        self.__total_pixel_offset = self.__scroll + self.__offset
+        self.__total_tick_offset += self.__tick_pixel_mapping.b_to_a(self.__total_pixel_offset)
 
         self.__paint_since_scale = float(self.__total_pixel_offset) / self.__pixel_per_scale
         self.__paint_until_scale = float(self.__total_pixel_offset + self.__axis_length) / self.__pixel_per_scale
 
-        self.__paint_start_scale = math.floor(self.__paint_since_scale)
-        self.__paint_start_tick = self.__paint_start_scale * self.__main_step
-
-        axis_metrics = AxisMetrics()
-        axis_metrics.set_scale_range(self.__paint_since_scale, self.__paint_until_scale)
+        paint_start_scale = math.floor(self.__paint_since_scale)
+        self.__paint_start_tick = paint_start_scale * self.__main_step
 
     def calc_paint_layout(self):
         # Reserve the text width (hori) / height (vert) of datetime
@@ -981,9 +979,6 @@ class TimeAxis(QWidget):
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
-            # area = QRect(QPoint(left, top), QPoint(left + left_thread_width, bottom))
-            # thread.on_paint_canvas_size_update(area)
-
         for i in range(0, right_thread_count):
             thread = self.__right_history_threads[i]
 
@@ -1007,9 +1002,6 @@ class TimeAxis(QWidget):
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
-            # area = QRect(QPoint(left, top), QPoint(left + right_thread_width, bottom))
-            # thread.on_paint_canvas_size_update(area)
-
     # ----------------------------------------------------- Scale ------------------------------------------------------
 
     def value_to_pixel(self, value: int, from_origin: bool = False) -> float:
@@ -1021,14 +1013,6 @@ class TimeAxis(QWidget):
             return self.__optimise_pixel[pixel]
         else:
             return float(pixel) / self.__pixel_per_scale * self.__main_step + self.__total_tick_offset
-
-    # def pixel_offset_to_scale_value(self, display_pixel_offset: int) -> float:
-    #     total_pixel_offset = self.__scroll + self.__offset + display_pixel_offset - self.DEFAULT_MARGIN_PIXEL
-    #     return total_pixel_offset / self.__pixel_per_scale * self.__main_step
-
-        # delta_pixel_offset = display_pixel_offset + self.__paint_start_offset - self.DEFAULT_MARGIN_PIXEL
-        # delta_scale_offset = delta_pixel_offset / self.__pixel_per_scale
-        # return (self.__paint_start_scale + delta_scale_offset) * self.__main_step
 
     def auto_scale(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         # since_rough = lower_rough(since)
@@ -1045,8 +1029,6 @@ class TimeAxis(QWidget):
         self.select_step_scale(step_index - 1)
 
         self.update_pixel_per_scale()
-        self.__origin_tick = since
-        # self.__scroll = since * self.__pixel_per_scale / self.__main_step
 
     def select_step_scale(self, step_index: int):
         step_index = max(step_index, 0)

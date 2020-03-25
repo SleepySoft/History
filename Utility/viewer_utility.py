@@ -50,6 +50,60 @@ ALIGN_RIGHT = 8
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+#                                                  class AxisMapping
+# ----------------------------------------------------------------------------------------------------------------------
+
+class AxisMapping:
+    def __init__(self,
+                 range_a_lower: float or int = 0, range_a_upper: float or int = 0,
+                 range_b_lower: float or int = 0, range_b_upper: float or int = 0):
+        self.__al = range_a_lower
+        self.__ah = range_a_upper
+        self.__bl = range_b_lower
+        self.__bh = range_b_upper
+
+    def set_range_a(self, lower: float or int, upper: float or int):
+        self.__al, self.__ah = lower, upper
+
+    def set_range_b(self, lower: float or int, upper: float or int):
+        self.__bl, self.__bh = lower, upper
+
+    def set_range_ref(self, ref_a: float or int, ref_b: float or int,
+                      origin_a: float or int = 0, origin_b: float or int = 0):
+        """
+        Config the mapping by the reference length of range a and b.
+        :param ref_a: The reference length of range a
+        :param ref_b: The reference length of range b
+        :param origin_a: The origin (offset) of range a
+        :param origin_b: The origin (offset) of range b
+        :return: None
+        """
+        if self.is_digit_zero(ref_a) or self.is_digit_zero(ref_b):
+            return
+        self.__al, self.__bl = origin_a, origin_b
+        # Formula: (bh - bl) / (ah - al) = ref_a / ref_b
+        # Assume: ah = al + 1000000
+        self.__ah = self.__al + 1000000
+        # So: (bh - bl) / 1000000 = ref_a / ref_b
+        # Finally: bh = (ref_a / ref_b) * 1000000 + bl
+        self.__bh = 1000000 * ref_a / ref_b + self.__bl
+
+    def a_to_b(self, value_a) -> float:
+        if self.is_digit_zero(self.__ah - self.__al):
+            return 0.0
+        return (value_a - self.__al) * (self.__bh - self.__bl) / (self.__ah - self.__al) + self.__bl
+
+    def b_to_a(self, value_b) -> float:
+        if self.is_digit_zero((self.__bh - self.__bl)):
+            return 0.0
+        return (value_b - self.__bl) * (self.__ah - self.__al) / (self.__bh - self.__bl) + self.__al
+
+    @staticmethod
+    def is_digit_zero(digit: float or int):
+        return digit == 0 if isinstance(digit, int) else digit < 0.0000001
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 #                                                  class AxisMetrics
 # ----------------------------------------------------------------------------------------------------------------------
 
