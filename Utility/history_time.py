@@ -27,11 +27,11 @@ class HistoryTime:
 
     TICK = int
     TICK_SEC = 1
-    TICK_MIN = TICK_SEC * 60
-    TICK_HOUR = TICK_MIN * 60
-    TICK_DAY = TICK_HOUR * 24
-    TICK_YEAR = TICK_DAY * 366
-    TICK_WEEK = TICK(TICK_YEAR / 52)
+    TICK_MIN = TICK_SEC * 60            # 60
+    TICK_HOUR = TICK_MIN * 60           # 3600
+    TICK_DAY = TICK_HOUR * 24           # 86400
+    TICK_YEAR = TICK_DAY * 366          # 31622400
+    TICK_WEEK = TICK(TICK_YEAR / 52)    # 608123.0769230769
     TICK_MONTH = [1,
                   31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
                   152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,

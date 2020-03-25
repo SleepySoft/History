@@ -44,11 +44,12 @@ class AxisItem:
         self.outer_metrics = outer_metrics
         self.item_metrics = copy.deepcopy(outer_metrics)
 
-        since_pixel = outer_metrics.value_to_pixel(self.index.since())
-        until_pixel = outer_metrics.value_to_pixel(self.index.until())
-        outer_since, outer_until = outer_metrics.get_longitudinal_range()
-        self.item_metrics.set_scale_range(self.index.since(), self.index.until())
-        self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
+        if self.index is not None:
+            since_pixel = outer_metrics.value_to_pixel(self.index.since())
+            until_pixel = outer_metrics.value_to_pixel(self.index.until())
+            outer_since, outer_until = outer_metrics.get_longitudinal_range()
+            self.item_metrics.set_scale_range(self.index.since(), self.index.until())
+            self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
 
     def paint(self, qp: QPainter):
         assert False
@@ -446,7 +447,7 @@ class TimeAxis(QWidget):
         HistoryTime.year(250), HistoryTime.year(200), HistoryTime.year(100),
         HistoryTime.year(50), HistoryTime.year(25), HistoryTime.year(20),
         HistoryTime.year(10), HistoryTime.year(5), HistoryTime.year(1),
-        HistoryTime.month(6), HistoryTime.month(1),
+        HistoryTime.month(7), HistoryTime.month(2),
         HistoryTime.week(1), HistoryTime.day(1),
     ]
     SUB_STEP_COUNT = [
@@ -486,6 +487,7 @@ class TimeAxis(QWidget):
 
         self.__offset = 0.0
         self.__scroll = 0.0
+        self.__origin_tick = 0
 
         self.__scale_per_page = 10
 
@@ -523,8 +525,10 @@ class TimeAxis(QWidget):
         # self.__layout = LAYOUT_HORIZON
 
         self.__step_selection = 0
-        self.__main_step = TimeAxis.STEP_LIST[0]
+        self.__main_step = TimeAxis.STEP_LIST[8]
         self.__sub_step_count = 10
+        self.__scale_step_limit_upper = TimeAxis.STEP_LIST[0]
+        self.__scale_step_limit_lower = TimeAxis.STEP_LIST[-1]
 
         self.setMinimumWidth(400)
         self.setMinimumHeight(500)
@@ -562,6 +566,24 @@ class TimeAxis(QWidget):
         if layout in [LAYOUT_HORIZON, LAYOUT_VERTICAL]:
             self.__layout = layout
             self.repaint()
+
+    # def set_axis_start_date(self, date: HistoryTime.TICK):
+    #     self.__total_tick_offset = date
+    #     self.__scroll = 0
+    #     self.__offset = 0
+    #     self.repaint()
+
+    def set_axis_scale_step(self, step: HistoryTime.TICK):
+        step_index = 0
+        for preset_step in TimeAxis.STEP_LIST:
+            if preset_step <= step:
+                break
+            step_index += 1
+        self.select_step_scale(step_index)
+
+    def set_axis_scale_step_limit(self, lower: HistoryTime.TICK, upper: HistoryTime.TICK):
+        self.__scale_step_limit_lower = lower
+        self.__scale_step_limit_upper = upper
 
     # --------------------------- Gets ---------------------------
 
@@ -837,6 +859,8 @@ class TimeAxis(QWidget):
         if not self.__enable_real_time_tips or self.__l_pressing:
             return
 
+        qp.setPen(QColor(0, 0, 0))
+
         qp.drawLine(0, self.__mouse_on_coordinate.y(), self.__width, self.__mouse_on_coordinate.y())
         qp.drawLine(self.__mouse_on_coordinate.x(), 0, self.__mouse_on_coordinate.x(), self.__height)
 
@@ -892,8 +916,9 @@ class TimeAxis(QWidget):
         self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
 
     def calc_paint_parameters(self):
-        self.__total_pixel_offset = self.__scroll + self.__offset
-        self.__total_tick_offset = self.__total_pixel_offset / self.__pixel_per_scale * self.__main_step
+        pixel_offset = self.__scroll + self.__offset
+        self.__total_tick_offset = self.__origin_tick + (pixel_offset / self.__pixel_per_scale) * self.__main_step
+        self.__total_pixel_offset = self.__total_tick_offset / self.__pixel_per_scale
 
         self.__paint_since_scale = float(self.__total_pixel_offset) / self.__pixel_per_scale
         self.__paint_until_scale = float(self.__total_pixel_offset + self.__axis_length) / self.__pixel_per_scale
@@ -1020,32 +1045,20 @@ class TimeAxis(QWidget):
         self.select_step_scale(step_index - 1)
 
         self.update_pixel_per_scale()
-        self.__scroll = since * self.__pixel_per_scale
+        self.__origin_tick = since
+        # self.__scroll = since * self.__pixel_per_scale / self.__main_step
 
     def select_step_scale(self, step_index: int):
-        self.__step_selection = step_index
-        self.__step_selection = max(self.__step_selection, 0)
-        self.__step_selection = min(self.__step_selection, len(TimeAxis.STEP_LIST) - 1)
+        step_index = max(step_index, 0)
+        step_index = min(step_index, len(TimeAxis.STEP_LIST) - 1)
+        new_step = TimeAxis.STEP_LIST[step_index]
 
-        self.__main_step = TimeAxis.STEP_LIST[self.__step_selection]
-        self.__sub_step_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
-
-        # abs_num = abs(num)
-        # if abs_num >= 100:
-        #     index_10 = math.log(abs_num, 10)
-        #     round_index_10 = math.floor(index_10)
-        #     scale = math.pow(10, round_index_10)
-        #     delta = scale / 10
-        # elif 10 < abs_num < 100:
-        #     delta = 10
-        # elif 1 < abs_num <= 10:
-        #     delta = 1
-        # else:
-        #     if sign > 0:
-        #         delta = 1
-        #     else:
-        #         delta = 0
-        # return sign * delta * ratio
+        if self.__scale_step_limit_lower <= new_step <= self.__scale_step_limit_upper:
+            self.__main_step = new_step
+            self.__step_selection = step_index
+            self.__sub_step_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
+        self.__main_step = max(self.__main_step, self.__scale_step_limit_lower)
+        self.__main_step = min(self.__main_step, self.__scale_step_limit_upper)
 
     # ------------------------------------------ Art ------------------------------------------
 

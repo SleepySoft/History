@@ -46,7 +46,18 @@ class Candlestick(AxisItem):
         metrics.set_scale_range(date, date + HistoryTime.day(1) - 1)
 
     def get_tip_text(self, on_tick: float) -> str:
-        return ''
+        return 'Open %0.2f; Close: %0.2f; High: %0.2f; Close: %0.2f' % \
+               (self.__open, self.__close, self.__high, self.__low)
+
+    def arrange_item(self, outer_metrics: AxisMetrics):
+        super(Candlestick, self).arrange_item(outer_metrics)
+
+        since, until = self.__date, self.__date + HistoryTime.day(1) - 1
+        since_pixel = outer_metrics.value_to_pixel(since)
+        until_pixel = outer_metrics.value_to_pixel(until)
+        outer_since, outer_until = outer_metrics.get_longitudinal_range()
+        self.item_metrics.set_scale_range(since, until)
+        self.item_metrics.set_longitudinal_range(max(since_pixel, outer_since), min(until_pixel, outer_until))
 
     def paint(self, qp: QPainter):
         if self.get_outer_metrics().get_layout() == LAYOUT_HORIZON:
@@ -92,11 +103,17 @@ def main():
     date = HistoryTime.now_tick() - HistoryTime.year(1)
     for i in range(100):
         date += HistoryTime.day(1)
-        cs = Candlestick(0, 5000, )
-
+        cs = Candlestick(0, 5000, date,
+                         random.randint(2000, 3000), random.randint(2000, 3000),
+                         random.randint(2000, 3000), random.randint(2000, 3000))
+        thread.add_axis_items(cs)
 
     # HistoryViewerDialog
     history_viewer = HistoryViewerDialog()
+    history_viewer.get_time_axis().set_axis_layout(LAYOUT_HORIZON)
+    history_viewer.get_time_axis().set_axis_scale_step_limit(HistoryTime.TICK_DAY, HistoryTime.TICK_YEAR)
+    history_viewer.get_time_axis().set_axis_scale_step(HistoryTime.TICK_DAY)
+    history_viewer.get_time_axis().set_time_range(HistoryTime.year(1980), HistoryTime.year(2030))
     history_viewer.get_time_axis().add_history_thread(thread)
     history_viewer.exec()
 
