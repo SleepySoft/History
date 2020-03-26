@@ -430,7 +430,9 @@ class HistoryIndexTrack(TimeThreadBase):
             bar.paint(qp)
 
 
+# ----------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------- class TimeAxis ---------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 class TimeAxis(QWidget):
 
@@ -467,41 +469,44 @@ class TimeAxis(QWidget):
         super(TimeAxis, self).__init__()
 
         self.__agent = []
-        self.__width = 0
-        self.__height = 0
-        self.__axis_width = 0
-        self.__axis_length = 0
 
-        self.__axis_area = QRect(0, 0, 0, 0)
+        # Paint metrics
         self.__paint_area = QRect(0, 0, 0, 0)
+        self.__coordinate_metrics = AxisMetrics()
 
+        # Axis metrics
         self.__axis_mid = 0
         self.__axis_left = 0
         self.__axis_right = 0
         self.__axis_space_w = 30
         self.__axis_align_offset = 0.4
 
+        # Thread metrics
         self.__thread_width = 0
         self.__thread_left_area = QRect(0, 0, 0, 0)
         self.__thread_right_area = QRect(0, 0, 0, 0)
 
+        # Scroll and Offset
         self.__offset = 0.0
         self.__scroll = 0.0
         self.__seeking = None
-
-        self.__scale_per_page = 10
-
-        self.__pixel_per_scale = 0
-        self.__total_tick_offset = 0
         self.__total_pixel_offset = 0
 
         self.__paint_since_scale = 0
         self.__paint_until_scale = 0
 
         self.__paint_start_tick = 0
-        self.__tick_pixel_mapping = AxisMapping()
 
-        # self.__axis_metrics = AxisMetrics()
+        # Scale Step Selection
+        self.__step_selection = 0
+        self.__main_scale = TimeAxis.STEP_LIST[8]
+        self.__sub_scale_count = 10
+        self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0]
+        self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1]
+
+        self.__scale_per_page = 10
+        self.__pixel_per_scale = 0
+        self.__tick_offset_mapping = AxisMapping()
 
         # Strictly mapping special scale to tick
         self.__optimise_pixel = {}
@@ -524,17 +529,10 @@ class TimeAxis(QWidget):
         self.__layout = LAYOUT_VERTICAL
         # self.__layout = LAYOUT_HORIZON
 
-        self.__step_selection = 0
-        self.__main_step = TimeAxis.STEP_LIST[8]
-        self.__sub_step_count = 10
-        self.__scale_step_limit_upper = TimeAxis.STEP_LIST[0]
-        self.__scale_step_limit_lower = TimeAxis.STEP_LIST[-1]
-
-        self.setMinimumWidth(400)
-        self.setMinimumHeight(500)
-
         self.set_time_range(0, HistoryTime.year(2000))
 
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         self.setMouseTracking(True)
 
         self.__history_core = None
@@ -568,12 +566,6 @@ class TimeAxis(QWidget):
             self.__layout = layout
             self.repaint()
 
-    # def set_axis_start_date(self, date: HistoryTime.TICK):
-    #     self.__total_tick_offset = date
-    #     self.__scroll = 0
-    #     self.__offset = 0
-    #     self.repaint()
-
     def set_axis_scale_step(self, step: HistoryTime.TICK):
         step_index = 0
         for preset_step in TimeAxis.STEP_LIST:
@@ -583,8 +575,8 @@ class TimeAxis(QWidget):
         self.select_step_scale(step_index)
 
     def set_axis_scale_step_limit(self, lower: HistoryTime.TICK, upper: HistoryTime.TICK):
-        self.__scale_step_limit_lower = lower
-        self.__scale_step_limit_upper = upper
+        self.__main_scale_limit_lower = lower
+        self.__main_scale_limit_upper = upper
 
     # --------------------------- Gets ---------------------------
 
@@ -646,7 +638,7 @@ class TimeAxis(QWidget):
 
     def align_from_point(self, pos: QPoint) -> ALIGN_TYPE:
         if self.__layout == LAYOUT_HORIZON:
-            return ALIGN_LEFT if pos.y() >= (self.__axis_width - self.__axis_mid) else ALIGN_RIGHT
+            return ALIGN_LEFT if pos.y() >= (self.__coordinate_metrics.get_transverse_length() - self.__axis_mid) else ALIGN_RIGHT
         else:
             return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
 
@@ -672,19 +664,19 @@ class TimeAxis(QWidget):
             # Get the value before step update
             current_pos = event.pos()
             pixel = current_pos.y() if self.__layout == LAYOUT_VERTICAL else current_pos.x()
-            current_pos_value = self.pixel_to_value(pixel)
+            current_pos_value = self.__coordinate_metrics.pixel_to_value(pixel)
 
-            old_main_step = self.__main_step
-            old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_step
+            old_main_step = self.__main_scale
+            old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
 
             self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
             # Make the value under mouse keep the same place on the screen
-            value_new_offset = current_pos_value * self.__pixel_per_scale / self.__main_step
+            value_new_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
             self.__scroll = int(value_new_offset - pixel)
             self.__offset = 0
 
             # print('Val = ' + str(current_pos_value) + '; Pixel = ' + str(pixel))
-            # print('Step: ' + str(old_main_step) + ' -> ' + str(self.__main_step))
+            # print('Step: ' + str(old_main_step) + ' -> ' + str(self.__main_scale))
             # print('Offset: ' + str(old_pixel_offset) + ' -> ' + str(value_new_offset))
         else:
             self.__scroll += (1 if angle_y < 0 else -1) * self.__pixel_per_scale / 4
@@ -778,31 +770,32 @@ class TimeAxis(QWidget):
         end = time.process_time()
 
         # print('Offset = %s, Step = %s; Pixel = %s, Value = %s' %
-        #       (self.__scroll + self.__offset, self.__main_step,
+        #       (self.__scroll + self.__offset, self.__main_scale,
         #        self.__mouse_on_coordinate.y(), self.__mouse_on_scale_value))
         print('Axis paint spends time: %s s' % (end - start))
 
     def paint_background(self, qp: QPainter):
         qp.setBrush(AXIS_BACKGROUND_COLORS[2])
-        qp.drawRect(0, 0, self.__width, self.__height)
+        qp.drawRect(self.__paint_area)
 
     def paint_horizon(self, qp: QPainter):
-        qp.drawLine(0, self.__height - self.__axis_mid, self.__width, self.__height - self.__axis_mid)
+        qp.drawLine(0, self.__paint_area.height() - self.__axis_mid,
+                    self.__paint_area.width(), self.__paint_area.height() - self.__axis_mid)
 
-        main_scale_start = self.__height - int(self.__axis_mid + 15)
-        main_scale_end = self.__height - int(self.__axis_mid - 15)
-        sub_scale_start = self.__height - int(self.__axis_mid + 5)
-        sub_scale_end = self.__height - int(self.__axis_mid - 5)
+        main_scale_start = self.__paint_area.height() - int(self.__axis_mid + 15)
+        main_scale_end = self.__paint_area.height() - int(self.__axis_mid - 15)
+        sub_scale_start = self.__paint_area.height() - int(self.__axis_mid + 5)
+        sub_scale_end = self.__paint_area.height() - int(self.__axis_mid - 5)
 
         self.__optimise_pixel.clear()
 
         for i in range(0, 12):
-            time_main = self.__paint_start_tick + i * self.__main_step
-            x_main = int(self.value_to_pixel(int(time_main)))
+            time_main = self.__paint_start_tick + i * self.__main_scale
+            x_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
 
             self.__optimise_pixel[x_main] = time_main
 
-            if self.__main_step >= HistoryTime.year(1):
+            if self.__main_scale >= HistoryTime.year(1):
                 main_scale_text = HistoryTime.tick_to_standard_string(time_main)
             else:
                 main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
@@ -810,14 +803,14 @@ class TimeAxis(QWidget):
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
             qp.drawText(x_main, main_scale_end + 20, main_scale_text)
 
-            for j in range(0, self.__sub_step_count):
-                time_sub = time_main + self.__main_step * j / self.__sub_step_count
-                x_sub = int(self.value_to_pixel(int(time_sub)))
+            for j in range(0, self.__sub_scale_count):
+                time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
+                x_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
                 self.__optimise_pixel[x_sub] = time_sub
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
 
     def paint_vertical(self, qp: QPainter):
-        qp.drawLine(self.__axis_mid, 0, self.__axis_mid, self.__height)
+        qp.drawLine(self.__axis_mid, 0, self.__axis_mid, self.__paint_area.height())
 
         main_scale_start = int(self.__axis_mid - 15)
         main_scale_end = int(self.__axis_mid + 15)
@@ -827,8 +820,8 @@ class TimeAxis(QWidget):
         self.__optimise_pixel.clear()
 
         for i in range(0, 12):
-            time_main = self.__paint_start_tick + i * self.__main_step
-            y_main = int(self.value_to_pixel(int(time_main)))
+            time_main = self.__paint_start_tick + i * self.__main_scale
+            y_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
 
             self.__optimise_pixel[y_main] = time_main
 
@@ -838,7 +831,7 @@ class TimeAxis(QWidget):
             # print(str(time_main) + '(' + str(original_year) + ') -> ' + str(y_main) + ' -> ' +
             #       str(retrieve_tick) + '(' + str(retrieve_year) + ')')
 
-            if self.__main_step >= HistoryTime.year(1):
+            if self.__main_scale >= HistoryTime.year(1):
                 main_scale_text = HistoryTime.tick_to_standard_string(time_main)
             else:
                 main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
@@ -846,9 +839,9 @@ class TimeAxis(QWidget):
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
-            for j in range(0, self.__sub_step_count):
-                time_sub = time_main + self.__main_step * j / self.__sub_step_count
-                y_sub = int(self.value_to_pixel(int(time_sub)))
+            for j in range(0, self.__sub_scale_count):
+                time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
+                y_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
                 self.__optimise_pixel[y_sub] = time_sub
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
@@ -862,8 +855,8 @@ class TimeAxis(QWidget):
 
         qp.setPen(QColor(0, 0, 0))
 
-        qp.drawLine(0, self.__mouse_on_coordinate.y(), self.__width, self.__mouse_on_coordinate.y())
-        qp.drawLine(self.__mouse_on_coordinate.x(), 0, self.__mouse_on_coordinate.x(), self.__height)
+        qp.drawLine(0, self.__mouse_on_coordinate.y(), self.__paint_area.width(), self.__mouse_on_coordinate.y())
+        qp.drawLine(self.__mouse_on_coordinate.x(), 0, self.__mouse_on_coordinate.x(), self.__paint_area.height())
 
         tip_text = self.format_real_time_tip()
 
@@ -874,7 +867,7 @@ class TimeAxis(QWidget):
 
         tip_area.setTop(tip_area.top() - fm.height())
         tip_area.setBottom(tip_area.bottom() - fm.height())
-        if tip_area.right() > self.__axis_width:
+        if tip_area.right() > self.__coordinate_metrics.get_transverse_length():
             tip_area.setLeft(tip_area.left() - text_width)
             tip_area.setRight(tip_area.right() - text_width)
 
@@ -886,46 +879,38 @@ class TimeAxis(QWidget):
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
-    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
-        thread = self.thread_from_point(point)
-        if thread is not None:
-            return thread.axis_item_from_point(point)
-
-    def calc_point_to_paint_start_offset(self, point):
-        if self.__layout == LAYOUT_HORIZON:
-            return point.x() - TimeAxis.DEFAULT_MARGIN_PIXEL
-        else:
-            return point.y() - TimeAxis.DEFAULT_MARGIN_PIXEL
-
     def update_paint_area(self):
         wnd_size = self.size()
-        self.__width = wnd_size.width()
-        self.__height = wnd_size.height()
-        self.__paint_area.setRect(0, 0, self.__width, self.__width)
-
-        self.__axis_width = self.__height if self.__layout == LAYOUT_HORIZON else self.__width
-        self.__axis_length = self.__width if self.__layout == LAYOUT_HORIZON else self.__height
-        self.__axis_length -= self.DEFAULT_MARGIN_PIXEL * 2
+        width = wnd_size.width()
+        height = wnd_size.height()
+        # TODO: Pixel not start from 0
+        self.__paint_area.setRect(0, 0, width, height)
+        self.__coordinate_metrics.set_transverse_limit(0, height if self.__layout == LAYOUT_HORIZON else width)
+        self.__coordinate_metrics.set_longitudinal_range(0, width if self.__layout == LAYOUT_HORIZON else height)
 
     def update_pixel_per_scale(self):
-        self.__pixel_per_scale = self.__axis_length / self.__scale_per_page
+        self.__pixel_per_scale = self.__coordinate_metrics.get_longitudinal_length() / self.__scale_per_page
         self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
-        # Update the ratio of history time / pixel
-        self.__tick_pixel_mapping.set_range_ref(self.__main_step, self.__pixel_per_scale)
+        # Update the ratio of history-time / pixel
+        self.__tick_offset_mapping.set_range_ref(self.__main_scale, self.__pixel_per_scale)
 
     def calc_paint_parameters(self):
         if self.__seeking is not None:
-            self.__scroll = self.__tick_pixel_mapping.a_to_b(self.__seeking)
+            self.__scroll = self.__tick_offset_mapping.a_to_b(self.__seeking)
             self.__offset = 0
             self.__seeking = None
         self.__total_pixel_offset = self.__scroll + self.__offset
-        self.__total_tick_offset += self.__tick_pixel_mapping.b_to_a(self.__total_pixel_offset)
+
+        tick_since = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset)
+        tick_until = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset +
+                                                       self.__coordinate_metrics.get_longitudinal_length())
+        self.__coordinate_metrics.set_scale_range(tick_since, tick_until)
 
         self.__paint_since_scale = float(self.__total_pixel_offset) / self.__pixel_per_scale
-        self.__paint_until_scale = float(self.__total_pixel_offset + self.__axis_length) / self.__pixel_per_scale
+        self.__paint_until_scale = float(self.__total_pixel_offset + self.__coordinate_metrics.get_longitudinal_length()) / self.__pixel_per_scale
 
         paint_start_scale = math.floor(self.__paint_since_scale)
-        self.__paint_start_tick = paint_start_scale * self.__main_step
+        self.__paint_start_tick = paint_start_scale * self.__main_scale
 
     def calc_paint_layout(self):
         # Reserve the text width (hori) / height (vert) of datetime
@@ -933,7 +918,7 @@ class TimeAxis(QWidget):
 
         left_thread_count = len(self.__left_history_threads)
         right_thread_count = len(self.__right_history_threads)
-        self.__axis_mid = int(self.__axis_width * self.__axis_align_offset)
+        self.__axis_mid = int(self.__coordinate_metrics.get_transverse_length() * self.__axis_align_offset)
 
         # TODO: Use AxisMetrics
 
@@ -941,16 +926,16 @@ class TimeAxis(QWidget):
         self.__axis_right = int(self.__axis_mid + self.__axis_space_w / 2 + 10)
 
         if self.__layout == LAYOUT_HORIZON:
-            self.__axis_left = self.__axis_width - self.__axis_left
-            self.__axis_right = self.__axis_width - self.__axis_right
+            self.__axis_left = self.__coordinate_metrics.get_transverse_length() - self.__axis_left
+            self.__axis_right = self.__coordinate_metrics.get_transverse_length() - self.__axis_right
 
-            left_thread_width = ((self.__axis_width - self.__axis_left) / left_thread_count) if \
+            left_thread_width = ((self.__coordinate_metrics.get_transverse_length() - self.__axis_left) / left_thread_count) if \
                 left_thread_count > 0 else 0
             right_thread_width = (self.__axis_right / right_thread_count) \
                 if right_thread_count > 0 else 0
         else:
             left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
-            right_thread_width = (self.__axis_width - self.__axis_right) / right_thread_count \
+            right_thread_width = (self.__coordinate_metrics.get_transverse_length() - self.__axis_right) / right_thread_count \
                 if right_thread_count > 0 else 0
 
         # Vertical -> Horizon : Left rotate
@@ -963,10 +948,10 @@ class TimeAxis(QWidget):
             metrics.set_layout(self.__layout)
 
             top = TimeAxis.DEFAULT_MARGIN_PIXEL
-            bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
             if self.__layout == LAYOUT_HORIZON:
                 # TODO: Can we just rotate the QPaint axis?
-                left = self.__axis_width - i * left_thread_width
+                left = self.__coordinate_metrics.get_transverse_length() - i * left_thread_width
                 right = left - left_thread_width
             else:
                 left = i * left_thread_width
@@ -974,8 +959,8 @@ class TimeAxis(QWidget):
 
             metrics.set_transverse_limit(left, right)
             metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
-                                    self.__paint_until_scale * self.__main_step)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
+                                    self.__paint_until_scale * self.__main_scale)
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
@@ -987,7 +972,7 @@ class TimeAxis(QWidget):
             metrics.set_layout(self.__layout)
 
             top = TimeAxis.DEFAULT_MARGIN_PIXEL
-            bottom = self.__axis_length - TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
             if self.__layout == LAYOUT_HORIZON:
                 # TODO: Can we just rotate the QPaint axis?
                 left = self.__axis_right - i * right_thread_width
@@ -997,22 +982,12 @@ class TimeAxis(QWidget):
                 right = left + right_thread_width
             metrics.set_transverse_limit(left, right)
             metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__paint_since_scale * self.__main_step,
-                                    self.__paint_until_scale * self.__main_step)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
+                                    self.__paint_until_scale * self.__main_scale)
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
-
-    def value_to_pixel(self, value: int, from_origin: bool = False) -> float:
-        return float(value - self.__total_tick_offset) / self.__main_step * self.__pixel_per_scale \
-               if not from_origin else value / self.__main_step * self.__pixel_per_scale
-
-    def pixel_to_value(self, pixel: int) -> float:
-        if pixel in self.__optimise_pixel.keys():
-            return self.__optimise_pixel[pixel]
-        else:
-            return float(pixel) / self.__pixel_per_scale * self.__main_step + self.__total_tick_offset
 
     def auto_scale(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         # since_rough = lower_rough(since)
@@ -1027,7 +1002,6 @@ class TimeAxis(QWidget):
                 break
             step_index += 1
         self.select_step_scale(step_index - 1)
-
         self.update_pixel_per_scale()
 
     def select_step_scale(self, step_index: int):
@@ -1035,12 +1009,33 @@ class TimeAxis(QWidget):
         step_index = min(step_index, len(TimeAxis.STEP_LIST) - 1)
         new_step = TimeAxis.STEP_LIST[step_index]
 
-        if self.__scale_step_limit_lower <= new_step <= self.__scale_step_limit_upper:
-            self.__main_step = new_step
+        if self.__main_scale_limit_lower <= new_step <= self.__main_scale_limit_upper:
+            self.__main_scale = new_step
             self.__step_selection = step_index
-            self.__sub_step_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
-        self.__main_step = max(self.__main_step, self.__scale_step_limit_lower)
-        self.__main_step = min(self.__main_step, self.__scale_step_limit_upper)
+            self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
+        self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
+        self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
+
+    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
+        thread = self.thread_from_point(point)
+        if thread is not None:
+            return thread.axis_item_from_point(point)
+
+    def calc_point_to_paint_start_offset(self, point):
+        if self.__layout == LAYOUT_HORIZON:
+            return point.x() - TimeAxis.DEFAULT_MARGIN_PIXEL
+        else:
+            return point.y() - TimeAxis.DEFAULT_MARGIN_PIXEL
+
+    # def value_to_pixel(self, value: int, from_origin: bool = False) -> float:
+    #     return float(value - self.__total_tick_offset) / self.__main_scale * self.__pixel_per_scale \
+    #            if not from_origin else value / self.__main_scale * self.__pixel_per_scale
+    #
+    # def pixel_to_value(self, pixel: int) -> float:
+    #     if pixel in self.__optimise_pixel.keys():
+    #         return self.__optimise_pixel[pixel]
+    #     else:
+    #         return float(pixel) / self.__pixel_per_scale * self.__main_scale + self.__total_tick_offset
 
     # ------------------------------------------ Art ------------------------------------------
 
@@ -1064,9 +1059,9 @@ class TimeAxis(QWidget):
         if self.__mouse_on_coordinate != pos:
             self.__mouse_on_coordinate = pos
             if self.__layout == LAYOUT_HORIZON:
-                self.__mouse_on_scale_value = self.pixel_to_value(pos.x())
+                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pos.x())
             else:
-                self.__mouse_on_scale_value = self.pixel_to_value(pos.y())
+                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pos.y())
             self.__mouse_on_item = self.axis_item_from_point(pos)
             self.repaint()
 

@@ -57,16 +57,20 @@ class AxisMapping:
     def __init__(self,
                  range_a_lower: float or int = 0, range_a_upper: float or int = 0,
                  range_b_lower: float or int = 0, range_b_upper: float or int = 0):
+        # al = a lower, ar = a reference
         self.__al = range_a_lower
-        self.__ah = range_a_upper
+        self.__ar = range_a_upper - range_a_lower
+        # bl = b lower, br = b reference
         self.__bl = range_b_lower
-        self.__bh = range_b_upper
+        self.__br = range_b_upper - range_b_lower
 
     def set_range_a(self, lower: float or int, upper: float or int):
-        self.__al, self.__ah = lower, upper
+        self.__al = lower
+        self.__ar = upper - lower
 
     def set_range_b(self, lower: float or int, upper: float or int):
-        self.__bl, self.__bh = lower, upper
+        self.__bl = lower
+        self.__br = upper - lower
 
     def set_range_ref(self, ref_a: float or int, ref_b: float or int,
                       origin_a: float or int = 0, origin_b: float or int = 0):
@@ -78,25 +82,14 @@ class AxisMapping:
         :param origin_b: The origin (offset) of range b
         :return: None
         """
-        if self.is_digit_zero(ref_a) or self.is_digit_zero(ref_b):
-            return
-        self.__al, self.__bl = origin_a, origin_b
-        # Formula: (bh - bl) / (ah - al) = ref_a / ref_b
-        # Assume: ah = al + 1000000
-        self.__ah = self.__al + 1000000
-        # So: (bh - bl) / 1000000 = ref_a / ref_b
-        # Finally: bh = (ref_a / ref_b) * 1000000 + bl
-        self.__bh = 1000000 * ref_a / ref_b + self.__bl
+        self.__al, self.__ar = origin_a, ref_a
+        self.__bl, self.__br = origin_b, ref_b
 
     def a_to_b(self, value_a) -> float:
-        if self.is_digit_zero(self.__ah - self.__al):
-            return 0.0
-        return (value_a - self.__al) * (self.__bh - self.__bl) / (self.__ah - self.__al) + self.__bl
+        return 0.0 if self.is_digit_zero(self.__ar) else (value_a - self.__al) * self.__br / self.__ar + self.__bl
 
     def b_to_a(self, value_b) -> float:
-        if self.is_digit_zero((self.__bh - self.__bl)):
-            return 0.0
-        return (value_b - self.__bl) * (self.__ah - self.__al) / (self.__bh - self.__bl) + self.__al
+        return 0.0 if self.is_digit_zero(self.__br) else (value_b - self.__bl) * self.__ar / self.__br + self.__al
 
     @staticmethod
     def is_digit_zero(digit: float or int):
@@ -117,6 +110,7 @@ class AxisMetrics:
         self.__longitudinal_until = 0
         self.__align = ALIGN_LEFT
         self.__layout = LAYOUT_VERTICAL
+        self.__value_pixel_mapping = AxisMapping()
 
     # ------------------- Gets -------------------
 
@@ -135,6 +129,12 @@ class AxisMetrics:
     def get_longitudinal_range(self) -> (int, int):
         return self.__longitudinal_since, self.__longitudinal_until
 
+    def get_transverse_length(self) -> int:
+        return abs(self.__transverse_right - self.__transverse_left)
+
+    def get_longitudinal_length(self) -> int:
+        return abs(self.__longitudinal_until - self.__longitudinal_since)
+
     # ------------------- Sets -------------------
 
     def set_align(self, align: ALIGN_TYPE):
@@ -146,14 +146,16 @@ class AxisMetrics:
     def set_scale_range(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         self.__scale_since = since
         self.__scale_until = until
+        self.__value_pixel_mapping.set_range_a(since, until)
 
     def set_transverse_limit(self, left: int, right: int):
         self.__transverse_left = left
         self.__transverse_right = right
 
-    def set_longitudinal_range(self, since: int, _range: int):
+    def set_longitudinal_range(self, since: int, until: int):
         self.__longitudinal_since = since
-        self.__longitudinal_until = _range
+        self.__longitudinal_until = until
+        self.__value_pixel_mapping.set_range_b(since, until)
 
     # ------------------- Parse -------------------
 
@@ -206,11 +208,15 @@ class AxisMetrics:
                 area.setRight(self.__longitudinal_until)
         return area
 
-    def value_to_pixel(self, value: HistoryTime.TICK):
-        scale_delta = self.__scale_until - self.__scale_since
-        if scale_delta == 0:
-            return 0
-        return (self.__longitudinal_until - self.__longitudinal_since) * (value - self.__scale_since) / scale_delta
+    def value_to_pixel(self, value: HistoryTime.TICK) -> int:
+        return int(self.__value_pixel_mapping.a_to_b(value))
+        # scale_delta = self.__scale_until - self.__scale_since
+        # if scale_delta == 0:
+        #     return 0
+        # return (self.__longitudinal_until - self.__longitudinal_since) * (value - self.__scale_since) / scale_delta
+
+    def pixel_to_value(self, pixel: int) -> HistoryTime.TICK:
+        return HistoryTime.TICK(self.__value_pixel_mapping.b_to_a(pixel))
 
 
 # ----------------------------------------------------------------------------------------------------------------------
