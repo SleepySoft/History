@@ -30,12 +30,20 @@ class HistoryTime:
     TICK_MIN = TICK_SEC * 60            # 60
     TICK_HOUR = TICK_MIN * 60           # 3600
     TICK_DAY = TICK_HOUR * 24           # 86400
-    TICK_YEAR = TICK_DAY * 366          # 31622400
+    TICK_YEAR = TICK_DAY * 365          # 31536000
+    TICK_LEAP_YEAR = TICK_DAY * 365     # 31622400
     TICK_WEEK = TICK(TICK_YEAR / 52)    # 608123.0769230769
     TICK_MONTH = [1,
                   31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
                   152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
                   274 * TICK_DAY, 304 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY]
+
+    MONTH_DAYS = [
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ]
+    MONTH_DAYS_LEAP_YEAR = [
+        31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+    ]
 
     EFFECTIVE_TIME_DIGIT = 10
 
@@ -299,6 +307,64 @@ class HistoryTime:
         else:
             text = '公元' + str(-year) + '年'
         return text + str(month) + '月' + str(day) + '日'
+
+    # -------------------------------------------- Strict DateTime From AD ---------------------------------------------
+
+    @staticmethod
+    def is_leap_year(year: int) -> bool:
+        year = abs(year)
+        return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
+    @staticmethod
+    def leap_year_count_since_ad(year: int) -> int:
+        """
+        Concept: Leap year should exclude the 25th, 50th, 75th, keep 100th, exclude 125th, 150th, ...
+        :param year:
+        :return:
+        """
+        rough_count = year // 4
+        except_count = rough_count - rough_count // 25 + rough_count // 100
+        return except_count
+
+    @staticmethod
+    def ad_second_to_year(sec: int) -> (int, int):
+        """
+
+        :param sec: The second since AD
+        :return: Year, Remainder of Seconds
+        """
+        sign = -1 if sec < 0 else 1
+        sec = abs(sec)
+
+        rough_years = sec // HistoryTime.TICK_YEAR
+        while True:
+            leap_year_count = HistoryTime.leap_year_count_since_ad(rough_years)
+            precise_year_days = rough_years * 365 + leap_year_count
+            remaining_sec = sec - precise_year_days * HistoryTime.TICK_DAY
+            if remaining_sec < 0:
+                rough_years -= 1
+            else:
+                break
+        return sign * rough_years, remaining_sec
+
+    @staticmethod
+    def seconds_to_month(sec: int, year: int = 0):
+        if year == 0:
+            year, sec = HistoryTime.ad_second_to_year(sec)
+        leap_year = HistoryTime.is_leap_year(year)
+        year_days = HistoryTime.TICK_LEAP_YEAR if leap_year else HistoryTime.TICK_YEAR
+        if sec > year_days:
+            sec = year_days % year_days
+        month_days = HistoryTime.MONTH_DAYS_LEAP_YEAR if leap_year else HistoryTime.MONTH_DAYS
+
+        month_sec = 0
+        for month in range(len(month_days)):
+            month_sec += month_days[month] * HistoryTime.TICK_DAY
+            if month_sec >= sec:
+                break
+            month_days += 1
+        return month, sec - month_sec
+
 
 
 # ----------------------------------------------------- Test Code ------------------------------------------------------
