@@ -185,6 +185,8 @@ class AxisMetrics:
         self.__longitudinal_until = rhs.__longitudinal_until
         self.__align = rhs.__align
         self.__layout = rhs.__layout
+        self.__value_pixel_mapping.set_range_a(self.__scale_since, self.__scale_until)
+        self.__value_pixel_mapping.set_range_b(self.__longitudinal_since, self.__longitudinal_until)
 
     def offset(self, long_offset: int, wide_offset: int):
         self.__longitudinal_since += long_offset

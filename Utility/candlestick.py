@@ -31,11 +31,11 @@ class Candlestick(AxisItem):
     COLOR_INCREASE = QColor(255, 0, 0)
     COLOR_DECREASE = QColor(0, 255, 0)
 
-    def __init__(self, upper_limit: float, lower_limit: float,
+    def __init__(self, lower_limit: float, upper_limit: float,
                  date: HistoryTime.TICK, _open: float, close: float, high: float, low: float):
         super(Candlestick, self).__init__(None, {})
-        self.__upper_limit = upper_limit
-        self.__lower_limit = lower_limit
+        self.__lower_limit = min(lower_limit, upper_limit)
+        self.__upper_limit = max(lower_limit, upper_limit)
         self.__date = date
         self.__open = _open
         self.__close = close
@@ -69,11 +69,18 @@ class Candlestick(AxisItem):
         metrics = self.get_item_metrics()
         item_rect = metrics.rect()
 
-        limit_range = self.__upper_limit - self.__lower_limit
-        open_y = item_rect.bottom() + item_rect.height() * (self.__open - self.__lower_limit) / limit_range
-        close_y = item_rect.bottom() + item_rect.height() * (self.__close - self.__lower_limit) / limit_range
-        high_y = item_rect.bottom() + item_rect.height() * (self.__high - self.__lower_limit) / limit_range
-        low_y = item_rect.bottom() + item_rect.height() * (self.__low - self.__lower_limit) / limit_range
+        value_y_mapping = AxisMapping(self.__lower_limit, self.__upper_limit, item_rect.bottom(), item_rect.top())
+        # limit_range = self.__upper_limit - self.__lower_limit
+
+        open_y = value_y_mapping.a_to_b(self.__open)
+        close_y = value_y_mapping.a_to_b(self.__close)
+        high_y = value_y_mapping.a_to_b(self.__high)
+        low_y = value_y_mapping.a_to_b(self.__low)
+
+        # open_y = item_rect.top() + item_rect.height() - item_rect.height() * (self.__open - self.__lower_limit) / limit_range
+        # close_y = item_rect.top() + item_rect.height() - item_rect.height() * (self.__close - self.__lower_limit) / limit_range
+        # high_y = item_rect.top() + item_rect.height() - item_rect.height() * (self.__high - self.__lower_limit) / limit_range
+        # low_y = item_rect.top() + item_rect.height() - item_rect.height() * (self.__low - self.__lower_limit) / limit_range
 
         item_rect.setTop(open_y)
         item_rect.setBottom(close_y)
@@ -113,8 +120,8 @@ def main():
     history_viewer.get_time_axis().set_axis_layout(LAYOUT_HORIZON)
     history_viewer.get_time_axis().set_axis_scale_step_limit(HistoryTime.TICK_DAY, HistoryTime.TICK_YEAR)
     history_viewer.get_time_axis().set_axis_scale_step(HistoryTime.TICK_DAY)
-    history_viewer.get_time_axis().set_time_range(HistoryTime.year(1980), HistoryTime.year(2030))
-    history_viewer.get_time_axis().add_history_thread(thread)
+    history_viewer.get_time_axis().set_time_range(HistoryTime.year(2010), HistoryTime.year(2020))
+    history_viewer.get_time_axis().add_history_thread(thread, ALIGN_RIGHT)
     history_viewer.exec()
 
 
