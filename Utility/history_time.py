@@ -361,6 +361,10 @@ class HistoryTime:
         return HistoryTime.MONTH_SEC_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_SEC
 
     @staticmethod
+    def month_days(year: int) -> [int]:
+        return HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_DAYS
+
+    @staticmethod
     def offset_bc_tick_to_ad(sec: int) -> (int, int):
         """
         It's hard to calculate the Date of BC directly.
@@ -538,6 +542,14 @@ class HistoryTime:
 
 # ----------------------------------------------------- Test Code ------------------------------------------------------
 
+f = open('history_time.log', 'wt')
+
+
+def __log_error(text: str):
+    f.write(text)
+    f.flush()
+
+
 def __verify_year_month(time_str, year_expect, month_expect):
     times = HistoryTime.time_text_to_history_times(time_str)
     year, month, day = HistoryTime.date_of_tick(times[0])
@@ -656,13 +668,13 @@ def __cross_verify_tick_datetime(*args):
     date_time = HistoryTime.ad_seconds_to_date_time(ad_tick)
     if date_time != args:
         print('Error: ' + str(args))
-        assert False
+        __log_error('Error: ' + str(args))
 
 
 def test_batch_ad_conversion():
     for year in range(0, 3000):
         for month in range(0, 12):
-            month_days = HistoryTime.month_ticks(year + 1)
+            month_days = HistoryTime.month_days(year + 1)
             for day in range(0, month_days[month + 1]):
                 for hour in [0, 8, 16, 23]:
                     for minute in [0, 30, 59]:
@@ -674,20 +686,25 @@ def test_batch_ad_conversion():
 def test_batch_bc_conversion():
     for year in range(0, -3000, -1):
         for month in range(0, 12):
-            month_days = HistoryTime.month_ticks(year - 1)
+            month_days = HistoryTime.month_days(year - 1)
             for day in range(0, month_days[month + 1]):
-                for hour in range(0, 24):
+                for hour in [0, 8, 16, 23]:
                     for minute in [0, 30, 59]:
                         for second in [0, 30, 59]:
                             __cross_verify_tick_datetime(year - 1, month + 1, day + 1, hour, minute, second)
-            print('BC %04d-%02d is OK.' % -(year - 1, month + 1))
+            print('BC %04d-%02d is OK.' % (-(year - 1), month + 1))
 
 
 def __manual_check_continuity_of_datetime_to_tick_single(sec: int):
     date_time = HistoryTime.ad_seconds_to_date_time(sec)
     seconds = HistoryTime.date_time_to_ad_seconds(*date_time)
-    print(str(sec) + ' -> ' + str(date_time) + ' -> ' + str(seconds) + ' : ' + ('PASS' if seconds == sec else 'FAIL'))
-    if seconds != sec:
+
+    success = (seconds == sec)
+    text = str(sec) + ' -> ' + str(date_time) + ' -> ' + str(seconds) + ' : ' + ('PASS' if success else 'FAIL')
+
+    print(text)
+    if not success:
+        __log_error(text)
         print('-------------------------------------------------')
 
 
@@ -699,14 +716,14 @@ def manual_check_continuity_of_datetime_to_tick():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    test_history_time_year()
-    test_history_time_year_month()
-    test_time_text_to_history_times()
-    test_ad_since_tick()
-    test_datetime_to_tick()
-    # test_batch_ad_conversion()
-    # test_batch_bc_conversion()
-    # manual_check_continuity_of_datetime_to_tick()
+    # test_history_time_year()
+    # test_history_time_year_month()
+    # test_time_text_to_history_times()
+    # test_ad_since_tick()
+    # test_datetime_to_tick()
+    test_batch_ad_conversion()
+    test_batch_bc_conversion()
+    manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
 
