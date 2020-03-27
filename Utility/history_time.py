@@ -330,6 +330,8 @@ class HistoryTime:
 
     @staticmethod
     def is_leap_year(year: int) -> bool:
+        if year == 0:
+            return False
         year = abs(year)
         return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
@@ -374,20 +376,20 @@ class HistoryTime:
         Convert seconds to month considering the size of the month and leap years
         :param sec: The seconds
         :param year: The year, for checking leap year. If it's 0, it will try to get year from sec
-        :return: Month - Start from 1; 13 if 
+        :return: Month - Start from 1
                  Remainder of Seconds
         """
         if year == 0:
             year, sec = HistoryTime.ad_second_to_year(sec)
         leap_year = HistoryTime.is_leap_year(year)
-        year_days = HistoryTime.TICK_LEAP_YEAR if leap_year else HistoryTime.TICK_YEAR
-        if sec > year_days:
-            sec = year_days % year_days
+        year_sec = HistoryTime.TICK_LEAP_YEAR if leap_year else HistoryTime.TICK_YEAR
+        if sec > year_sec:
+            sec = sec % year_sec
         month_sec = HistoryTime.MONTH_SEC_LEAP_YEAR if leap_year else HistoryTime.MONTH_SEC
 
         month = 1
         while month < len(month_sec):
-            if month_sec[month] >= sec:
+            if month_sec[month] > sec:
                 break
             month += 1
         return month, sec - month_sec[month - 1]
@@ -397,7 +399,7 @@ class HistoryTime:
         """
         Convert seconds to days
         :param sec: Seconds
-        :return: Days
+        :return: Days - Start from 0
                  Remainder of Seconds
         """
         return sec // HistoryTime.TICK_DAY, sec % HistoryTime.TICK_DAY
@@ -459,11 +461,13 @@ class HistoryTime:
                                 hours: int = 0, minutes: int = 0, seconds: int = 0) -> TICK:
         assert 1 <= month <= 12
 
-        leap_years = HistoryTime.leap_year_count_since_ad(year)
         leap_year = HistoryTime.is_leap_year(year)
-        if leap_year:
-            # Exclude this year
-            leap_years -= 1
+
+        year = HistoryTime.__shrink_edge(year)
+        month = HistoryTime.__shrink_edge(month)
+        day = HistoryTime.__shrink_edge(day)
+
+        leap_years = HistoryTime.leap_year_count_since_ad(year)
         year_seconds = year * HistoryTime.TICK_YEAR + leap_years * HistoryTime.TICK_DAY
 
         month_sec = HistoryTime.MONTH_SEC_LEAP_YEAR if leap_year else HistoryTime.MONTH_SEC
@@ -472,6 +476,15 @@ class HistoryTime:
         day_seconds = day * HistoryTime.TICK_DAY
 
         return year_seconds + month_seconds + day_seconds + HistoryTime.time_to_seconds(hours, minutes, seconds)
+
+    @staticmethod
+    def __shrink_edge(num: int) -> int:
+        if num > 0:
+            return num - 1
+        if num < 0:
+            return num + 1
+        else:
+            return num
 
 
 # ----------------------------------------------------- Test Code ------------------------------------------------------
@@ -547,19 +560,20 @@ def __cross_verify_tick_datetime(*args):
     ad_tick = HistoryTime.date_time_to_ad_seconds(*args)
     date_time = HistoryTime.ad_seconds_to_date_time(ad_tick)
     if date_time != args:
-        print('Break Point Here')
+        print('Error: ' + str(args))
         assert False
 
 
 def test_batch_ad_conversion():
     for year in range(0, 3000):
         for month in range(0, 12):
-            month_days = HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_DAYS
-            for day in range(0, month_days[month]):
+            month_days = HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year + 1) else HistoryTime.MONTH_DAYS
+            for day in range(0, month_days[month + 1]):
                 for hour in range(0, 24):
-                    for minute in range(0, 60):
-                        for second in range(0, 60):
+                    for minute in [0, 30, 59]:
+                        for second in [0, 30, 59]:
                             __cross_verify_tick_datetime(year + 1, month + 1, day + 1, hour, minute, second)
+            print('%04d-%02d is OK.' % (year + 1, month + 1))
 
 
 def test_ad_since_tick():
@@ -585,14 +599,40 @@ def test_ad_since_tick():
     assert (year, month, day, hour, minutes, sec) == (5, 1, 1, 0, 0, 0)
 
 
+def test_datetime_to_tick():
+    ad_tick = HistoryTime.date_time_to_ad_seconds(1, 1, 1, 0, 0, 0)
+    assert ad_tick == 0
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(1, 1, 1, 23, 59, 59)
+    assert ad_tick == HistoryTime.TICK_DAY - 1
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(1, 1, 2, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_DAY
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(1, 12, 31, 23, 59, 59)
+    assert ad_tick == HistoryTime.TICK_YEAR - 1
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(2, 1, 1, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(4, 12, 31, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR * 4
+
+    ad_tick = HistoryTime.date_time_to_ad_seconds(5, 1, 1, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR
+
+
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    # test_history_time_year()
-    # test_history_time_year_month()
-    # test_time_text_to_history_times()
-    # test_ad_since_tick()
+    test_history_time_year()
+    test_history_time_year_month()
+    test_time_text_to_history_times()
+    test_ad_since_tick()
+    test_datetime_to_tick()
     test_batch_ad_conversion()
+    # __cross_verify_tick_datetime(1, 2, 1, 0, 0, 0)
+
     print('All test passed.')
 
 
