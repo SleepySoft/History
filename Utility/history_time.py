@@ -339,9 +339,10 @@ class HistoryTime:
     def leap_year_count_since_ad(year: int) -> int:
         """
         Concept: Leap year should exclude the 25th, 50th, 75th, keep 100th, exclude 125th, 150th, ...
-        :param year:
-        :return:
+        :param year: Since 0001
+        :return: Leap year count that include this year itself
         """
+        year = 1 if year == 0 else abs(year)
         rough_count = year // 4
         except_count = rough_count - rough_count // 25 + rough_count // 100
         return except_count
@@ -376,8 +377,13 @@ class HistoryTime:
         """
         if sec >= 0:
             return sec, 0
-        offset_year = -sec // HistoryTime.TICK_YEAR + 1
+        abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
+        offset_year = abs_year
         offset_year_ticks = HistoryTime.year_ticks_since_ad(offset_year)
+        # BC 0003-MM-DD, the offset_year will be 4
+        # It will over count for one year
+        if HistoryTime.is_leap_year(offset_year) and remaining_sec == 0:
+            offset_year_ticks -= HistoryTime.TICK_DAY
         return sec + offset_year_ticks, offset_year + 1
 
     @staticmethod
@@ -414,6 +420,9 @@ class HistoryTime:
         rough_years = sec // HistoryTime.TICK_YEAR
         while True:
             leap_year_count = HistoryTime.leap_year_count_since_ad(rough_years)
+            # Exclude itself
+            if HistoryTime.is_leap_year(rough_years):
+                leap_year_count -= 1
             precise_year_days = rough_years * 365 + leap_year_count
             remaining_sec = sec - precise_year_days * HistoryTime.TICK_DAY
             if remaining_sec < 0:
@@ -484,7 +493,7 @@ class HistoryTime:
         offset_tick, offset_year = HistoryTime.offset_bc_tick_to_ad(sec)
 
         year, remainder = HistoryTime.ad_second_to_year(offset_tick)
-        month, remainder = HistoryTime.seconds_to_month(remainder, year)
+        month, remainder = HistoryTime.seconds_to_month(remainder, abs(year - offset_year))
         day, remainder = HistoryTime.seconds_to_day(remainder)
 
         return year - offset_year, month, day + 1, remainder
@@ -667,7 +676,7 @@ def __cross_verify_tick_datetime(*args):
     ad_tick = HistoryTime.date_time_to_ad_seconds(*args)
     date_time = HistoryTime.ad_seconds_to_date_time(ad_tick)
     if date_time != args:
-        print('Error: ' + str(args))
+        print('Error: ' + str(args) + ' -> ' + str(date_time))
         __log_error('Error: ' + str(args))
 
 
@@ -716,14 +725,19 @@ def manual_check_continuity_of_datetime_to_tick():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
+    # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
+    # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
+    # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
+    __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
+
     # test_history_time_year()
     # test_history_time_year_month()
     # test_time_text_to_history_times()
     # test_ad_since_tick()
     # test_datetime_to_tick()
-    test_batch_ad_conversion()
+    # test_batch_ad_conversion()
     test_batch_bc_conversion()
-    manual_check_continuity_of_datetime_to_tick()
+    # manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
 

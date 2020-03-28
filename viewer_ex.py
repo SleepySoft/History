@@ -743,6 +743,116 @@ class TimeAxis(QWidget):
         self.__history_editor.show_browser(False)
         self.__history_editor.exec()
 
+    # -------------------------------------------------- Calculation ---------------------------------------------------
+
+    def update_paint_area(self):
+        wnd_size = self.size()
+        width = wnd_size.width()
+        height = wnd_size.height()
+        # TODO: Pixel not start from 0
+        self.__paint_area.setRect(0, 0, width, height)
+        self.__coordinate_metrics.set_transverse_limit(0, height if self.__layout == LAYOUT_HORIZON else width)
+        self.__coordinate_metrics.set_longitudinal_range(0, width if self.__layout == LAYOUT_HORIZON else height)
+
+    def update_pixel_per_scale(self):
+        self.__pixel_per_scale = self.__coordinate_metrics.get_longitudinal_length() / self.__scale_per_page
+        self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
+        # Update the ratio of history-time / pixel
+        self.__tick_offset_mapping.set_range_ref(self.__main_scale, self.__pixel_per_scale)
+
+    def calc_paint_parameters(self):
+        if self.__seeking is not None:
+            self.__scroll = self.__tick_offset_mapping.a_to_b(self.__seeking)
+            self.__offset = 0
+            self.__seeking = None
+        self.__total_pixel_offset = self.__scroll + self.__offset
+
+        tick_since = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset)
+        tick_until = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset +
+                                                       self.__coordinate_metrics.get_longitudinal_length())
+        self.__coordinate_metrics.set_scale_range(tick_since, tick_until)
+
+        self.__paint_since_scale = float(self.__total_pixel_offset) / self.__pixel_per_scale
+        self.__paint_until_scale = float(self.__total_pixel_offset + self.__coordinate_metrics.get_longitudinal_length()) / self.__pixel_per_scale
+
+        paint_start_scale = math.floor(self.__paint_since_scale)
+        self.__paint_start_tick = paint_start_scale * self.__main_scale
+
+    def calc_paint_layout(self):
+        # Reserve the text width (hori) / height (vert) of datetime
+        era_text_width = 30 if self.__layout == LAYOUT_HORIZON else 80
+
+        left_thread_count = len(self.__left_history_threads)
+        right_thread_count = len(self.__right_history_threads)
+        self.__axis_mid = int(self.__coordinate_metrics.get_transverse_length() * self.__axis_align_offset)
+
+        # TODO: Use AxisMetrics
+
+        self.__axis_left = int(self.__axis_mid - self.__axis_space_w / 2 - 10) - era_text_width
+        self.__axis_right = int(self.__axis_mid + self.__axis_space_w / 2 + 10)
+
+        if self.__layout == LAYOUT_HORIZON:
+            self.__axis_left = self.__coordinate_metrics.get_transverse_length() - self.__axis_left
+            self.__axis_right = self.__coordinate_metrics.get_transverse_length() - self.__axis_right
+
+            left_thread_width = ((self.__coordinate_metrics.get_transverse_length() - self.__axis_left) / left_thread_count) if \
+                left_thread_count > 0 else 0
+            right_thread_width = (self.__axis_right / right_thread_count) \
+                if right_thread_count > 0 else 0
+        else:
+            left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
+            right_thread_width = (self.__coordinate_metrics.get_transverse_length() - self.__axis_right) / right_thread_count \
+                if right_thread_count > 0 else 0
+
+        # Vertical -> Horizon : Left rotate
+
+        for i in range(0, left_thread_count):
+            thread = self.__left_history_threads[i]
+
+            metrics = AxisMetrics()
+            metrics.set_align(ALIGN_LEFT)
+            metrics.set_layout(self.__layout)
+
+            top = TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
+            if self.__layout == LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
+                left = self.__coordinate_metrics.get_transverse_length() - i * left_thread_width
+                right = left - left_thread_width
+            else:
+                left = i * left_thread_width
+                right = left + left_thread_width
+
+            metrics.set_transverse_limit(left, right)
+            metrics.set_longitudinal_range(top, bottom)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
+                                    self.__paint_until_scale * self.__main_scale)
+            thread.set_thread_metrics(metrics)
+            thread.refresh()
+
+        for i in range(0, right_thread_count):
+            thread = self.__right_history_threads[i]
+
+            metrics = AxisMetrics()
+            metrics.set_align(ALIGN_RIGHT)
+            metrics.set_layout(self.__layout)
+
+            top = TimeAxis.DEFAULT_MARGIN_PIXEL
+            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
+            if self.__layout == LAYOUT_HORIZON:
+                # TODO: Can we just rotate the QPaint axis?
+                left = self.__axis_right - i * right_thread_width
+                right = left - right_thread_width
+            else:
+                left = self.__axis_right + i * right_thread_width
+                right = left + right_thread_width
+            metrics.set_transverse_limit(left, right)
+            metrics.set_longitudinal_range(top, bottom)
+            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
+                                    self.__paint_until_scale * self.__main_scale)
+            thread.set_thread_metrics(metrics)
+            thread.refresh()
+
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paintEvent(self, event):
@@ -876,116 +986,6 @@ class TimeAxis(QWidget):
 
         qp.drawRect(tip_area)
         qp.drawText(tip_area, Qt.AlignLeft, tip_text)
-
-    # -------------------------------------------------- Calculation ---------------------------------------------------
-
-    def update_paint_area(self):
-        wnd_size = self.size()
-        width = wnd_size.width()
-        height = wnd_size.height()
-        # TODO: Pixel not start from 0
-        self.__paint_area.setRect(0, 0, width, height)
-        self.__coordinate_metrics.set_transverse_limit(0, height if self.__layout == LAYOUT_HORIZON else width)
-        self.__coordinate_metrics.set_longitudinal_range(0, width if self.__layout == LAYOUT_HORIZON else height)
-
-    def update_pixel_per_scale(self):
-        self.__pixel_per_scale = self.__coordinate_metrics.get_longitudinal_length() / self.__scale_per_page
-        self.__pixel_per_scale = max(self.__pixel_per_scale, TimeAxis.MAIN_SCALE_MIN_PIXEL)
-        # Update the ratio of history-time / pixel
-        self.__tick_offset_mapping.set_range_ref(self.__main_scale, self.__pixel_per_scale)
-
-    def calc_paint_parameters(self):
-        if self.__seeking is not None:
-            self.__scroll = self.__tick_offset_mapping.a_to_b(self.__seeking)
-            self.__offset = 0
-            self.__seeking = None
-        self.__total_pixel_offset = self.__scroll + self.__offset
-
-        tick_since = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset)
-        tick_until = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset +
-                                                       self.__coordinate_metrics.get_longitudinal_length())
-        self.__coordinate_metrics.set_scale_range(tick_since, tick_until)
-
-        self.__paint_since_scale = float(self.__total_pixel_offset) / self.__pixel_per_scale
-        self.__paint_until_scale = float(self.__total_pixel_offset + self.__coordinate_metrics.get_longitudinal_length()) / self.__pixel_per_scale
-
-        paint_start_scale = math.floor(self.__paint_since_scale)
-        self.__paint_start_tick = paint_start_scale * self.__main_scale
-
-    def calc_paint_layout(self):
-        # Reserve the text width (hori) / height (vert) of datetime
-        era_text_width = 30 if self.__layout == LAYOUT_HORIZON else 80
-
-        left_thread_count = len(self.__left_history_threads)
-        right_thread_count = len(self.__right_history_threads)
-        self.__axis_mid = int(self.__coordinate_metrics.get_transverse_length() * self.__axis_align_offset)
-
-        # TODO: Use AxisMetrics
-
-        self.__axis_left = int(self.__axis_mid - self.__axis_space_w / 2 - 10) - era_text_width
-        self.__axis_right = int(self.__axis_mid + self.__axis_space_w / 2 + 10)
-
-        if self.__layout == LAYOUT_HORIZON:
-            self.__axis_left = self.__coordinate_metrics.get_transverse_length() - self.__axis_left
-            self.__axis_right = self.__coordinate_metrics.get_transverse_length() - self.__axis_right
-
-            left_thread_width = ((self.__coordinate_metrics.get_transverse_length() - self.__axis_left) / left_thread_count) if \
-                left_thread_count > 0 else 0
-            right_thread_width = (self.__axis_right / right_thread_count) \
-                if right_thread_count > 0 else 0
-        else:
-            left_thread_width = self.__axis_left / left_thread_count if left_thread_count > 0 else 0
-            right_thread_width = (self.__coordinate_metrics.get_transverse_length() - self.__axis_right) / right_thread_count \
-                if right_thread_count > 0 else 0
-
-        # Vertical -> Horizon : Left rotate
-
-        for i in range(0, left_thread_count):
-            thread = self.__left_history_threads[i]
-
-            metrics = AxisMetrics()
-            metrics.set_align(ALIGN_LEFT)
-            metrics.set_layout(self.__layout)
-
-            top = TimeAxis.DEFAULT_MARGIN_PIXEL
-            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
-            if self.__layout == LAYOUT_HORIZON:
-                # TODO: Can we just rotate the QPaint axis?
-                left = self.__coordinate_metrics.get_transverse_length() - i * left_thread_width
-                right = left - left_thread_width
-            else:
-                left = i * left_thread_width
-                right = left + left_thread_width
-
-            metrics.set_transverse_limit(left, right)
-            metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
-                                    self.__paint_until_scale * self.__main_scale)
-            thread.set_thread_metrics(metrics)
-            thread.refresh()
-
-        for i in range(0, right_thread_count):
-            thread = self.__right_history_threads[i]
-
-            metrics = AxisMetrics()
-            metrics.set_align(ALIGN_RIGHT)
-            metrics.set_layout(self.__layout)
-
-            top = TimeAxis.DEFAULT_MARGIN_PIXEL
-            bottom = self.__coordinate_metrics.get_longitudinal_length() - TimeAxis.DEFAULT_MARGIN_PIXEL
-            if self.__layout == LAYOUT_HORIZON:
-                # TODO: Can we just rotate the QPaint axis?
-                left = self.__axis_right - i * right_thread_width
-                right = left - right_thread_width
-            else:
-                left = self.__axis_right + i * right_thread_width
-                right = left + right_thread_width
-            metrics.set_transverse_limit(left, right)
-            metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__paint_since_scale * self.__main_scale,
-                                    self.__paint_until_scale * self.__main_scale)
-            thread.set_thread_metrics(metrics)
-            thread.refresh()
 
     # ----------------------------------------------------- Scale ------------------------------------------------------
 
