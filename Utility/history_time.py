@@ -408,22 +408,22 @@ class HistoryTime:
 
     # ---------------------------------- Offset Calculation ----------------------------------
 
-    @staticmethod
-    def offset_bc_tick_to_ad(sec: int) -> (int, int):
-        """
-        It's hard to calculate the Date of BC directly.
-        We can offset the AD origin for years.
-        Then minus the offset years from the result.
-        :param sec: The ticks we want to offset.
-        :return: Tick - The tick after offset
-                  Year - The years that we offset
-        """
-        if sec >= 0:
-            return sec, 0
-        abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
-        offset_year = abs_year if remaining_sec == 0 else abs_year + 1
-        offset_year_ticks = HistoryTime.year_to_second(offset_year)
-        return sec + offset_year_ticks, offset_year + 1
+    # @staticmethod
+    # def offset_bc_tick_to_ad(sec: int) -> (int, int):
+    #     """
+    #     It's hard to calculate the Date of BC directly.
+    #     We can offset the AD origin for years.
+    #     Then minus the offset years from the result.
+    #     :param sec: The ticks we want to offset.
+    #     :return: Tick - The tick after offset
+    #               Year - The years that we offset
+    #     """
+    #     if sec >= 0:
+    #         return sec, 0
+    #     abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
+    #     offset_year = abs_year if remaining_sec == 0 else abs_year + 1
+    #     offset_year_ticks = HistoryTime.year_to_second(offset_year)
+    #     return sec + offset_year_ticks, offset_year + 1
 
     @staticmethod
     def offset_bc_year_to_ad(year: int) -> (int, int):
@@ -504,12 +504,21 @@ class HistoryTime:
                  Day - 1 ~ 31
                  Remainder of Seconds - 0 ~ 86400
         """
-        offset_tick, offset_year = HistoryTime.offset_bc_tick_to_ad(sec)
+        if sec >= 0:
+            year, remainder = HistoryTime.ad_second_to_year(sec)
+            month, remainder = HistoryTime.seconds_to_month(remainder, year + 1)
+            day, remainder = HistoryTime.seconds_to_day(remainder)
+            return year + 1, month, day + 1, remainder
+        else:
+            abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
+            offset_year = abs_year if remaining_sec == 0 else abs_year + 1
+            offset_year_ticks = HistoryTime.year_to_second(offset_year)
+            offset_tick = sec + offset_year_ticks
 
-        month, remainder = HistoryTime.seconds_to_month(offset_tick, abs(offset_year - 1))
-        day, remainder = HistoryTime.seconds_to_day(remainder)
+            month, remainder = HistoryTime.seconds_to_month(offset_tick, offset_year)
+            day, remainder = HistoryTime.seconds_to_day(remainder)
 
-        return 1 - offset_year, month, day + 1, remainder
+            return -offset_year, month, day + 1, remainder
 
     @staticmethod
     def ad_seconds_to_date_time(sec: int) -> (int, int, int, int, int, int):
@@ -749,8 +758,8 @@ def main():
     test_ad_since_tick()
     test_datetime_to_tick()
 
-    # test_batch_ad_conversion()
-    # test_batch_bc_conversion()
+    test_batch_ad_conversion()
+    test_batch_bc_conversion()
     # manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
