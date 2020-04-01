@@ -717,7 +717,7 @@ def test_batch_ad_conversion():
 def test_batch_bc_conversion():
     for year in range(0, -3000, -1):
         for month in range(0, 12):
-            month_days = HistoryTime.month_days(year - 1)
+            month_days = HistoryTime.month_days(abs(year - 1))
             for day in range(0, month_days[month + 1]):
                 for hour in [0, 8, 16, 23]:
                     for minute in [0, 30, 59]:
@@ -747,18 +747,18 @@ def manual_check_continuity_of_datetime_to_tick():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
-    __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
-    __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
-    __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
-
-    test_history_time_year()
-    test_history_time_year_month()
-    test_time_text_to_history_times()
-    test_ad_since_tick()
-    test_datetime_to_tick()
-
-    test_batch_ad_conversion()
+    # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
+    # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
+    # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
+    # __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
+    #
+    # test_history_time_year()
+    # test_history_time_year_month()
+    # test_time_text_to_history_times()
+    # test_ad_since_tick()
+    # test_datetime_to_tick()
+    #
+    # test_batch_ad_conversion()
     test_batch_bc_conversion()
     # manual_check_continuity_of_datetime_to_tick()
 
