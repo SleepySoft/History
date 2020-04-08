@@ -120,69 +120,71 @@ class HistoryTime:
 
     # ------------------------------- Constant -------------------------------
 
-    @staticmethod
-    def year(year: int = 1) -> TICK:
-        return year * HistoryTime.TICK_YEAR
+    # @staticmethod
+    # def year(year: int = 1) -> TICK:
+    #     return year * HistoryTime.TICK_YEAR
+    #
+    # @staticmethod
+    # def month(month: int = 1) -> TICK:
+    #     month = max(month, 1)
+    #     month = min(month, 12)
+    #     return HistoryTime.TICK_MONTH[month - 1]
+    #
+    # @staticmethod
+    # def week(week: int = 1) -> TICK:
+    #     return int(week * HistoryTime.TICK_WEEK)
+    #
+    # @staticmethod
+    # def day(day: int = 1) -> TICK:
+    #     return int(day * HistoryTime.TICK_DAY)
 
-    @staticmethod
-    def month(month: int = 1) -> TICK:
-        month = max(month, 1)
-        month = min(month, 12)
-        return HistoryTime.TICK_MONTH[month - 1]
-
-    @staticmethod
-    def week(week: int = 1) -> TICK:
-        return int(week * HistoryTime.TICK_WEEK)
-
-    @staticmethod
-    def day(day: int = 1) -> TICK:
-        return int(day * HistoryTime.TICK_DAY)
-
-    # ------------------------------- Convert -------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------- Convert -----------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
 
     @staticmethod
     def pytime_to_tick(ts: time.struct_time) -> TICK:
-        return HistoryTime.build_history_time_tick(ts.tm_year, ts.tm_mon, ts.tm_mday,
+        return HistoryTime.date_time_to_ad_seconds(ts.tm_year, ts.tm_mon, ts.tm_mday,
                                                    ts.tm_hour, ts.tm_min, ts.tm_sec)
 
-    @staticmethod
-    def year_of_tick(tick: TICK) -> int:
-        return HistoryTime.date_of_tick(tick)[0]
-
-    @staticmethod
-    def month_of_tick(tick: TICK) -> int:
-        return HistoryTime.date_of_tick(tick)[1]
-
-    @staticmethod
-    def day_of_tick(tick: TICK) -> int:
-        return HistoryTime.date_of_tick(tick)[2]
-
-    @staticmethod
-    def date_of_tick(tick: TICK) -> (int, int, int):
-        sign = 1 if tick >= 0 else -1
-        day = 0
-        year = sign * int(abs(tick) / HistoryTime.TICK_YEAR)
-        month = 12
-        year_mod = abs(tick) % HistoryTime.TICK_YEAR
-        for i in range(0, len(HistoryTime.TICK_MONTH)):
-            if year_mod <= HistoryTime.TICK_MONTH[i]:
-                day_tick = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
-                day = day_tick / HistoryTime.day()
-                month = i + 1
-                break
-        return int(year), int(month), int(day)
-
-    @staticmethod
-    def decimal_year_to_tick(year: float) -> TICK:
-        return int(year * HistoryTime.TICK_YEAR)
-
-    @staticmethod
-    def tick_to_decimal_year(tick: TICK) -> float:
-        return HistoryTime.round_decimal_year(float(tick) / HistoryTime.TICK_YEAR)
+    # @staticmethod
+    # def year_of_tick(tick: TICK) -> int:
+    #     return HistoryTime.ad_second_to_year(tick)[0]
+    #
+    # @staticmethod
+    # def month_of_tick(tick: TICK) -> int:
+    #     return HistoryTime.ad_seconds_to_date(tick)[1]
+    #
+    # @staticmethod
+    # def day_of_tick(tick: TICK) -> int:
+    #     return HistoryTime.date_of_tick(tick)[2]
+    #
+    # @staticmethod
+    # def date_of_tick(tick: TICK) -> (int, int, int):
+    #     sign = 1 if tick >= 0 else -1
+    #     day = 0
+    #     year = sign * int(abs(tick) / HistoryTime.TICK_YEAR)
+    #     month = 12
+    #     year_mod = abs(tick) % HistoryTime.TICK_YEAR
+    #     for i in range(0, len(HistoryTime.TICK_MONTH)):
+    #         if year_mod <= HistoryTime.TICK_MONTH[i]:
+    #             day_tick = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
+    #             day = day_tick / HistoryTime.day()
+    #             month = i + 1
+    #             break
+    #     return int(year), int(month), int(day)
+    #
+    # @staticmethod
+    # def decimal_year_to_tick(year: float) -> TICK:
+    #     return int(year * HistoryTime.TICK_YEAR)
+    #
+    # @staticmethod
+    # def tick_to_decimal_year(tick: TICK) -> float:
+    #     return HistoryTime.round_decimal_year(float(tick) / HistoryTime.TICK_YEAR)
 
     @staticmethod
     def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
-        year, month, day = HistoryTime.date_of_tick(tick)
+        year, month, day, _ = HistoryTime.ad_seconds_to_date(tick)
         if year < 0:
             text = str(-year) + ' BCE'
         else:
@@ -195,25 +197,27 @@ class HistoryTime:
 
     # ------------------------------- Calculation -------------------------------
 
-    @staticmethod
-    def round_decimal_year(year: float):
-        return round(year, HistoryTime.EFFECTIVE_TIME_DIGIT)
+    # @staticmethod
+    # def round_decimal_year(year: float):
+    #     return round(year, HistoryTime.EFFECTIVE_TIME_DIGIT)
+    #
+    # @staticmethod
+    # def decimal_year_equal(digital1: float, digital2: float):
+    #     return abs(digital1 - digital2) < pow(1.0, -(HistoryTime.EFFECTIVE_TIME_DIGIT + 1))
+    #
+    # @staticmethod
+    # def build_history_time_tick(year: int = 0, month: int = 0, day: int = 0,
+    #                             hour: int = 0, minute: int = 0, second: int = 0,
+    #                             week: int = 0) -> TICK:
+    #     sign = 1 if year >= 0 else -1
+    #     tick = HistoryTime.year(abs(year)) + HistoryTime.month(month) + HistoryTime.day(day) + \
+    #         hour * HistoryTime.TICK_HOUR + minute * HistoryTime.TICK_MIN + second * HistoryTime.TICK_MIN + \
+    #         week * HistoryTime.TICK_WEEK
+    #     return sign * tick
 
-    @staticmethod
-    def decimal_year_equal(digital1: float, digital2: float):
-        return abs(digital1 - digital2) < pow(1.0, -(HistoryTime.EFFECTIVE_TIME_DIGIT + 1))
-
-    @staticmethod
-    def build_history_time_tick(year: int = 0, month: int = 0, day: int = 0,
-                                hour: int = 0, minute: int = 0, second: int = 0,
-                                week: int = 0) -> TICK:
-        sign = 1 if year >= 0 else -1
-        tick = HistoryTime.year(abs(year)) + HistoryTime.month(month) + HistoryTime.day(day) + \
-            hour * HistoryTime.TICK_HOUR + minute * HistoryTime.TICK_MIN + second * HistoryTime.TICK_MIN + \
-            week * HistoryTime.TICK_WEEK
-        return sign * tick
-
-    # ------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    # -------------------------------------------- Text Analysis and Parse ---------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
 
     @staticmethod
     def __get_first_item_except(items: list, expect: str):
@@ -232,9 +236,9 @@ class HistoryTime:
 
         if year == '':
             number_str = int("".join(filter(str.isdigit, arablized_str)))
-            return HistoryTime.build_history_time_tick(sign * int(number_str))
+            return HistoryTime.date_time_to_ad_seconds(sign * int(number_str, 0, 0))
         else:
-            return HistoryTime.build_history_time_tick(sign * str_to_int(year), str_to_int(month), str_to_int(day))
+            return HistoryTime.date_time_to_ad_seconds(sign * str_to_int(year), str_to_int(month), str_to_int(day))
 
     @staticmethod
     def time_text_to_history_times(text: str) -> [TICK]:
@@ -315,9 +319,7 @@ class HistoryTime:
 
     @staticmethod
     def tick_to_cn_date_text(his_tick: TICK) -> str:
-        year = HistoryTime.year_of_tick(his_tick)
-        month = HistoryTime.month_of_tick(his_tick)
-        day = HistoryTime.day_of_tick(his_tick)
+        year, month, day, _ = HistoryTime.ad_seconds_to_date(his_tick)
         if year < 0:
             text = '公元前' + str(-year) + '年'
         else:
@@ -747,20 +749,20 @@ def manual_check_continuity_of_datetime_to_tick():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
-    # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
-    # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
-    # __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
-    #
-    # test_history_time_year()
-    # test_history_time_year_month()
-    # test_time_text_to_history_times()
-    # test_ad_since_tick()
-    # test_datetime_to_tick()
-    #
-    # test_batch_ad_conversion()
+    __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
+    __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
+    __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
+    __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
+
+    test_history_time_year()
+    test_history_time_year_month()
+    test_time_text_to_history_times()
+    test_ad_since_tick()
+    test_datetime_to_tick()
+
+    test_batch_ad_conversion()
     test_batch_bc_conversion()
-    # manual_check_continuity_of_datetime_to_tick()
+    manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
 

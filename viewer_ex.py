@@ -443,6 +443,34 @@ class TimeAxis(QWidget):
         def on_r_button_up(self, pos: QPoint):
             pass
 
+    class Scale:
+        def __init__(self, year_step: int, month_step: int, day_step: int,
+                     hour_step: int, minute_step: int, second_step: int):
+            self.offset_tick = (year_step, month_step, day_step, hour_step, minute_step, second_step)
+            self.current_tick = 0
+
+        def estimate_scale(self, tick: HistoryTime.TICK) -> tuple:
+            tick_date = list(HistoryTime.ad_seconds_to_date(tick))
+            for i in range(len(self.offset_tick)):
+                if self.offset_tic(i) == 0:
+                    tick_date[i] = 0
+                else:
+                    tick_date[i] = (tick_date[i] // self.offset_tick) * self.offset_tick
+            self.current_tick = tick_date
+            return self.current_tick
+
+        def prev_scale(self, tick: HistoryTime.TICK):
+            pass
+
+        def next_scale(self, tick: HistoryTime.TICK):
+            pass
+
+        def sub_scale_count(self) -> int:
+            pass
+
+        def sub_scale(self, index: int) -> HistoryTime.TICK:
+            pass
+
     STEP_LIST = [
         HistoryTime.year(10000), HistoryTime.year(5000), HistoryTime.year(2500),
         HistoryTime.year(2000), HistoryTime.year(1000), HistoryTime.year(500),
