@@ -444,41 +444,52 @@ class TimeAxis(QWidget):
             pass
 
     class Scale:
-        def __init__(self, year_step: int, month_step: int, day_step: int,
-                     hour_step: int, minute_step: int, second_step: int):
-            self.offset_tick = (year_step, month_step, day_step, hour_step, minute_step, second_step)
+        def __init__(self,
+                     main_scale_offset: (int, int, int, int, int, int),
+                     sub_scale_offset: (int, int, int, int, int, int)):
+            assert len(main_scale_offset) == 6
+            assert len(sub_scale_offset) == 6
+            self.main_scale_offset = main_scale_offset
+            self.sub_scale_offset = sub_scale_offset
             self.current_tick = 0
 
-        def estimate_scale(self, tick: HistoryTime.TICK) -> tuple:
-            tick_date = list(HistoryTime.ad_seconds_to_date(tick))
-            for i in range(len(self.offset_tick)):
-                if self.offset_tic(i) == 0:
-                    tick_date[i] = 0
+        def rough_offset_tick(self):
+            return self.main_scale_offset[0] * HistoryTime.TICK_YEAR + \
+                   self.main_scale_offset[0] // 4 * HistoryTime.TICK_DAY + \
+                   self.main_scale_offset[1] * HistoryTime.TICK_MONTH + \
+                   self.main_scale_offset[2] * HistoryTime.TICK_DAY + \
+                   self.main_scale_offset[3] * HistoryTime.TICK_HOUR + \
+                   self.main_scale_offset[4] * HistoryTime.TICK_MIN + \
+                   self.main_scale_offset[5]
+
+        def estimate_closest_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
+            date = HistoryTime.ad_seconds_to_date_time(tick)
+            for i in range(5, -1, -1):
+                if self.main_scale_offset[i] == 0:
+                    date[i] = 0
                 else:
-                    tick_date[i] = (tick_date[i] // self.offset_tick) * self.offset_tick
-            self.current_tick = tick_date
-            return self.current_tick
+                    date[i] -= date[i] % self.main_scale_offset[i]
+            return HistoryTime.date_time_to_ad_seconds(*date)
 
-        def prev_scale(self, tick: HistoryTime.TICK):
-            pass
+        def next_main_scale(self, tick: HistoryTime.TICK):
+            HistoryTime.offset_ad_second(tick, *self.main_scale_offset)
 
-        def next_scale(self, tick: HistoryTime.TICK):
-            pass
-
-        def sub_scale_count(self) -> int:
-            pass
-
-        def sub_scale(self, index: int) -> HistoryTime.TICK:
-            pass
+        def next_sub_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
+            HistoryTime.offset_ad_second(tick, *self.sub_scale_offset)
 
     STEP_LIST = [
-        HistoryTime.year(10000), HistoryTime.year(5000), HistoryTime.year(2500),
-        HistoryTime.year(2000), HistoryTime.year(1000), HistoryTime.year(500),
-        HistoryTime.year(250), HistoryTime.year(200), HistoryTime.year(100),
-        HistoryTime.year(50), HistoryTime.year(25), HistoryTime.year(20),
-        HistoryTime.year(10), HistoryTime.year(5), HistoryTime.year(1),
-        HistoryTime.month(7), HistoryTime.month(2),
-        HistoryTime.week(1), HistoryTime.day(1),
+        Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0)),
+        Scale((5000, 0, 0, 0, 0, 0), (500, 0, 0, 0, 0, 0)),
+        Scale((2500, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0)),
+        Scale((2000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0)),
+        Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0)),
+        Scale((500, 0, 0, 0, 0, 0), (50, 0, 0, 0, 0, 0)),
+        Scale((250, 0, 0, 0, 0, 0), (25, 0, 0, 0, 0, 0)),
+        Scale((200, 0, 0, 0, 0, 0), (20, 0, 0, 0, 0, 0)),
+        Scale((100, 0, 0, 0, 0, 0), (10, 0, 0, 0, 0, 0)),
+        Scale((50, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0)),
+        Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0)),
+        Scale((1, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0)),
     ]
     SUB_STEP_COUNT = [
         10, 10, 10,
@@ -526,11 +537,13 @@ class TimeAxis(QWidget):
         self.__paint_start_tick = 0
 
         # Scale Step Selection
-        self.__step_selection = 0
-        self.__main_scale = TimeAxis.STEP_LIST[8]
-        self.__sub_scale_count = 10
-        self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0]
-        self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1]
+        self.__scale_selection = 0
+        self.__scale = TimeAxis.STEP_LIST[8]
+
+        # self.__main_scale = TimeAxis.STEP_LIST[8]
+        # self.__sub_scale_count = 10
+        # self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0]
+        # self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1]
 
         self.__scale_per_page = 10
         self.__pixel_per_scale = 0
@@ -697,7 +710,7 @@ class TimeAxis(QWidget):
             old_main_step = self.__main_scale
             old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
 
-            self.select_step_scale(self.__step_selection + (1 if angle_y > 0 else -1))
+            self.select_step_scale(self.__scale_selection + (1 if angle_y > 0 else -1))
             # Make the value under mouse keep the same place on the screen
             value_new_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
             self.__scroll = int(value_new_offset - pixel)
@@ -1039,8 +1052,8 @@ class TimeAxis(QWidget):
 
         if self.__main_scale_limit_lower <= new_step <= self.__main_scale_limit_upper:
             self.__main_scale = new_step
-            self.__step_selection = step_index
-            self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__step_selection]
+            self.__scale_selection = step_index
+            self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__scale_selection]
         self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
         self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
 
