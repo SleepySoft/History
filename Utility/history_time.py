@@ -347,6 +347,50 @@ class HistoryTime:
         assert year > 0
         return HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_DAYS
 
+    # -------------------------------------- Time Delta --------------------------------------
+
+    @staticmethod
+    def offset_ad_second(tick: TICK, offset_year: int, offset_month: int, offset_day: int,
+                    offset_hour: int, offset_minute: int, offset_second: int) -> TICK:
+        tick += offset_day * HistoryTime.TICK_DAY + \
+                offset_hour * HistoryTime.TICK_HOUR + \
+                offset_minute * HistoryTime.TICK_MIN + \
+                offset_second * HistoryTime.TICK_SEC
+        year, month, day, remainder = HistoryTime.ad_seconds_to_date(tick)
+
+        month += offset_month
+        if month > 0:
+            offset_year += (month - 1) // 12
+            month = (month - 1) % 12 + 1
+        else:
+            # If month = -11, then the offset year is -1 and the complement month is  1 (-1 * 12 + 1 = -11)
+            # If month = -12, then the offset year is -2 and the complement month is 12 (-2 * 12 + 12 = -12)
+            # If month = -13, then the offset year is -2 and the complement month is 11 (-2 * 12 + 11 = -13)
+            month_year = abs(month) // 12 + 1
+            complement_month = month_year * 12 + month
+            offset_year -= month_year
+            month = complement_month
+
+        # If year is 1, and offset_year is -1, the result should be -1, because there's no 0 year.
+        # So if year is 10, and offset_year is -10, the -1 branch will be reached
+        # Else if year is less than 0 or offset_year is larger than 0, the -1 branch will not be reached
+        if 0 < year <= -offset_year:
+            year += offset_year - 1
+        else:
+            year += offset_year
+
+        month_days = HistoryTime.month_days(abs(year))
+        day = min(day, month_days[month])
+
+        return HistoryTime.date_time_to_ad_seconds(year, month, day, 0, 0, 0) + remainder
+
+    @staticmethod
+    def offset_date_time(origin: (int, int, int, int, int, int),
+                         offset: (int, int, int, int, int, int)) -> (int, int, int, int, int, int):
+        tick = HistoryTime.date_time_to_ad_seconds(*origin)
+        offset_tick = HistoryTime.offset_ad_second(tick, *offset)
+        return HistoryTime.ad_seconds_to_date_time(offset_tick)
+
     # ---------------------------------- Basic Calculation -----------------------------------
 
     @staticmethod
@@ -696,6 +740,24 @@ def test_datetime_to_tick():
     assert ad_tick == HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR
 
 
+def __verify_time_offset(origin: (int, int, int, int, int, int),
+                         offset: (int, int, int, int, int, int),
+                         expect: (int, int, int, int, int, int)):
+    result = HistoryTime.offset_date_time(origin, offset)
+    if result != expect:
+        print('%s + %s -> %s != %s' % (str(origin), str(offset), str(result), str(expect)))
+        assert False
+
+
+def test_time_offset():
+    __verify_time_offset((1, 12, 31, 0, 0, 0), (0, -12, 0, 0, 0, 0), (-1, 12, 31, 0, 0, 0))
+    __verify_time_offset((1, 12, 31, 0, 0, 0), (-1,  0, 0, 0, 0, 0), (-1, 12, 31, 0, 0, 0))
+    __verify_time_offset((1, 12, 31, 23, 59, 59), (0, -13, 0, 0, 0, 0), (-1, 11, 30, 23, 59, 59))
+
+    __verify_time_offset((1, 3, 31, 0, 0, 0), (0, -1, 0, 0, 0, 0), (1, 2, 28, 0, 0, 0))
+    __verify_time_offset((4, 3, 31, 23, 59, 59), (0, -1, 0, 0, 0, 0), (4, 2, 29, 23, 59, 59))
+
+
 def __cross_verify_tick_datetime(*args):
     ad_tick = HistoryTime.date_time_to_ad_seconds(*args)
     date_time = HistoryTime.ad_seconds_to_date_time(ad_tick)
@@ -759,6 +821,8 @@ def main():
     test_time_text_to_history_times()
     test_ad_since_tick()
     test_datetime_to_tick()
+
+    test_time_offset()
 
     test_batch_ad_conversion()
     test_batch_bc_conversion()
