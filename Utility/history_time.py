@@ -237,9 +237,19 @@ class HistoryTime:
 
         if year == '':
             number_str = int("".join(filter(str.isdigit, arablized_str)))
-            return HistoryTime.date_time_to_ad_seconds(sign * int(number_str, 0, 0))
+            return HistoryTime.date_time_to_ad_seconds(sign * int(number_str), 1, 1)
         else:
-            return HistoryTime.date_time_to_ad_seconds(sign * str_to_int(year), str_to_int(month), str_to_int(day))
+            year = sign * str_to_int(year)
+            month = str_to_int(month)
+            day = str_to_int(day)
+
+            year = 1 if year == 0 else year
+            month = max(month, 1)
+            month = min(month, 12)
+            day = max(day, 1)
+            day = min(day, HistoryTime.month_days(abs(year))[month])
+
+            return HistoryTime.date_time_to_ad_seconds(year, month, day)
 
     @staticmethod
     def time_text_to_history_times(text: str) -> [TICK]:

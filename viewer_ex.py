@@ -153,16 +153,16 @@ class HistoryIndexBar(AxisItem):
         if since == until:
             # If it's a single time event
             # Show Event Year
-            tip_text += ' : [' + str(HistoryTime.year_of_tick(since)) + ']'
+            tip_text += ' : [' + str(HistoryTime.ad_seconds_to_date(since)[0]) + ']'
         else:
             # If it's a period event.
-            since_year = HistoryTime.year_of_tick(since)
-            current_year = HistoryTime.year_of_tick(on_tick)
-            until_year = HistoryTime.year_of_tick(until)
+            since_year = HistoryTime.ad_seconds_to_date(since)[0]
+            current_year = HistoryTime.ad_seconds_to_date(int(on_tick))[0]
+            until_year = HistoryTime.ad_seconds_to_date(until)[0]
 
             # Show Current Year / Total Year
-            tip_text += '(' + str(current_year - since_year)
-            tip_text += '/' + str(HistoryTime.year_of_tick(until - since)) + ')'
+            tip_text += '(' + str(current_year - since_year + 1)
+            tip_text += '/' + str(until_year - since_year + 1) + ')'
 
             # Show Period
             tip_text += ' : [' + str(since_year) + ' - ' + str(until_year) + ']'
@@ -747,9 +747,10 @@ class TimeAxis(QWidget):
     def mouseDoubleClickEvent(self,  event):
         now_pos = event.pos()
         axis_item = self.axis_item_from_point(now_pos)
-        index = axis_item.get_index()
-        if index is not None:
-            self.popup_editor_for_index(index)
+        if axis_item is not None:
+            index = axis_item.get_index()
+            if index is not None:
+                self.popup_editor_for_index(index)
 
     def mouseMoveEvent(self, event):
         now_pos = event.pos()
@@ -939,7 +940,7 @@ class TimeAxis(QWidget):
         qp.drawLine(0, self.__paint_area.height() - self.__axis_mid,
                     self.__paint_area.width(), self.__paint_area.height() - self.__axis_mid)
 
-        self.__coordinate_metrics.get_longitudinal_range()
+        # self.__coordinate_metrics.get_longitudinal_range()
 
         main_scale_start = self.__paint_area.height() - int(self.__axis_mid + 15)
         main_scale_end = self.__paint_area.height() - int(self.__axis_mid - 15)
@@ -948,30 +949,50 @@ class TimeAxis(QWidget):
 
         self.__optimise_pixel.clear()
 
-        for i in range(0, 12):
-            time_main = self.__paint_start_tick + i * self.__main_scale
-            x_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
+        tick_since, tick_until = self.__coordinate_metrics.get_scale_range()
+        paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
+        assert paint_tick <= tick_since
 
-            self.__optimise_pixel[x_main] = time_main
+        while paint_tick < tick_until:
+            next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
-            if self.__main_scale >= HistoryTime.year(1):
-                main_scale_text = HistoryTime.tick_to_standard_string(time_main)
-            else:
-                main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+            x_main = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
+            self.__optimise_pixel[x_main] = paint_tick
+            main_scale_text = HistoryTime.tick_to_standard_string(paint_tick)
 
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
             qp.drawText(x_main, main_scale_end + 20, main_scale_text)
 
-            for j in range(0, self.__sub_scale_count):
-                time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
-                x_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
-                self.__optimise_pixel[x_sub] = time_sub
+            while paint_tick < next_paint_tick:
+                paint_tick = self.__scale.next_sub_scale(paint_tick)
+                x_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
+                self.__optimise_pixel[x_sub] = paint_tick
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
+
+            paint_tick = next_paint_tick
+
+        # for i in range(0, 12):
+        #     time_main = self.__paint_start_tick + i * self.__main_scale
+        #     x_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
+        #
+        #     self.__optimise_pixel[x_main] = time_main
+        #
+        #     if self.__main_scale >= HistoryTime.year(1):
+        #         main_scale_text = HistoryTime.tick_to_standard_string(time_main)
+        #     else:
+        #         main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+        #
+        #     qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
+        #     qp.drawText(x_main, main_scale_end + 20, main_scale_text)
+        #
+        #     for j in range(0, self.__sub_scale_count):
+        #         time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
+        #         x_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
+        #         self.__optimise_pixel[x_sub] = time_sub
+        #         qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
 
     def paint_vertical(self, qp: QPainter):
         qp.drawLine(self.__axis_mid, 0, self.__axis_mid, self.__paint_area.height())
-
-        # TODO: Here
 
         main_scale_start = int(self.__axis_mid - 15)
         main_scale_end = int(self.__axis_mid + 15)
