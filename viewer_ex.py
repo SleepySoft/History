@@ -456,26 +456,29 @@ class TimeAxis(QWidget):
         def rough_offset_tick(self):
             return self.main_scale_offset[0] * HistoryTime.TICK_YEAR + \
                    self.main_scale_offset[0] // 4 * HistoryTime.TICK_DAY + \
-                   self.main_scale_offset[1] * HistoryTime.TICK_MONTH + \
+                   self.main_scale_offset[1] * HistoryTime.TICK_MONTH_AVG + \
                    self.main_scale_offset[2] * HistoryTime.TICK_DAY + \
                    self.main_scale_offset[3] * HistoryTime.TICK_HOUR + \
                    self.main_scale_offset[4] * HistoryTime.TICK_MIN + \
                    self.main_scale_offset[5]
 
         def estimate_closest_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            date = HistoryTime.ad_seconds_to_date_time(tick)
-            for i in range(5, -1, -1):
+            date = list(HistoryTime.ad_seconds_to_date_time(tick))
+            start_suppress = False
+            for i in range(len(self.main_scale_offset)):
                 if self.main_scale_offset[i] == 0:
-                    date[i] = 0
+                    if start_suppress:
+                        date[i] = 0 if i > 2 else 1
                 else:
+                    start_suppress = True
                     date[i] -= date[i] % self.main_scale_offset[i]
             return HistoryTime.date_time_to_ad_seconds(*date)
 
-        def next_main_scale(self, tick: HistoryTime.TICK):
-            HistoryTime.offset_ad_second(tick, *self.main_scale_offset)
+        def next_main_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
+            return HistoryTime.offset_ad_second(tick, *self.main_scale_offset)
 
         def next_sub_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            HistoryTime.offset_ad_second(tick, *self.sub_scale_offset)
+            return HistoryTime.offset_ad_second(tick, *self.sub_scale_offset)
 
     STEP_LIST = [
         Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0)),
@@ -534,7 +537,7 @@ class TimeAxis(QWidget):
         # self.__paint_since_scale = 0
         # self.__paint_until_scale = 0
 
-        self.__paint_start_tick = 0
+        # self.__paint_start_tick = 0
 
         # Scale Step Selection
         self.__scale_selection = 0
@@ -542,8 +545,8 @@ class TimeAxis(QWidget):
 
         # self.__main_scale = TimeAxis.STEP_LIST[8]
         # self.__sub_scale_count = 10
-        # self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0]
-        # self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1]
+        self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0].rough_offset_tick()
+        self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1].rough_offset_tick()
 
         self.__scale_per_page = 10
         # self.__pixel_per_scale = 0
@@ -572,7 +575,7 @@ class TimeAxis(QWidget):
         self.__layout = LAYOUT_VERTICAL
         # self.__layout = LAYOUT_HORIZON
 
-        self.set_time_range(0, HistoryTime.year(2000))
+        self.set_time_range(0, HistoryTime.year_ticks(2000))
 
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
@@ -799,6 +802,8 @@ class TimeAxis(QWidget):
 
     def update_pixel_per_scale(self):
         page_pixel = self.__coordinate_metrics.get_longitudinal_length()
+        if page_pixel == 0:
+            return
         scale_pixel = page_pixel / self.__scale_per_page
         scale_pixel = max(scale_pixel, TimeAxis.MAIN_SCALE_MIN_PIXEL)
         scale_count = self.__coordinate_metrics.get_longitudinal_length() / scale_pixel
@@ -808,7 +813,7 @@ class TimeAxis(QWidget):
         self.__page_tick = page_tick
         self.__tick_per_pixel = page_tick / page_pixel
         # Update the ratio of history-time / pixel
-        self.__tick_offset_mapping.set_range_ref(page_pixel, page_tick)
+        self.__tick_offset_mapping.set_range_ref(page_tick, page_pixel)
 
     def calc_paint_parameters(self):
         if self.__seeking is not None:
@@ -821,7 +826,6 @@ class TimeAxis(QWidget):
         tick_until = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset +
                                                        self.__coordinate_metrics.get_longitudinal_length())
         self.__coordinate_metrics.set_scale_range(int(tick_since), int(tick_until))
-        self.__paint_start_tick = self.__scale.estimate_closest_scale(self.__total_pixel_offset)
 
     def calc_paint_layout(self):
         # Reserve the text width (hori) / height (vert) of datetime
@@ -935,7 +939,7 @@ class TimeAxis(QWidget):
         qp.drawLine(0, self.__paint_area.height() - self.__axis_mid,
                     self.__paint_area.width(), self.__paint_area.height() - self.__axis_mid)
 
-        # TODO: Here
+        self.__coordinate_metrics.get_longitudinal_range()
 
         main_scale_start = self.__paint_area.height() - int(self.__axis_mid + 15)
         main_scale_end = self.__paint_area.height() - int(self.__axis_mid - 15)
@@ -976,31 +980,53 @@ class TimeAxis(QWidget):
 
         self.__optimise_pixel.clear()
 
-        for i in range(0, 12):
-            time_main = self.__paint_start_tick + i * self.__main_scale
-            y_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
+        tick_since, tick_until = self.__coordinate_metrics.get_scale_range()
+        paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
+        assert paint_tick <= tick_since
 
-            self.__optimise_pixel[y_main] = time_main
+        while paint_tick < tick_until:
+            next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
-            # original_year = HistoryTime.year_of_tick(time_main)
-            # retrieve_tick = self.pixel_to_value(y_main)
-            # retrieve_year = HistoryTime.year_of_tick(retrieve_tick)
-            # print(str(time_main) + '(' + str(original_year) + ') -> ' + str(y_main) + ' -> ' +
-            #       str(retrieve_tick) + '(' + str(retrieve_year) + ')')
-
-            if self.__main_scale >= HistoryTime.year(1):
-                main_scale_text = HistoryTime.tick_to_standard_string(time_main)
-            else:
-                main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+            y_main = int(self.__coordinate_metrics.value_to_pixel(paint_tick))
+            self.__optimise_pixel[y_main] = paint_tick
+            main_scale_text = HistoryTime.tick_to_standard_string(paint_tick)
 
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
-            for j in range(0, self.__sub_scale_count):
-                time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
-                y_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
-                self.__optimise_pixel[y_sub] = time_sub
+            while paint_tick < next_paint_tick:
+                paint_tick = self.__scale.next_sub_scale(paint_tick)
+                y_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
+                self.__optimise_pixel[y_sub] = paint_tick
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
+
+            paint_tick = next_paint_tick
+
+        # for i in range(0, 12):
+        #     time_main = self.__paint_start_tick + i * self.__main_scale
+        #     y_main = int(self.__coordinate_metrics.value_to_pixel(int(time_main)))
+        #
+        #     self.__optimise_pixel[y_main] = time_main
+        #
+        #     # original_year = HistoryTime.year_of_tick(time_main)
+        #     # retrieve_tick = self.pixel_to_value(y_main)
+        #     # retrieve_year = HistoryTime.year_of_tick(retrieve_tick)
+        #     # print(str(time_main) + '(' + str(original_year) + ') -> ' + str(y_main) + ' -> ' +
+        #     #       str(retrieve_tick) + '(' + str(retrieve_year) + ')')
+        #
+        #     if self.__main_scale >= HistoryTime.year(1):
+        #         main_scale_text = HistoryTime.tick_to_standard_string(time_main)
+        #     else:
+        #         main_scale_text = HistoryTime.tick_to_standard_string(time_main, show_date=True)
+        #
+        #     qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
+        #     qp.drawText(main_scale_end - 100, y_main, main_scale_text)
+        #
+        #     for j in range(0, self.__sub_scale_count):
+        #         time_sub = time_main + self.__main_scale * j / self.__sub_scale_count
+        #         y_sub = int(self.__coordinate_metrics.value_to_pixel(int(time_sub)))
+        #         self.__optimise_pixel[y_sub] = time_sub
+        #         qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
     def paint_threads(self, qp: QPainter):
         for thread in self.__history_threads:
@@ -1045,23 +1071,23 @@ class TimeAxis(QWidget):
 
         step_index = 1
         while step_index < len(TimeAxis.STEP_LIST):
-            if TimeAxis.STEP_LIST[step_index] < step_rough:
+            if TimeAxis.STEP_LIST[step_index].rough_offset_tick() < step_rough:
                 break
             step_index += 1
         self.select_step_scale(step_index - 1)
         self.update_pixel_per_scale()
 
     def select_step_scale(self, step_index: int):
-        step_index = max(step_index, 0)
-        step_index = min(step_index, len(TimeAxis.STEP_LIST) - 1)
-        new_step = TimeAxis.STEP_LIST[step_index]
+        scale_index = max(step_index, 0)
+        scale_index = min(step_index, len(TimeAxis.STEP_LIST) - 1)
+        new_scale = TimeAxis.STEP_LIST[step_index]
 
-        if self.__main_scale_limit_lower <= new_step <= self.__main_scale_limit_upper:
-            self.__main_scale = new_step
+        if self.__main_scale_limit_lower <= new_scale.rough_offset_tick() <= self.__main_scale_limit_upper:
+            self.__scale = new_scale
             self.__scale_selection = step_index
-            self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__scale_selection]
-        self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
-        self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
+        #     self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__scale_selection]
+        # self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
+        # self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
 
     def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
         thread = self.thread_from_point(point)
@@ -1088,7 +1114,8 @@ class TimeAxis(QWidget):
 
     def format_real_time_tip(self) -> str:
         # Show The Time From Mouse Position
-        tip_text = '(' + str(HistoryTime.year_of_tick(self.__mouse_on_scale_value)) + ')'
+        year, month, day, _ = HistoryTime.ad_seconds_to_date(int(self.__mouse_on_scale_value))
+        tip_text = '(' + str(year) + ')'
 
         # Axis Item information
         if self.__mouse_on_item is not None:
@@ -1106,9 +1133,13 @@ class TimeAxis(QWidget):
         if self.__mouse_on_coordinate != pos:
             self.__mouse_on_coordinate = pos
             if self.__layout == LAYOUT_HORIZON:
-                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pos.x())
+                pixel = pos.x()
             else:
-                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pos.y())
+                pixel = pos.y()
+            if pixel in self.__optimise_pixel.keys():
+                self.__mouse_on_scale_value = self.__optimise_pixel[pixel]
+            else:
+                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pixel)
             self.__mouse_on_item = self.axis_item_from_point(pos)
             self.repaint()
 

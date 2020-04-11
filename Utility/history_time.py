@@ -30,6 +30,7 @@ class HistoryTime:
     TICK_MIN = TICK_SEC * 60            # 60
     TICK_HOUR = TICK_MIN * 60           # 3600
     TICK_DAY = TICK_HOUR * 24           # 86400
+    TICK_MONTH_AVG = TICK_DAY * 30      # 2592000
     TICK_YEAR = TICK_DAY * 365          # 31536000
     TICK_LEAP_YEAR = TICK_DAY * 366     # 31622400
     TICK_WEEK = TICK(TICK_YEAR / 52)    # 608123.0769230769
@@ -344,14 +345,15 @@ class HistoryTime:
 
     @staticmethod
     def month_days(year: int) -> [int]:
-        assert year > 0
+        if year <= 0:
+            assert False
         return HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_DAYS
 
     # -------------------------------------- Time Delta --------------------------------------
 
     @staticmethod
     def offset_ad_second(tick: TICK, offset_year: int, offset_month: int, offset_day: int,
-                    offset_hour: int, offset_minute: int, offset_second: int) -> TICK:
+                         offset_hour: int, offset_minute: int, offset_second: int) -> TICK:
         tick += offset_day * HistoryTime.TICK_DAY + \
                 offset_hour * HistoryTime.TICK_HOUR + \
                 offset_minute * HistoryTime.TICK_MIN + \
@@ -376,6 +378,8 @@ class HistoryTime:
         # Else if year is less than 0 or offset_year is larger than 0, the -1 branch will not be reached
         if 0 < year <= -offset_year:
             year += offset_year - 1
+        elif -offset_year <= year < 0:
+            year += offset_year + 1
         else:
             year += offset_year
 
