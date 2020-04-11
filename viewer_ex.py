@@ -472,6 +472,9 @@ class TimeAxis(QWidget):
                 else:
                     start_suppress = True
                     date[i] -= date[i] % self.main_scale_offset[i]
+                if date[i] == 0 and i <= 2:
+                    # year, month, day start from 1
+                    date[i] = 1
             return HistoryTime.date_time_to_ad_seconds(*date)
 
         def next_main_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
@@ -549,7 +552,7 @@ class TimeAxis(QWidget):
         self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1].rough_offset_tick()
 
         self.__scale_per_page = 10
-        # self.__pixel_per_scale = 0
+        self.__pixel_per_scale = 0
         self.__page_tick = 0
         self.__tick_per_pixel = 0
         self.__tick_offset_mapping = AxisMapping()
@@ -712,13 +715,16 @@ class TimeAxis(QWidget):
             pixel = current_pos.y() if self.__layout == LAYOUT_VERTICAL else current_pos.x()
             current_pos_value = self.__coordinate_metrics.pixel_to_value(pixel)
 
-            old_main_step = self.__main_scale
-            old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
+            # old_main_step = self.__main_scale
+            # old_pixel_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
 
             self.select_step_scale(self.__scale_selection + (1 if angle_y > 0 else -1))
+
+            self.update_pixel_per_scale()
+            self.calc_paint_parameters()
+
             # Make the value under mouse keep the same place on the screen
-            value_new_offset = current_pos_value * self.__pixel_per_scale / self.__main_scale
-            self.__scroll = int(value_new_offset - pixel)
+            self.__scroll = self.__tick_offset_mapping.a_to_b(current_pos_value) - pixel
             self.__offset = 0
 
             # print('Val = ' + str(current_pos_value) + '; Pixel = ' + str(pixel))
@@ -812,6 +818,7 @@ class TimeAxis(QWidget):
         page_tick = rough_scale_tick * scale_count
 
         self.__page_tick = page_tick
+        self.__pixel_per_scale = scale_pixel
         self.__tick_per_pixel = page_tick / page_pixel
         # Update the ratio of history-time / pixel
         self.__tick_offset_mapping.set_range_ref(page_tick, page_pixel)
@@ -875,7 +882,7 @@ class TimeAxis(QWidget):
 
             metrics.set_transverse_limit(left, right)
             metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__total_pixel_offset, self.__total_pixel_offset + self.__page_tick)
+            metrics.set_scale_range(*self.__coordinate_metrics.get_scale_range())
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
@@ -897,7 +904,7 @@ class TimeAxis(QWidget):
                 right = left + right_thread_width
             metrics.set_transverse_limit(left, right)
             metrics.set_longitudinal_range(top, bottom)
-            metrics.set_scale_range(self.__total_pixel_offset, self.__total_pixel_offset + self.__page_tick)
+            metrics.set_scale_range(*self.__coordinate_metrics.get_scale_range())
             thread.set_thread_metrics(metrics)
             thread.refresh()
 
@@ -1005,6 +1012,7 @@ class TimeAxis(QWidget):
         paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
         assert paint_tick <= tick_since
 
+        paint_scale_count = 0
         while paint_tick < tick_until:
             next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
@@ -1015,6 +1023,8 @@ class TimeAxis(QWidget):
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
+            paint_scale_count += 1
+
             while paint_tick < next_paint_tick:
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
                 y_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
@@ -1022,6 +1032,8 @@ class TimeAxis(QWidget):
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
             paint_tick = next_paint_tick
+
+        print('Print scale count = %s' % paint_scale_count)
 
         # for i in range(0, 12):
         #     time_main = self.__paint_start_tick + i * self.__main_scale
@@ -1098,14 +1110,14 @@ class TimeAxis(QWidget):
         self.select_step_scale(step_index - 1)
         self.update_pixel_per_scale()
 
-    def select_step_scale(self, step_index: int):
-        scale_index = max(step_index, 0)
-        scale_index = min(step_index, len(TimeAxis.STEP_LIST) - 1)
-        new_scale = TimeAxis.STEP_LIST[step_index]
+    def select_step_scale(self, scale_index: int):
+        scale_index = max(scale_index, 0)
+        scale_index = min(scale_index, len(TimeAxis.STEP_LIST) - 1)
+        new_scale = TimeAxis.STEP_LIST[scale_index]
 
         if self.__main_scale_limit_lower <= new_scale.rough_offset_tick() <= self.__main_scale_limit_upper:
             self.__scale = new_scale
-            self.__scale_selection = step_index
+            self.__scale_selection = scale_index
         #     self.__sub_scale_count = TimeAxis.SUB_STEP_COUNT[self.__scale_selection]
         # self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
         # self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
