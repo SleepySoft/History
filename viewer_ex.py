@@ -20,6 +20,8 @@ class AxisItem:
         self.index = index
         self.item_metrics = AxisMetrics()
         self.outer_metrics = AxisMetrics()
+        if self.index is not None:
+            self.item_metrics.set_scale_range(self.index.since(), self.index.until())
 
     # ---------------------------------------------------------
 
@@ -82,8 +84,12 @@ class TimeThreadBase:
         for item in self.__axis_items:
             item_since, item_until = item.get_item_metrics().get_scale_range()
             if (item_since <= until) and (item_until >= since):
-                item.arrange_item(self.get_thread_metrics())
                 self.__paint_items.append(item)
+        self.arrange_items()
+
+    def arrange_items(self):
+        for item in self.__paint_items:
+            item.arrange_item(self.get_thread_metrics())
 
     def add_axis_items(self, items: AxisItem or [AxisItem]):
         if isinstance(items, AxisItem):
@@ -115,6 +121,9 @@ class TimeThreadBase:
 
     def get_axis_items(self) -> [AxisItem]:
         return self.__axis_items
+
+    def get_paint_items(self) -> [AxisItem]:
+        return self.__paint_items
 
     def get_thread_color(self) -> QColor:
         return self.__paint_color
@@ -280,55 +289,28 @@ class HistoryIndexTrack(TimeThreadBase):
         super(HistoryIndexTrack, self).__init__()
         
         self.__event_indexes = []
-        self.__paint_indexes = []
         self.__index_bar_table = {}
 
-        self.__thread_track = []
-        self.__thread_track_bars = []
-
+        self.__thread_tracks = []
         self.__thread_track_count = 0
         self.__thread_track_width = 50
 
-    # ------------------------------------------- Operations -------------------------------------------
-
-    def paint(self, qp: QPainter):
-        qp.setBrush(self.get_thread_color())
-        qp.drawRect(self.get_thread_metrics().rect())
-
-        if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
-            self.__paint_horizon(qp)
-        elif self.get_thread_metrics().get_layout() == LAYOUT_VERTICAL:
-            self.__paint_vertical(qp)
-        else:
-            assert False
-
-    def refresh(self):
-        # When scale updated
-        self.__pickup_paint_indexes()
-        # When metrics updated
-        self.__calc_paint_parameters()
-        self.__layout_track()
-        self.__layout_bars()
-
-    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
-        if not self.get_thread_metrics().contains(point):
-            return None
-        for i in range(len(self.__thread_track_bars) - 1, -1, -1):
-            axis_item = self.__thread_track_bars[i]
-            if axis_item.get_item_metrics().contains(point):
-                return axis_item
-        return None
+        self.__flag_build_track = True
+        self.__flag_layout_track = True
+        self.__flag_layout_items = True
+        self.__flag_arrange_items = True
 
     # ------------------------------------------ Sets ------------------------------------------
 
     def set_thread_event_indexes(self, indexes: list):
-        self.__event_indexes = indexes
         self.clear()
+        self.__event_indexes = indexes
         self.__index_bar_table.clear()
         for index in self.__event_indexes:
             bar = HistoryIndexBar(index)
             self.add_axis_items(bar)
             self.__index_bar_table[index] = bar
+        self.__flag_layout_items = True
 
     # ------------------------------------------ Gets ------------------------------------------
 
@@ -339,36 +321,81 @@ class HistoryIndexTrack(TimeThreadBase):
             self.__index_bar_table[index] = bar
         return bar
 
+    # ------------------------------------------- Operations -------------------------------------------
+
+    # def paint(self, qp: QPainter):
+    #     qp.setBrush(self.get_thread_color())
+    #     qp.drawRect(self.get_thread_metrics().rect())
+    #
+    #     for item in self.get_paint_items():
+    #         item.paint(qp)
+    #     if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
+    #         self.__paint_horizon(qp)
+    #     elif self.get_thread_metrics().get_layout() == LAYOUT_VERTICAL:
+    #         self.__paint_vertical(qp)
+    #     else:
+    #         assert False
+
+    def arrange_items(self):
+        paint_items = self.get_paint_items()
+        paint_items.sort(key=lambda item: item.get_index().until() - item.get_index().since(), reverse=True)
+
+        # Adjust track count
+        track_count = self.get_thread_metrics().wide() / self.get_thread_min_track_width()
+        track_count = max(1, int(track_count + 0.5))
+        self.__thread_track_width = self.get_thread_metrics().wide() / track_count
+
+        if self.__thread_track_count != track_count:
+            self.__thread_track_count = track_count
+            self.__flag_build_track = True
+            self.__flag_layout_items = True
+        self.__flag_layout_track = True
+        self.__flag_arrange_items = True
+
+        self.__update_paint_parameters()
+
     # ------------------------------------------------------------------------------------------
 
-    def __pickup_paint_indexes(self):
-        self.__paint_indexes.clear()
-        since, until = self.get_thread_metrics().get_scale_range()
-        for index in self.__event_indexes:
-            if index.period_adapt(since, until):
-                # Pick the paint indexes and sort by its period length
-                self.__paint_indexes.append(index)
+    # def __pickup_paint_indexes(self):
+    #     self.__paint_indexes.clear()
+    #     since, until = self.get_thread_metrics().get_scale_range()
+    #     for index in self.__event_indexes:
+    #         if index.period_adapt(since, until):
+    #             # Pick the paint indexes and sort by its period length
+    #             self.__paint_indexes.append(index)
+    #
+    #     # Sort method 1: The earlier index has higher priority -> The start track would be full filled.
+    #     # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
+    #
+    #     # Sort method2: The longer index has higher priority -> The bar layout should be more stable.
+    #     self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
 
-        # Sort method 1: The earlier index has higher priority -> The start track would be full filled.
-        # self.__paint_indexes = sorted(self.__paint_indexes, key=lambda x: x.since())
+    def __update_paint_parameters(self):
+        if self.__flag_build_track:
+            self.__build_track()
+            self.__flag_build_track = False
+        if self.__flag_layout_track:
+            self.__layout_track()
+            self.__flag_layout_track = False
+        if self.__flag_layout_items:
+            self.__layout_track_items()
+            self.__flag_layout_items = False
+        if self.__flag_arrange_items:
+            self.__arrange_track_items()
+            self.__flag_arrange_items = False
 
-        # Sort method2: The longer index has higher priority -> The bar layout should be more stable.
-        self.__paint_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
-
-    def __calc_paint_parameters(self):
-        # Adjust track count
-        self.__thread_track_count = self.get_thread_metrics().wide() / self.get_thread_min_track_width()
-        self.__thread_track_count = max(1, int(self.__thread_track_count + 0.5))
-        self.__thread_track_width = self.get_thread_metrics().wide() / self.__thread_track_count
+    def __build_track(self):
+        self.__thread_tracks.clear()
+        for track_index in range(self.__thread_track_count):
+            track = TrackContext()
+            self.__thread_tracks.append(track)
 
     def __layout_track(self):
-        self.__thread_track.clear()
-
-        for track_index in range(0, self.__thread_track_count):
+        for track_index in range(len(self.__thread_tracks)):
             track_metrics = copy.deepcopy(self.get_thread_metrics())
             transverse_left, transverse_right = self.get_thread_metrics().get_transverse_limit()
 
-            # TODO: How to do it with the same inteface
+            # TODO: How to do it with the same interface
             if self.get_thread_metrics().get_layout() == LAYOUT_HORIZON:
                 if self.get_thread_metrics().get_align() == ALIGN_RIGHT:
                     track_metrics.set_transverse_limit(transverse_left - track_index * self.__thread_track_width,
@@ -383,21 +410,19 @@ class HistoryIndexTrack(TimeThreadBase):
                 else:
                     track_metrics.set_transverse_limit(transverse_right - (track_index + 1) * self.__thread_track_width,
                                                        transverse_right - track_index * self.__thread_track_width)
-            track = TrackContext()
-            track.set_metrics(track_metrics)
-            self.__thread_track.append(track)
+            self.__thread_tracks[track_index].set_metrics(track_metrics)
 
-    def __layout_bars(self):
-        self.__thread_track_bars.clear()
-        layout_indexes = self.__paint_indexes.copy()
+    def __layout_track_items(self):
+        layout_indexes = self.__event_indexes.copy()
+        layout_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
 
         overlap_count = 0
         prev_index_area = None
 
-        for i in range(0, len(self.__thread_track)):
-            track = self.__thread_track[i]
-
+        for i in range(len(self.__thread_tracks)):
+            track = self.__thread_tracks[i]
             processing_indexes = layout_indexes.copy()
+
             for index in processing_indexes:
                 bar = self.get_index_axis_item(index)
                 # If this index is a single time event, it should layout at the first track
@@ -406,13 +431,11 @@ class HistoryIndexTrack(TimeThreadBase):
                 if i == 0 and index.since() != index.until():
                     continue
                 if (index.since() == index.until()) or \
-                        track.has_space(*bar.get_item_metrics().get_longitudinal_range()) or \
-                        (i == len(self.__thread_track) - 1):
+                        track.has_space(*bar.get_item_metrics().get_scale_range()) or \
+                        (i == len(self.__thread_tracks) - 1):
                     track.take_space_for(bar)
-                    bar.arrange_item(track.get_metrics())
                     layout_indexes.remove(index)
-                    self.__thread_track_bars.append(bar)
-
+                    bar.arrange_item(track.get_metrics())
                     index_rect = bar.get_item_metrics().rect()
                     if prev_index_area is not None and index_rect == prev_index_area:
                         overlap_count += 1
@@ -420,14 +443,13 @@ class HistoryIndexTrack(TimeThreadBase):
                         overlap_count = 0
                     prev_index_area = index_rect
                     bar.shift_item(-3 * overlap_count, 0)
+                else:
+                    pass
 
-    def __paint_horizon(self, qp: QPainter):
-        for bar in self.__thread_track_bars:
-            bar.paint(qp)
-
-    def __paint_vertical(self, qp: QPainter):
-        for bar in self.__thread_track_bars:
-            bar.paint(qp)
+    def __arrange_track_items(self):
+        for track in self.__thread_tracks:
+            for bar in track.get_layout_bars():
+                bar.arrange_item(track.get_metrics())
 
 
 # ----------------------------------------------------------------------------------------------------------------------

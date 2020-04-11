@@ -239,16 +239,13 @@ class TrackContext:
     def get_layout_bars(self) -> []:
         return self.__layout_bars
 
-    def has_space(self, since: int, until: int) -> bool:
+    def has_space(self, since: HistoryTime.TICK, until: HistoryTime.TICK) -> bool:
         for bar in self.__layout_bars:
-            exist_since_pixel, exist_until_pixel = bar.get_item_metrics().get_longitudinal_range()
-            if exist_since_pixel < since < exist_until_pixel or \
-                    exist_since_pixel < until < exist_until_pixel:
+            exist_since_tick, exist_until_tick = bar.get_item_metrics().get_scale_range()
+            if exist_since_tick < since < exist_until_tick or \
+                    exist_since_tick < until < exist_until_tick:
                 return False
         return True
-
-    def has_space_for(self, bar) -> bool:
-        return self.has_space(*bar.get_longitudinal_space())
 
     def take_space_for(self, bar):
         if bar in self.__layout_bars:
