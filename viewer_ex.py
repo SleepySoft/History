@@ -600,7 +600,7 @@ class TimeAxis(QWidget):
         self.__layout = LAYOUT_VERTICAL
         # self.__layout = LAYOUT_HORIZON
 
-        self.set_time_range(0, HistoryTime.year_ticks(2000))
+        self.set_time_range(0, 2000 * HistoryTime.TICK_YEAR)
 
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
@@ -816,7 +816,14 @@ class TimeAxis(QWidget):
         self.__history_editor = HistoryEditorDialog(editor_agent=self)
         self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
         self.__history_editor.show_browser(False)
-        self.__history_editor.exec()
+
+        # # To avoid lossing focus
+        # self.__history_editor.setWindowFlags(Qt.Popup)
+        # self.__history_editor.setAttribute(Qt.WA_QuitOnClose)
+        # self.__history_editor.show()
+        # self.__history_editor.raise_()
+        self.__history_editor.exec_()
+        self.setFocus()
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
 

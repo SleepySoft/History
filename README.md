@@ -9,7 +9,10 @@ sleepy_history##163.com
 # Readme CN   
   
 ##最近更新
-支持坐标轴水平显示，在View -> Axis Appearance Setting中设置  
+使用严格公元纪元时间绘制时间轴  
+> 公元元年1月1日秒数为0，秒数为负则为公元前  
+> 考虑大小月及闰年影响  
+> 使用上和之前应该没多大区别，但这次更改的程度非常大，程序中时间的使用变得非常严谨  
   
 如果有任何意见和建议，或者对此项目感兴趣，请给我发送邮件：sleepy_history##163.com  
   
@@ -129,6 +132,7 @@ TODO
 (DONE) | 坐标轴的改进：  
 (DONE) | 	main scale为年时sub scale应为月（12格），同理月之下为周，周之下为日，日之下为时  
 (DONE) | 	更好的取整及显示时间单位  
+(DONE) | 支持坐标轴水平显示，在View -> Axis Appearance Setting中设置  
 
 ## TODO:
 
