@@ -2,6 +2,7 @@ import re
 import math
 import time
 import traceback
+import datetime
 from os import sys, path
 
 root_path = path.dirname(path.dirname(path.abspath(__file__)))
@@ -147,6 +148,37 @@ class HistoryTime:
     def pytime_to_tick(ts: time.struct_time) -> TICK:
         return HistoryTime.date_time_to_ad_seconds(ts.tm_year, ts.tm_mon, ts.tm_mday,
                                                    ts.tm_hour, ts.tm_min, ts.tm_sec)
+
+    @staticmethod
+    def time_str_to_tick(text: str):
+        dt = HistoryTime.time_str_to_datetime(text)
+        return HistoryTime.date_time_to_ad_seconds(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+
+    @staticmethod
+    def time_str_to_datetime(text: str) -> datetime.datetime or None:
+        if isinstance(text, datetime.datetime):
+            return text
+        # noinspection PyBroadException
+        try:
+            return datetime.datetime.strptime(text, '%Y-%m-%d %H:%M:%S')
+        except Exception:
+            pass
+        # noinspection PyBroadException
+        try:
+            return datetime.datetime.strptime(text, '%Y-%m-%d')
+        except Exception:
+            pass
+        # noinspection PyBroadException
+        try:
+            return datetime.datetime.strptime(text, '%H:%M:%S')
+        except Exception:
+            pass
+        # noinspection PyBroadException
+        try:
+            return datetime.datetime.strptime(text, '%Y%m%d')
+        except Exception:
+            pass
+        return None
 
     # @staticmethod
     # def year_of_tick(tick: TICK) -> int:
@@ -460,10 +492,12 @@ class HistoryTime:
             precise_year_days = rough_years * 365 + leap_year_count
             remaining_sec = sec - precise_year_days * HistoryTime.TICK_DAY
             if remaining_sec < 0:
-                rough_years -= 1
+                remainder_years = -remaining_sec // HistoryTime.TICK_YEAR
+                rough_years -= 1 if remainder_years == 0 else remainder_years
             else:
                 break
-        assert remaining_sec < HistoryTime.year_ticks(rough_years + 1)
+        if remaining_sec >= HistoryTime.year_ticks(rough_years + 1):
+            assert False
         return rough_years, remaining_sec
 
     # ---------------------------------- Offset Calculation ----------------------------------
@@ -643,7 +677,7 @@ def __log_error(text: str):
 
 def __verify_year_month(time_str, year_expect, month_expect):
     times = HistoryTime.time_text_to_history_times(time_str)
-    year, month, day = HistoryTime.date_of_tick(times[0])
+    year, month, day, _ = HistoryTime.ad_seconds_to_date(times[0])
     assert year == year_expect and month == month_expect
 
 

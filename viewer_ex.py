@@ -12,6 +12,36 @@ from Utility.viewer_utility import *
 from Utility.history_public import *
 
 
+# ------------------------------------------------------- Clock --------------------------------------------------------
+
+class Clock:
+    def __init__(self, start_flag: bool = True):
+        self.__start_time = time.time()
+        self.__start_flag = start_flag
+        self.__freeze_time = None
+
+    def reset(self):
+        self.__start_flag = True
+        self.__freeze_time = None
+        self.__start_time = time.time()
+
+    def freeze(self):
+        self.__freeze_time = time.time()
+
+    def elapsed(self) -> float:
+        if self.__freeze_time is None:
+            base_time = time.time()
+        else:
+            base_time = self.__freeze_time
+        return (base_time - self.__start_time) if self.__start_flag else 0
+
+    def elapsed_s(self) -> int:
+        return int(self.elapsed()) if self.__start_flag else 0
+
+    def elapsed_ms(self) -> int:
+        return int(self.elapsed() * 1000) if self.__start_flag else 0
+
+
 # ------------------------------------------------------ AxisItem ------------------------------------------------------
 
 class AxisItem:
@@ -72,8 +102,10 @@ class TimeThreadBase:
     def paint(self, qp: QPainter):
         qp.setBrush(self.get_thread_color())
         qp.drawRect(self.get_thread_metrics().rect())
+        start = time.time()
         for item in self.__paint_items:
             item.paint(qp)
+        print('Paint %s items, timespends: %ss' % (len(self.__paint_items), time.time() - start))
 
     def clear(self):
         self.__axis_items.clear()
@@ -525,9 +557,7 @@ class TimeAxis(QWidget):
             date_time_text = formatter[formatter_index](date_time)
 
             if date_time[0] < 0:
-                date_time_text = 'BCE ' + date_time_text
-            else:
-                date_time_text = 'CE ' + date_time_text
+                date_time_text = 'BC' + date_time_text
 
             return date_time_text
 
@@ -969,24 +999,38 @@ class TimeAxis(QWidget):
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paintEvent(self, event):
+        clock = Clock()
         start = time.process_time()
 
         qp = QPainter()
         qp.begin(self)
 
+        clock.reset()
         self.update_paint_area()
         self.update_pixel_per_scale()
         self.calc_paint_parameters()
+        print('Calc paint parameters: %sms' % clock.elapsed_ms())
+
+        clock.reset()
         self.calc_paint_layout()
+        print('Calc paint layout: %sms' % clock.elapsed_ms())
 
         self.paint_background(qp)
 
+        clock.reset()
         if self.__layout == LAYOUT_HORIZON:
             self.paint_horizon(qp)
         else:
             self.paint_vertical(qp)
+        print('Paint axis: %sms' % clock.elapsed_ms())
+
+        clock.reset()
         self.paint_threads(qp)
+        print('Paint threads: %sms' % clock.elapsed_ms())
+
+        clock.reset()
         self.paint_real_time_tips(qp)
+        print('Paint real time tips: %sms' % clock.elapsed_ms())
 
         qp.end()
 
@@ -1028,7 +1072,7 @@ class TimeAxis(QWidget):
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
             qp.drawText(x_main, main_scale_end + 20, main_scale_text)
 
-            print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+            # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
 
             while True:
                 prev_paint_tick = paint_tick
@@ -1038,7 +1082,7 @@ class TimeAxis(QWidget):
                 if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
                     break
 
-                print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+                # print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
                 x_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[x_sub] = paint_tick
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
@@ -1089,7 +1133,7 @@ class TimeAxis(QWidget):
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
-            print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+            # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
 
             while True:
                 prev_paint_tick = paint_tick
@@ -1099,7 +1143,7 @@ class TimeAxis(QWidget):
                 if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
                     break
 
-                print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+                # print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
                 y_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[y_sub] = paint_tick
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
