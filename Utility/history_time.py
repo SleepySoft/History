@@ -493,7 +493,9 @@ class HistoryTime:
             remaining_sec = sec - precise_year_days * HistoryTime.TICK_DAY
             if remaining_sec < 0:
                 remainder_years = -remaining_sec // HistoryTime.TICK_YEAR
-                rough_years -= 1 if remainder_years == 0 else remainder_years
+                rough_years -= remainder_years + 1
+            elif remaining_sec >= HistoryTime.year_ticks(rough_years + 1):
+                rough_years += remaining_sec // HistoryTime.TICK_YEAR
             else:
                 break
         if remaining_sec >= HistoryTime.year_ticks(rough_years + 1):
@@ -739,7 +741,8 @@ def test_time_text_to_history_times():
     # assert HistoryTime.year_of_tick(times[0]) == 220 and HistoryTime.year_of_tick(times[1]) == 535
 
     times = HistoryTime.time_text_to_history_times('公元前1600年 - 公元前1046年')
-    assert HistoryTime.year_of_tick(times[0]) == -1600 and HistoryTime.year_of_tick(times[1]) == -1046
+    assert HistoryTime.ad_seconds_to_date(times[0])[0] == -1600 and \
+           HistoryTime.ad_seconds_to_date(times[1])[0] == -1046
 
 
 def test_ad_since_tick():
