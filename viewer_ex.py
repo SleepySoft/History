@@ -505,6 +505,32 @@ class TimeAxis(QWidget):
         def next_sub_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
             return HistoryTime.offset_ad_second(tick, *self.sub_scale_offset)
 
+        def format_main_scale_text(self, tick: HistoryTime.TICK) -> str:
+            formatter = [
+                lambda x:'%04d' % x[0],
+                lambda x:'%04d/%02d' % x[0: 2],
+                lambda x:'%04d/%02d/%02d' % x[0: 3],
+
+                lambda x:'%04d/%02d/%02d %02dH' % x[0: 4],
+                lambda x:'%04d/%02d/%02d %02d:%02d:%02d' % x,
+                lambda x:'%04d/%02d/%02d %02d:%02d:%02d' % x,
+            ]
+
+            formatter_index = 0
+            for index in range(len(self.main_scale_offset)):
+                if self.main_scale_offset[index] != 0:
+                    formatter_index = index
+
+            date_time = HistoryTime.ad_seconds_to_date_time(tick)
+            date_time_text = formatter[formatter_index](date_time)
+
+            if date_time[0] < 0:
+                date_time_text = 'BCE ' + date_time_text
+            else:
+                date_time_text = 'CE ' + date_time_text
+
+            return date_time_text
+
     STEP_LIST = [
         Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0)),
         Scale((5000, 0, 0, 0, 0, 0), (500, 0, 0, 0, 0, 0)),
@@ -518,6 +544,9 @@ class TimeAxis(QWidget):
         Scale((50, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0)),
         Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0)),
         Scale((1, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0)),
+        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0)),
+        Scale((0, 0, 10, 0, 0, 0), (0, 0, 1, 0, 0, 0)),
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 2, 0, 0)),
     ]
     # SUB_STEP_COUNT = [
     #     10, 10, 10,
@@ -640,7 +669,7 @@ class TimeAxis(QWidget):
     def set_axis_scale_step(self, step: HistoryTime.TICK):
         step_index = 0
         for preset_step in TimeAxis.STEP_LIST:
-            if preset_step <= step:
+            if preset_step.rough_offset_tick() <= step:
                 break
             step_index += 1
         self.select_step_scale(step_index)
@@ -994,13 +1023,22 @@ class TimeAxis(QWidget):
 
             x_main = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
             self.__optimise_pixel[x_main] = paint_tick
-            main_scale_text = HistoryTime.tick_to_standard_string(paint_tick)
+            main_scale_text = self.__scale.format_main_scale_text(paint_tick)
 
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
             qp.drawText(x_main, main_scale_end + 20, main_scale_text)
 
-            while paint_tick < next_paint_tick:
+            print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+
+            while True:
+                prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
+                delta_paint_tick = paint_tick - prev_paint_tick
+
+                if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
+                    break
+
+                print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
                 x_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[x_sub] = paint_tick
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
@@ -1041,28 +1079,32 @@ class TimeAxis(QWidget):
         paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
         assert paint_tick <= tick_since
 
-        paint_scale_count = 0
         while paint_tick < tick_until:
             next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
             y_main = int(self.__coordinate_metrics.value_to_pixel(paint_tick))
             self.__optimise_pixel[y_main] = paint_tick
-            main_scale_text = HistoryTime.tick_to_standard_string(paint_tick)
+            main_scale_text = self.__scale.format_main_scale_text(paint_tick)
 
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
-            paint_scale_count += 1
+            print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
 
-            while paint_tick < next_paint_tick:
+            while True:
+                prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
+                delta_paint_tick = paint_tick - prev_paint_tick
+
+                if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
+                    break
+
+                print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
                 y_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[y_sub] = paint_tick
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
 
             paint_tick = next_paint_tick
-
-        print('Print scale count = %s' % paint_scale_count)
 
         # for i in range(0, 12):
         #     time_main = self.__paint_start_tick + i * self.__main_scale
