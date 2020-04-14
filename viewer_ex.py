@@ -1057,9 +1057,9 @@ class TimeAxis(QWidget):
         clock.reset()
         self.paint_background(qp)
         if self.__layout == LAYOUT_HORIZON:
-            self.paint_horizon(qp)
+            self.paint_horizon_scale(qp)
         else:
-            self.paint_vertical(qp)
+            self.paint_vertical_scale(qp)
         print('Paint axis: %sms' % clock.elapsed_ms())
 
         clock.reset()
@@ -1083,7 +1083,7 @@ class TimeAxis(QWidget):
         qp.setBrush(AXIS_BACKGROUND_COLORS[2])
         qp.drawRect(self.__paint_area)
 
-    def paint_horizon(self, qp: QPainter):
+    def paint_horizon_scale(self, qp: QPainter):
         qp.drawLine(0, self.__paint_area.height() - self.__axis_mid,
                     self.__paint_area.width(), self.__paint_area.height() - self.__axis_mid)
 
@@ -1112,7 +1112,8 @@ class TimeAxis(QWidget):
 
             # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
 
-            while True:
+            clock = Clock()
+            while False:
                 prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
                 delta_paint_tick = paint_tick - prev_paint_tick
@@ -1124,6 +1125,7 @@ class TimeAxis(QWidget):
                 x_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[x_sub] = paint_tick
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
+            print('Paint sub scale: %sms' % clock.elapsed_ms())
 
             paint_tick = next_paint_tick
 
@@ -1147,7 +1149,7 @@ class TimeAxis(QWidget):
         #         self.__optimise_pixel[x_sub] = time_sub
         #         qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
 
-    def paint_vertical(self, qp: QPainter):
+    def paint_vertical_scale(self, qp: QPainter):
         qp.drawLine(self.__axis_mid, 0, self.__axis_mid, self.__paint_area.height())
 
         main_scale_start = int(self.__axis_mid - 15)
@@ -1173,7 +1175,7 @@ class TimeAxis(QWidget):
 
             # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
 
-            while True:
+            while False:
                 prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
                 delta_paint_tick = paint_tick - prev_paint_tick

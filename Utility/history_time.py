@@ -35,33 +35,22 @@ class HistoryTime:
     TICK_YEAR = TICK_DAY * 365          # 31536000
     TICK_LEAP_YEAR = TICK_DAY * 366     # 31622400
     TICK_WEEK = TICK(TICK_YEAR / 52)    # 608123.0769230769
-    TICK_MONTH = [1,
-                  31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
-                  152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
-                  274 * TICK_DAY, 304 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY]
 
     MONTH_DAYS = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     MONTH_DAYS_LEAP_YEAR = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-    MONTH_SEC_LEAP_YEAR = [
-        0 * TICK_DAY,
-        31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
-        152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
-        274 * TICK_DAY, 305 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY,
-    ]
+    MONTH_DAYS_SUM = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+    MONTH_DAYS_SUM_LEAP_YEAR = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366]
 
-    MONTH_SEC = [
-        0 * TICK_DAY,
-        31 * TICK_DAY, 59 * TICK_DAY, 90 * TICK_DAY, 120 * TICK_DAY,
-        151 * TICK_DAY, 181 * TICK_DAY, 212 * TICK_DAY, 243 * TICK_DAY,
-        273 * TICK_DAY, 304 * TICK_DAY, 334 * TICK_DAY, 365 * TICK_DAY,
-    ]
-    MONTH_SEC_LEAP_YEAR = [
-        0 * TICK_DAY,
-        31 * TICK_DAY, 60 * TICK_DAY, 91 * TICK_DAY, 121 * TICK_DAY,
-        152 * TICK_DAY, 182 * TICK_DAY, 213 * TICK_DAY, 244 * TICK_DAY,
-        274 * TICK_DAY, 305 * TICK_DAY, 335 * TICK_DAY, 366 * TICK_DAY,
-    ]
+    YEAR_DAYS = 365
+    YEAR_DAYS_LEAP_YEAR = 366
+
+    MONTH_SEC = [86400 * days for days in MONTH_DAYS_SUM]
+    MONTH_SEC_LEAP_YEAR = [86400 * days for days in MONTH_DAYS_SUM_LEAP_YEAR]
+
+    DAYS_PER_4_YEARS = 365 * 4 + 4 // 4 - 4 // 100 + 4 // 400
+    DAYS_PER_100_YEARS = 365 * 100 + 100 // 4 - 100 // 100 + 100 // 400
+    DAYS_PER_400_YEARS = 365 * 400 + 400 // 4 - 400 // 100 + 400 // 400
 
     EFFECTIVE_TIME_DIGIT = 10
 
@@ -377,8 +366,11 @@ class HistoryTime:
 
     @staticmethod
     def year_ticks(year: int) -> int:
-        assert year > 0
-        return HistoryTime.TICK_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.TICK_YEAR
+        return HistoryTime.TICK_LEAP_YEAR if HistoryTime.is_leap_year(abs(year)) else HistoryTime.TICK_YEAR
+
+    @staticmethod
+    def year_days(year: int) -> int:
+        return HistoryTime.YEAR_DAYS if HistoryTime.is_leap_year(abs(year)) else HistoryTime.YEAR_DAYS_LEAP_YEAR
 
     @staticmethod
     def month_ticks(year: int) -> [int]:
@@ -390,6 +382,112 @@ class HistoryTime:
         if year <= 0:
             assert False
         return HistoryTime.MONTH_DAYS_LEAP_YEAR if HistoryTime.is_leap_year(year) else HistoryTime.MONTH_DAYS
+
+    # ---------------------------------- Basic Calculation -----------------------------------
+
+    @staticmethod
+    def is_leap_year(year: int) -> bool:
+        """
+        Check whether the year is leap year.
+        :param year: Since 0001
+        :return: True if it's leap year else False
+        """
+        year = abs(int(year))
+        assert year != 0
+        return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
+    @staticmethod
+    def leap_year_count_since_ad(year: int) -> int:
+        """
+        Concept: Leap year should exclude the 25th, 50th, 75th, keep 100th, exclude 125th, 150th, ...
+        :param year: Since 0001
+        :return: Leap year count that include this year itself
+        """
+        year = 1 if year == 0 else abs(year)
+        rough_count = year // 4
+        except_count = rough_count - rough_count // 25 + rough_count // 100
+        return except_count
+
+    # ------------------ xxx -> days ------------------
+
+    @staticmethod
+    def days_of_year(year: int) -> int:
+        year = abs(year)
+        return 365 * year + year // 4 - year // 100 + year // 400
+
+    @staticmethod
+    def days_of_month(month: int, leap_year: bool) -> int:
+        if month < 0 or month > 12:
+            assert False
+        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month] if leap_year else HistoryTime.MONTH_DAYS_SUM[month]
+
+    @staticmethod
+    def days_of_date(year: int, month: int, day: int) -> int:
+        year_days = HistoryTime.days_of_year(year)
+        month_days = HistoryTime.days_of_month(month, HistoryTime.is_leap_year(year))
+        return (year_days + month_days + day) if year > 0 else (year_days - month_days - day)
+
+    # ------------------ days -> xxx ------------------
+
+    @staticmethod
+    def year_of_days(days: int) -> (int, int):
+        years_400 = abs(days) // HistoryTime.DAYS_PER_400_YEARS
+        remainder = abs(days) % HistoryTime.DAYS_PER_400_YEARS
+
+        years_100 = remainder // HistoryTime.DAYS_PER_100_YEARS
+        remainder = remainder % HistoryTime.DAYS_PER_100_YEARS
+
+        years_4 = remainder // HistoryTime.DAYS_PER_4_YEARS
+        remainder = remainder % HistoryTime.DAYS_PER_4_YEARS
+
+        years_1 = remainder // HistoryTime.YEAR_DAYS
+        remainder = remainder % HistoryTime.YEAR_DAYS
+
+        return (-1 if days < 0 else 1) * (years_400 * 400 + years_100 * 100 + years_4 * 4 + years_1 + 1), remainder
+
+    @staticmethod
+    def month_of_days(days: int, leap_year: bool) -> (int, int):
+        assert days > 0
+        month_days_sum = HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR if leap_year else HistoryTime.MONTH_DAYS_SUM
+        for month in range(len(month_days_sum)):
+            if month_days_sum[month] >= days:
+                return month, days - month_days_sum[month]
+        assert False
+
+    @staticmethod
+    def date_of_days(days: int) ->(int, int, int):
+        year, remainder = HistoryTime.year_of_days(days)
+        if days < 0:
+            remainder = HistoryTime.year_days(year) - remainder
+        month, remainder = HistoryTime.month_of_days(remainder, HistoryTime.is_leap_year(year))
+        return year, month, remainder
+
+    # -------------------- seconds --------------------
+
+    @staticmethod
+    def year_to_ad_second(year: int) -> int:
+        """
+        Calculate the seconds since 0001 to the end of specified year.
+        :param year: Since 0001
+        :return: The seconds
+        """
+        days = HistoryTime.days_of_year(year)
+        return days * HistoryTime.TICK_DAY
+
+    @staticmethod
+    def ad_second_to_year(sec: int) -> (int, int):
+        """
+        Convert AD since seconds to years. Notice the year starts from 0
+        :param sec: The second since AD which should be larger than 0
+        :return: Year - Start from 0 if the seconds is less than a year
+                  Remainder - Remainder of Seconds less than a year
+        """
+        days, remainder = abs(sec) / HistoryTime.TICK_DAY
+        remainder_sec = abs(sec) % HistoryTime.TICK_DAY
+        years, remainder_day = HistoryTime.year_of_days(days)
+        # TODO:
+        if sec > 0:
+            return years,
 
     # -------------------------------------- Time Delta --------------------------------------
 
@@ -433,74 +531,19 @@ class HistoryTime:
     @staticmethod
     def offset_date_time(origin: (int, int, int, int, int, int),
                          offset: (int, int, int, int, int, int)) -> (int, int, int, int, int, int):
-        tick = HistoryTime.date_time_to_ad_seconds(*origin)
-        offset_tick = HistoryTime.offset_ad_second(tick, *offset)
-        return HistoryTime.ad_seconds_to_date_time(offset_tick)
+        offset_datetime = [x + y for x, y in zip(origin, offset)]
 
-    # ---------------------------------- Basic Calculation -----------------------------------
+        offset_datetime[4] = offset_datetime[5] // 60
+        offset_datetime[5] = offset_datetime[5] % 60
 
-    @staticmethod
-    def is_leap_year(year: int) -> bool:
-        """
-        Check whether the year is leap year.
-        :param year: Since 0001
-        :return: True if it's leap year else False
-        """
-        year = abs(int(year))
-        assert year != 0
-        return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+        offset_datetime[3] = offset_datetime[4] // 60
+        offset_datetime[4] = offset_datetime[4] % 60
 
-    @staticmethod
-    def leap_year_count_since_ad(year: int) -> int:
-        """
-        Concept: Leap year should exclude the 25th, 50th, 75th, keep 100th, exclude 125th, 150th, ...
-        :param year: Since 0001
-        :return: Leap year count that include this year itself
-        """
-        year = 1 if year == 0 else abs(year)
-        rough_count = year // 4
-        except_count = rough_count - rough_count // 25 + rough_count // 100
-        return except_count
+        offset_datetime[2] = offset_datetime[3] // 24
+        offset_datetime[3] = offset_datetime[3] % 24
 
-    @staticmethod
-    def year_to_second(year: int) -> int:
-        """
-        Calculate the seconds since 0001 to the end of specified year.
-        :param year: Since 0001
-        :return: The seconds
-        """
-        assert year >= 0
-        if year == 0:
-            return 0
-        leap_years = HistoryTime.leap_year_count_since_ad(year)
-        year_seconds = year * HistoryTime.TICK_YEAR + leap_years * HistoryTime.TICK_DAY
-        return year_seconds
-
-    @staticmethod
-    def ad_second_to_year(sec: int) -> (int, int):
-        """
-        Convert AD since seconds to years. Notice the year starts from 0
-        :param sec: The second since AD which should be larger than 0
-        :return: Year - Start from 0 if the seconds is less than a year
-                  Remainder - Remainder of Seconds less than a year
-        """
-        assert sec >= 0
-        rough_years = sec // HistoryTime.TICK_YEAR
-
-        while True:
-            leap_year_count = HistoryTime.leap_year_count_since_ad(rough_years)
-            precise_year_days = rough_years * 365 + leap_year_count
-            remaining_sec = sec - precise_year_days * HistoryTime.TICK_DAY
-            if remaining_sec < 0:
-                remainder_years = -remaining_sec // HistoryTime.TICK_YEAR
-                rough_years -= remainder_years + 1
-            elif remaining_sec >= HistoryTime.year_ticks(rough_years + 1):
-                rough_years += remaining_sec // HistoryTime.TICK_YEAR
-            else:
-                break
-        if remaining_sec >= HistoryTime.year_ticks(rough_years + 1):
-            assert False
-        return rough_years, remaining_sec
+        days = HistoryTime.days_of_date(offset_datetime[0], offset_datetime[1], offset_datetime[2])
+        return HistoryTime.date_of_days(days), offset_datetime[3], offset_datetime[4], offset_datetime[5]
 
     # ---------------------------------- Offset Calculation ----------------------------------
 
@@ -518,7 +561,7 @@ class HistoryTime:
     #         return sec, 0
     #     abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
     #     offset_year = abs_year if remaining_sec == 0 else abs_year + 1
-    #     offset_year_ticks = HistoryTime.year_to_second(offset_year)
+    #     offset_year_ticks = HistoryTime.year_to_ad_second(offset_year)
     #     return sec + offset_year_ticks, offset_year + 1
 
     @staticmethod
@@ -534,7 +577,7 @@ class HistoryTime:
         if year >= 0:
             return 0, year
         offset_year = -year
-        offset_year_ticks = HistoryTime.year_to_second(offset_year)
+        offset_year_ticks = HistoryTime.year_to_ad_second(offset_year)
         # Note that there's no 0 year. So from -1 year to 1 year, it only shifts 1 year
         # And if we offset it's absolute years, the original year is always 1
         return offset_year_ticks, 1
@@ -608,7 +651,7 @@ class HistoryTime:
         else:
             abs_year, remaining_sec = HistoryTime.ad_second_to_year(-sec)
             offset_year = abs_year if remaining_sec == 0 else abs_year + 1
-            offset_year_ticks = HistoryTime.year_to_second(offset_year)
+            offset_year_ticks = HistoryTime.year_to_ad_second(offset_year)
             offset_tick = sec + offset_year_ticks
 
             month, remainder = HistoryTime.seconds_to_month(offset_tick, offset_year)
@@ -650,7 +693,7 @@ class HistoryTime:
         month = HistoryTime.__shrink_edge(month)
         day = HistoryTime.__shrink_edge(day)
 
-        year_seconds = HistoryTime.year_to_second(offset_year)
+        year_seconds = HistoryTime.year_to_ad_second(offset_year)
         month_seconds = month_sec[month]
         day_seconds = day * HistoryTime.TICK_DAY
 
