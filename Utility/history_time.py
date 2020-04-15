@@ -366,19 +366,42 @@ class HistoryTime:
 
     @staticmethod
     def year_ticks(leap_year: bool) -> TICK:
+        """
+        Get seconds of a year.
+        :param leap_year: Is leap year or not
+        :return: seconds of 365 days if leap year else seconds of 366 days
+        """
         return HistoryTime.TICK_LEAP_YEAR if leap_year else HistoryTime.TICK_YEAR
 
     @staticmethod
     def year_days(leap_year: bool) -> int:
+        """
+        Get days of a year.
+        :param leap_year: Is leap year or not
+        :return: 365 days if leap year else 366 days
+        """
         return HistoryTime.YEAR_DAYS if leap_year else HistoryTime.YEAR_DAYS_LEAP_YEAR
 
     @staticmethod
     def month_ticks(month: int, leap_year: bool) -> TICK:
+        """
+        Get seconds of the month.
+        :param month: The month should be 0 <= month <= 13
+        :param leap_year: Is leap year or not
+        :return: The seconds of the month.
+        """
         assert 0 <= month <= 13
         return HistoryTime.MONTH_SEC_LEAP_YEAR[month] if leap_year else HistoryTime.MONTH_SEC[month]
 
     @staticmethod
     def month_days(month: int, leap_year: bool) -> int:
+        """
+        Get days of the month
+        :param month: The month should be 0 <= month <= 13
+                       Jan should be 1 and Dec should be 12
+        :param leap_year: Is leap year or not
+        :return: The days of the month.
+        """
         assert 0 <= month <= 13
         return HistoryTime.MONTH_DAYS_LEAP_YEAR[month] if leap_year else HistoryTime.MONTH_DAYS[month]
 
@@ -388,7 +411,8 @@ class HistoryTime:
     def is_leap_year(year: int) -> bool:
         """
         Check whether the year is leap year.
-        :param year: Since 0001
+        :param year: Since 0001 or -0001. Can be positive or negative, but not 0.
+                      This function will calculate with the absolute value of year.
         :return: True if it's leap year else False
         """
         assert year != 0
@@ -399,28 +423,52 @@ class HistoryTime:
     def leap_year_count_since_ad(year: int) -> int:
         """
         Concept: Leap year should exclude the 25th, 50th, 75th, keep 100th, exclude 125th, 150th, ...
-        :param year: Since 0001
-        :return: Leap year count that include this year itself
+        :param year: Since 0001 or -0001. Can be positive or negative, but not 0.
+                      This function will calculate with the absolute value of year.
+        :return: Leap year count that includes this year itself
         """
-        year = 1 if year == 0 else abs(year)
-        rough_count = year // 4
+        assert year != 0
+        rough_count = abs(year) // 4
         except_count = rough_count - rough_count // 25 + rough_count // 100
         return except_count
+
+    # --------------------------------------- Days ---------------------------------------
 
     # ------------------ xxx -> days ------------------
 
     @staticmethod
     def years_to_days(year: int) -> int:
-        year = abs(year)
+        """
+        Calculate days count of years
+        :param year: The year since 0001. It will use absolute value if year is negative.
+        :return: The days of years. Considering the leap years.
+        """
+        assert year != 0
+        year = abs(year) - 1
         return 365 * year + year // 4 - year // 100 + year // 400
 
     @staticmethod
     def months_to_days(month: int, leap_year: bool) -> int:
-        assert 0 <= month <= 13
-        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month] if leap_year else HistoryTime.MONTH_DAYS_SUM[month]
+        """
+        Calculate the days since the beginning of a year to the end of the month.
+        :param month: The month should be 1 <= month <= 12
+        :param leap_year: Is leap year or not
+        :return: The days since the beginning of a year to the end of the month, Considering the leap year.
+        """
+        assert 1 <= month <= 12
+        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] if leap_year else HistoryTime.MONTH_DAYS_SUM[month - 1]
 
     @staticmethod
     def date_to_days(year: int, month: int, day: int) -> int:
+        """
+        Calculate the days
+        :param year: Since 0001 CE or 0001 BCE
+        :param month: 1 to 12
+        :param day: Any
+        :return: The days of date since 0001 CE or 0001 BCE
+        """
+        assert year != 0
+        assert 1 <= month <= 12
         year_days = HistoryTime.years_to_days(year)
         month_days = HistoryTime.months_to_days(month, HistoryTime.is_leap_year(year))
         return (year_days + month_days + day) if year > 0 else (year_days - month_days - day)
@@ -429,6 +477,11 @@ class HistoryTime:
 
     @staticmethod
     def days_to_years(days: int) -> (int, int):
+        """
+        Calculate the years of days since 0001 CE or 0001 BCE.
+        :param days: Positive for CE and Negative for BCE.
+        :return: The years since 0001 CE or 0001 BCE
+        """
         sign = 1 if days >= 0 else -1
 
         years_400 = abs(days) // HistoryTime.DAYS_PER_400_YEARS
@@ -447,33 +500,66 @@ class HistoryTime:
 
     @staticmethod
     def days_to_months(days: int, leap_year: bool) -> (int, int):
-        assert days >= 0
+        """
+        Calculate the month of days since the beginning of year
+        :param days: Days that should be larger than 0 and start with 1 and less than a year
+        :param leap_year: Is leap year or not
+        :return: The month that since 1 to 12
+        """
+        assert days > 0
         month_days_sum = HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR if leap_year else HistoryTime.MONTH_DAYS_SUM
         for month in range(len(month_days_sum)):
-            if month_days_sum[month] >= days:
+            if month_days_sum[month] > days - 1:
                 return month + 1, days - month_days_sum[month]
         assert False
 
     @staticmethod
     def days_to_date(days: int) ->(int, int, int):
+        """
+        Calculate the date of days since 0001 CE or 0001 BCE
+        :param days: Positive for CE and Negative for BCE.
+        :return: The date of days
+        """
         year, remainder = HistoryTime.days_to_years(days)
+        leap_year = HistoryTime.is_leap_year(year)
         if days < 0:
-            remainder = HistoryTime.year_days(HistoryTime.is_leap_year(year)) - remainder
-        month, remainder = HistoryTime.days_to_months(remainder, HistoryTime.is_leap_year(year))
-        return year, month, remainder
+            remainder = HistoryTime.year_days(leap_year) - remainder
+        month, day = HistoryTime.days_to_months(remainder, leap_year)
+        return year, month, day
+
+    # -------------------------------------- Seconds --------------------------------------
 
     # -------------------- xxx -> seconds --------------------
 
     @staticmethod
     def time_to_seconds(hours: int = 0, minutes: int = 0, seconds: int = 0) -> int:
+        """
+        Calculate the seconds since the start of day of specified time
+        :param hours: 0 - 23
+        :param minutes: 0 - 59
+        :param seconds: 0 - 59
+        :return: The seconds of time
+        """
         return hours * HistoryTime.TICK_HOUR + minutes * HistoryTime.TICK_MIN + seconds
 
     @staticmethod
     def days_to_seconds(days: int) -> int:
-        return days * HistoryTime.TICK_DAY
+        """
+        Calculate the seconds of day.
+        :param days: Days larger than 0 and start from 1
+        :return: The seconds of days
+        """
+        assert days > 0
+        return (days - 1) * HistoryTime.TICK_DAY
 
     @staticmethod
     def months_to_seconds(months: int, leap_year: bool) -> int:
+        """
+        Calculate the seconds of month.
+        :param months: 1 - 12
+        :param leap_year: Is leap year or not
+        :return: The seconds of months
+        """
         month_days = HistoryTime.months_to_days(months, leap_year)
         return HistoryTime.days_to_seconds(month_days)
 
@@ -488,13 +574,19 @@ class HistoryTime:
         return HistoryTime.days_to_seconds(year_days)
 
     @staticmethod
-    def date_time_to_seconds(year: int, month: int, day: int,
-                             hours: int = 0, minutes: int = 0, seconds: int = 0) -> int:
+    def date_to_seconds(year: int, month: int, day: int) -> int:
         year_seconds = HistoryTime.years_to_seconds(year)
         month_seconds = HistoryTime.months_to_seconds(month, HistoryTime.is_leap_year(year))
         day_seconds = HistoryTime.days_to_seconds(day)
+        return (year_seconds + month_seconds + day_seconds) if year > 0 else \
+               (year_seconds + month_seconds - day_seconds)
+
+    @staticmethod
+    def date_time_to_seconds(year: int, month: int, day: int,
+                             hours: int = 0, minutes: int = 0, seconds: int = 0) -> int:
+        date_seconds = HistoryTime.date_to_seconds(year, month, day)
         time_seconds = HistoryTime.time_to_seconds(hours, minutes, seconds)
-        return year_seconds + month_seconds + day_seconds + time_seconds
+        return (date_seconds + time_seconds) if year > 0 else (date_seconds - time_seconds)
 
     # -------------------- seconds -> xxx --------------------
 
@@ -504,8 +596,8 @@ class HistoryTime:
         Convert seconds to hour, minutes and seconds
         :param sec: Seconds
         :return: Hour - 0 ~ max
-                 Minutes - 0 ~ 59
-                 Seconds - 0 ~ 59
+                  Minutes - 0 ~ 59
+                  Seconds - 0 ~ 59
         """
         sec = abs(sec)
         hour = sec // HistoryTime.TICK_HOUR
@@ -516,9 +608,8 @@ class HistoryTime:
 
     @staticmethod
     def seconds_to_days(sec: int) -> (int, int):
-        sign = 1 if sec > 0 else -1
-        sec = abs(sec)
-        return sign * (sec // HistoryTime.TICK_DAY), sign * (sec % HistoryTime.TICK_DAY)
+        assert sec >= 0
+        return sec // HistoryTime.TICK_DAY + 1, sec % HistoryTime.TICK_DAY
 
     @staticmethod
     def seconds_to_month(sec: int, leap_year: bool) -> (int, int):
@@ -527,8 +618,9 @@ class HistoryTime:
         :param sec: The seconds
         :param leap_year: True if leap year else False
         :return: Month - Start from 1
-                 Remainder of Seconds
+                  Remainder of Seconds
         """
+        assert sec >= 0
         days, remainder_sec = HistoryTime.seconds_to_days(sec)
         months, remainder_days = HistoryTime.days_to_months(days, leap_year)
         return months, remainder_sec + HistoryTime.days_to_seconds(remainder_days)
@@ -536,18 +628,18 @@ class HistoryTime:
     @staticmethod
     def seconds_to_years(sec: int) -> (int, int):
         """
-        Convert AD since seconds to years. Notice the year starts from 0
-        :param sec: The second since AD which should be larger than 0
-        :return: Year - Start from 0 if the seconds is less than a year
-                  Remainder - Remainder of Seconds less than a year
+        Convert seconds to year since CE or BCE
+        :param sec: CE if sec >= 0 else BCE
+        :return: Year - Since 0001 CE if sec >= 0 else Since 0001 BCE if sec < 0
+                  Remainder - Remainder of Seconds that less than a year
         """
-        days, remainder_sec = HistoryTime.seconds_to_days(sec)
+        days, remainder_sec = HistoryTime.seconds_to_days(abs(sec))
         years, remainder_day = HistoryTime.days_to_years(days)
         remainder_sec += remainder_day * HistoryTime.TICK_DAY
         if sec > 0:
             return years, remainder_sec
         else:
-            return years, HistoryTime.year_days(years) - remainder_sec
+            return years, HistoryTime.year_ticks(years) - remainder_sec
 
     @staticmethod
     def seconds_to_date(sec: int) ->(int, int, int, int):
