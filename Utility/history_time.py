@@ -439,24 +439,29 @@ class HistoryTime:
     @staticmethod
     def years_to_days(year: int) -> int:
         """
-        Calculate days count of years
+        Calculate days since 0001 CE to the start of the positive year
+        Or days since 0001 BCE to the head of the negative year
+        Note that from 0001 CE to 0004 CE the days should be 3 * 365
+        But from 0001 BCE to 0004 BCE the days should be 1 + 4 * 365
         :param year: The year since 0001. It will use absolute value if year is negative.
-        :return: The days of years. Considering the leap years.
+        :return: The days of years. Considering the leap years. The sign is the same with the year.
         """
         assert year != 0
-        year = abs(year) - 1
-        return 365 * year + year // 4 - year // 100 + year // 400
+        sign = 1 if year > 0 else -1
+        abs_year = year - 1 if year > 0 else -year
+        return sign * (365 * abs_year + abs_year // 4 - abs_year // 100 + abs_year // 400)
 
     @staticmethod
     def months_to_days(month: int, leap_year: bool) -> int:
         """
-        Calculate the days since the beginning of a year to the end of the month.
+        Calculate the days since the beginning of a year to the start of the month.
         :param month: The month should be 1 <= month <= 12
         :param leap_year: Is leap year or not
         :return: The days since the beginning of a year to the end of the month, Considering the leap year.
         """
         assert 1 <= month <= 12
-        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] if leap_year else HistoryTime.MONTH_DAYS_SUM[month - 1]
+        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] + 1 if leap_year else \
+               HistoryTime.MONTH_DAYS_SUM[month - 1] + 1
 
     @staticmethod
     def date_to_days(year: int, month: int, day: int) -> int:
@@ -471,7 +476,7 @@ class HistoryTime:
         assert 1 <= month <= 12
         year_days = HistoryTime.years_to_days(year)
         month_days = HistoryTime.months_to_days(month, HistoryTime.is_leap_year(year))
-        return (year_days + month_days + day) if year > 0 else (year_days - month_days - day)
+        return year_days + month_days + day
 
     # ------------------ days -> xxx ------------------
 
@@ -509,7 +514,7 @@ class HistoryTime:
         assert days > 0
         month_days_sum = HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR if leap_year else HistoryTime.MONTH_DAYS_SUM
         for month in range(len(month_days_sum)):
-            if month_days_sum[month] > days - 1:
+            if month_days_sum[month] >= days - 1:
                 return month + 1, days - month_days_sum[month]
         assert False
 
@@ -566,12 +571,13 @@ class HistoryTime:
     @staticmethod
     def years_to_seconds(year: int) -> int:
         """
-        Calculate the seconds since 0001 to the end of specified year.
-        :param year: Since 0001
-        :return: The seconds
+        Calculate the seconds since 0001 CE to the start of a positive year
+        Or the seconds since 0001 BCE to the head of a negative year
+        :param year: Start from 0001 CE or 0001 BCE. Cannot be 0
+        :return: The seconds of the years. The sign is the same to the year.
         """
         year_days = HistoryTime.years_to_days(year)
-        return HistoryTime.days_to_seconds(year_days)
+        return HistoryTime.years_to_days(year_days)
 
     @staticmethod
     def date_to_seconds(year: int, month: int, day: int) -> int:
@@ -639,7 +645,8 @@ class HistoryTime:
         if sec > 0:
             return years, remainder_sec
         else:
-            return years, HistoryTime.year_ticks(years) - remainder_sec
+            return (-years, 0) if remainder_sec == 0 else \
+                   (-years - 1, HistoryTime.year_ticks(HistoryTime.is_leap_year(years + 1)) - remainder_sec)
 
     @staticmethod
     def seconds_to_date(sec: int) ->(int, int, int, int):
@@ -823,6 +830,79 @@ class HistoryTime:
 # ----------------------------------------------------- Test Code ------------------------------------------------------
 
 f = open('history_time.log', 'wt')
+
+
+def test_years_to_days():
+    assert HistoryTime.years_to_days(1) == 0
+    assert HistoryTime.years_to_days(2) == 365
+    assert HistoryTime.years_to_days(3) == 365 + 365
+    assert HistoryTime.years_to_days(4) == 365 + 365 + 365
+    assert HistoryTime.years_to_days(5) == 365 + 365 + 365 + 366
+
+    assert HistoryTime.years_to_days(-1) == -365
+    assert HistoryTime.years_to_days(-2) == -365 - 365
+    assert HistoryTime.years_to_days(-3) == -365 - 365 - 365
+    assert HistoryTime.years_to_days(-4) == -365 - 365 - 365 - 366
+
+
+def test_month_to_days():
+    assert HistoryTime.months_to_days(1, True) == 1
+    assert HistoryTime.months_to_days(1, False) == 1
+
+    assert HistoryTime.months_to_days(2, True) == 31 + 1
+    assert HistoryTime.months_to_days(2, False) == 31 + 1
+
+    assert HistoryTime.months_to_days(3, True) == 31 + 29 + 1
+    assert HistoryTime.months_to_days(3, False) == 31 + 28 + 1
+
+    assert HistoryTime.months_to_days(4, True) == 31 + 29 + 31 + 1
+    assert HistoryTime.months_to_days(4, False) == 31 + 28 + 31 + 1
+
+    assert HistoryTime.months_to_days(5, True) == 31 + 29 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(5, False) == 31 + 28 + 31 + 30 + 1
+
+    assert HistoryTime.months_to_days(6, True) == 31 + 29 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(6, False) == 31 + 28 + 31 + 30 + 31 + 1
+
+    assert HistoryTime.months_to_days(7, True) == 31 + 29 + 31 + 30 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(7, False) == 31 + 28 + 31 + 30 + 31 + 30 + 1
+
+    assert HistoryTime.months_to_days(8, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(8, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 1
+
+    assert HistoryTime.months_to_days(9, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 1
+    assert HistoryTime.months_to_days(9, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 1
+
+    assert HistoryTime.months_to_days(10, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(10, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 1
+
+    assert HistoryTime.months_to_days(11, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(11, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 1
+
+    assert HistoryTime.months_to_days(12, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(12, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 1
+
+
+def test_date_to_days():
+    assert HistoryTime.date_to_days(1, 1, 1) == 0
+    assert HistoryTime.date_to_days(1, 1, 2) == 2
+    assert HistoryTime.date_to_days(1, 3, 1) == 31 + 28 + 1
+    assert HistoryTime.date_to_days(1, 12, 31) == 365
+
+    assert HistoryTime.date_to_days(4, 1, 1) == 365 * 3 + 0
+    assert HistoryTime.date_to_days(4, 1, 2) == 365 * 3 + 2
+    assert HistoryTime.date_to_days(4, 2, 1) == 365 * 3 + 31 + 29 + 1
+    assert HistoryTime.date_to_days(4, 12, 31) == 365 * 3 + 366
+
+    assert HistoryTime.date_to_days(1, 1, 1) == 0
+    assert HistoryTime.date_to_days(1, 1, 2) == 2
+    assert HistoryTime.date_to_days(1, 3, 1) == 31 + 28 + 1
+    assert HistoryTime.date_to_days(1, 12, 31) == 365
+
+    assert HistoryTime.date_to_days(4, 1, 1) == 0
+    assert HistoryTime.date_to_days(4, 1, 2) == 2
+    assert HistoryTime.date_to_days(4, 2, 1) == 31 + 29 + 1
+    assert HistoryTime.date_to_days(4, 12, 31) == 366
 
 
 def __log_error(text: str):
@@ -1015,23 +1095,27 @@ def manual_check_continuity_of_datetime_to_tick():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
-    __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
-    __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
-    __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
+    test_years_to_days()
+    test_month_to_days()
+    test_date_to_days()
+
+    # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
+    # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
+    # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
+    # __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
 
     # test_history_time_year()
     # test_history_time_year_month()
     # test_time_text_to_history_times()
 
-    test_ad_since_tick()
-    test_datetime_to_tick()
-
-    test_time_offset()
-
-    test_batch_ad_conversion()
-    test_batch_bc_conversion()
-    manual_check_continuity_of_datetime_to_tick()
+    # test_ad_since_tick()
+    # test_datetime_to_tick()
+    #
+    # test_time_offset()
+    #
+    # test_batch_ad_conversion()
+    # test_batch_bc_conversion()
+    # manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
 
