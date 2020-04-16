@@ -380,7 +380,7 @@ class HistoryTime:
         :param leap_year: Is leap year or not
         :return: 365 days if leap year else 366 days
         """
-        return HistoryTime.YEAR_DAYS if leap_year else HistoryTime.YEAR_DAYS_LEAP_YEAR
+        return HistoryTime.YEAR_DAYS_LEAP_YEAR if leap_year else HistoryTime.YEAR_DAYS
 
     @staticmethod
     def month_ticks(month: int, leap_year: bool) -> TICK:
@@ -439,10 +439,10 @@ class HistoryTime:
     @staticmethod
     def years_to_days(year: int) -> int:
         """
-        Calculate days since 0001 CE to the start of the positive year
-        Or days since 0001 BCE to the head of the negative year
-        Note that from 0001 CE to 0004 CE the days should be 3 * 365
-        But from 0001 BCE to 0004 BCE the days should be 1 + 4 * 365
+        The day of 0001 CE is 0
+        The day of 0001 BCE is -365
+        The day of 0004 CE the days should be 3 * 365
+        The day of 0004 BCE the days should be -(1 + 4 * 365)
         :param year: The year since 0001. It will use absolute value if year is negative.
         :return: The days of years. Considering the leap years. The sign is the same with the year.
         """
@@ -460,8 +460,8 @@ class HistoryTime:
         :return: The days since the beginning of a year to the end of the month, Considering the leap year.
         """
         assert 1 <= month <= 12
-        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] + 1 if leap_year else \
-               HistoryTime.MONTH_DAYS_SUM[month - 1] + 1
+        return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] if leap_year else \
+               HistoryTime.MONTH_DAYS_SUM[month - 1]
 
     @staticmethod
     def date_to_days(year: int, month: int, day: int) -> int:
@@ -476,7 +476,7 @@ class HistoryTime:
         assert 1 <= month <= 12
         year_days = HistoryTime.years_to_days(year)
         month_days = HistoryTime.months_to_days(month, HistoryTime.is_leap_year(year))
-        return year_days + month_days + day
+        return year_days + month_days + (day if year > 0 else day - 1)
 
     # ------------------ days -> xxx ------------------
 
@@ -489,8 +489,8 @@ class HistoryTime:
         """
         sign = 1 if days >= 0 else -1
 
-        years_400 = abs(days) // HistoryTime.DAYS_PER_400_YEARS
-        remainder = abs(days) % HistoryTime.DAYS_PER_400_YEARS
+        years_400 = (abs(days) - 1) // HistoryTime.DAYS_PER_400_YEARS
+        remainder = (abs(days) - 1) % HistoryTime.DAYS_PER_400_YEARS
 
         years_100 = remainder // HistoryTime.DAYS_PER_100_YEARS
         remainder = remainder % HistoryTime.DAYS_PER_100_YEARS
@@ -498,10 +498,14 @@ class HistoryTime:
         years_4 = remainder // HistoryTime.DAYS_PER_4_YEARS
         remainder = remainder % HistoryTime.DAYS_PER_4_YEARS
 
-        years_1 = remainder // HistoryTime.YEAR_DAYS
-        remainder = remainder % HistoryTime.YEAR_DAYS
+        if remainder == HistoryTime.DAYS_PER_4_YEARS - 1:
+            years_1 = 3
+            remainder = HistoryTime.YEAR_DAYS
+        else:
+            years_1 = remainder // HistoryTime.YEAR_DAYS
+            remainder = remainder % HistoryTime.YEAR_DAYS
 
-        return sign * (years_400 * 400 + years_100 * 100 + years_4 * 4 + years_1 + 1), remainder
+        return sign * (years_400 * 400 + years_100 * 100 + years_4 * 4 + years_1 + 1), remainder + 1
 
     @staticmethod
     def days_to_months(days: int, leap_year: bool) -> (int, int):
@@ -514,8 +518,8 @@ class HistoryTime:
         assert days > 0
         month_days_sum = HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR if leap_year else HistoryTime.MONTH_DAYS_SUM
         for month in range(len(month_days_sum)):
-            if month_days_sum[month] >= days - 1:
-                return month + 1, days - month_days_sum[month]
+            if month_days_sum[month] > days - 1:
+                return month, days - month_days_sum[month - 1]
         assert False
 
     @staticmethod
@@ -528,7 +532,7 @@ class HistoryTime:
         year, remainder = HistoryTime.days_to_years(days)
         leap_year = HistoryTime.is_leap_year(year)
         if days < 0:
-            remainder = HistoryTime.year_days(leap_year) - remainder
+            remainder = HistoryTime.year_days(leap_year) - (remainder - 1)
         month, day = HistoryTime.days_to_months(remainder, leap_year)
         return year, month, day
 
@@ -846,63 +850,124 @@ def test_years_to_days():
 
 
 def test_month_to_days():
-    assert HistoryTime.months_to_days(1, True) == 1
-    assert HistoryTime.months_to_days(1, False) == 1
+    assert HistoryTime.months_to_days(1, True) == 0
+    assert HistoryTime.months_to_days(1, False) == 0
 
-    assert HistoryTime.months_to_days(2, True) == 31 + 1
-    assert HistoryTime.months_to_days(2, False) == 31 + 1
+    assert HistoryTime.months_to_days(2, True) == 31
+    assert HistoryTime.months_to_days(2, False) == 31
 
-    assert HistoryTime.months_to_days(3, True) == 31 + 29 + 1
-    assert HistoryTime.months_to_days(3, False) == 31 + 28 + 1
+    assert HistoryTime.months_to_days(3, True) == 31 + 29
+    assert HistoryTime.months_to_days(3, False) == 31 + 28
 
-    assert HistoryTime.months_to_days(4, True) == 31 + 29 + 31 + 1
-    assert HistoryTime.months_to_days(4, False) == 31 + 28 + 31 + 1
+    assert HistoryTime.months_to_days(4, True) == 31 + 29 + 31
+    assert HistoryTime.months_to_days(4, False) == 31 + 28 + 31
 
-    assert HistoryTime.months_to_days(5, True) == 31 + 29 + 31 + 30 + 1
-    assert HistoryTime.months_to_days(5, False) == 31 + 28 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(5, True) == 31 + 29 + 31 + 30
+    assert HistoryTime.months_to_days(5, False) == 31 + 28 + 31 + 30
 
-    assert HistoryTime.months_to_days(6, True) == 31 + 29 + 31 + 30 + 31 + 1
-    assert HistoryTime.months_to_days(6, False) == 31 + 28 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(6, True) == 31 + 29 + 31 + 30 + 31
+    assert HistoryTime.months_to_days(6, False) == 31 + 28 + 31 + 30 + 31
 
-    assert HistoryTime.months_to_days(7, True) == 31 + 29 + 31 + 30 + 31 + 30 + 1
-    assert HistoryTime.months_to_days(7, False) == 31 + 28 + 31 + 30 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(7, True) == 31 + 29 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_days(7, False) == 31 + 28 + 31 + 30 + 31 + 30
 
-    assert HistoryTime.months_to_days(8, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 1
-    assert HistoryTime.months_to_days(8, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(8, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31
+    assert HistoryTime.months_to_days(8, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31
 
-    assert HistoryTime.months_to_days(9, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 1
-    assert HistoryTime.months_to_days(9, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 1
+    assert HistoryTime.months_to_days(9, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31
+    assert HistoryTime.months_to_days(9, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31
 
-    assert HistoryTime.months_to_days(10, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 1
-    assert HistoryTime.months_to_days(10, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(10, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30
+    assert HistoryTime.months_to_days(10, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30
 
-    assert HistoryTime.months_to_days(11, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 1
-    assert HistoryTime.months_to_days(11, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 1
+    assert HistoryTime.months_to_days(11, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
+    assert HistoryTime.months_to_days(11, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
 
-    assert HistoryTime.months_to_days(12, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 1
-    assert HistoryTime.months_to_days(12, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + 1
+    assert HistoryTime.months_to_days(12, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_days(12, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
 
 
 def test_date_to_days():
-    assert HistoryTime.date_to_days(1, 1, 1) == 0
+    assert HistoryTime.date_to_days(1, 1, 1) == 1
     assert HistoryTime.date_to_days(1, 1, 2) == 2
     assert HistoryTime.date_to_days(1, 3, 1) == 31 + 28 + 1
     assert HistoryTime.date_to_days(1, 12, 31) == 365
 
-    assert HistoryTime.date_to_days(4, 1, 1) == 365 * 3 + 0
+    assert HistoryTime.date_to_days(4, 1, 1) == 365 * 3 + 1
     assert HistoryTime.date_to_days(4, 1, 2) == 365 * 3 + 2
-    assert HistoryTime.date_to_days(4, 2, 1) == 365 * 3 + 31 + 29 + 1
+    assert HistoryTime.date_to_days(4, 2, 1) == 365 * 3 + 31 + 1
     assert HistoryTime.date_to_days(4, 12, 31) == 365 * 3 + 366
 
-    assert HistoryTime.date_to_days(1, 1, 1) == 0
-    assert HistoryTime.date_to_days(1, 1, 2) == 2
-    assert HistoryTime.date_to_days(1, 3, 1) == 31 + 28 + 1
-    assert HistoryTime.date_to_days(1, 12, 31) == 365
+    assert HistoryTime.date_to_days(5, 1, 1) == 365 * 3 + 366 + 1
+    assert HistoryTime.date_to_days(5, 1, 2) == 365 * 3 + 366 + 2
+    assert HistoryTime.date_to_days(5, 2, 1) == 365 * 3 + 366 + 31 + 1
+    assert HistoryTime.date_to_days(5, 12, 31) == 365 * 3 + 366 + 365
 
-    assert HistoryTime.date_to_days(4, 1, 1) == 0
-    assert HistoryTime.date_to_days(4, 1, 2) == 2
-    assert HistoryTime.date_to_days(4, 2, 1) == 31 + 29 + 1
-    assert HistoryTime.date_to_days(4, 12, 31) == 366
+    assert HistoryTime.date_to_days(-1, 1, 1) == -365
+    assert HistoryTime.date_to_days(-1, 12, 31) == -1
+
+    assert HistoryTime.date_to_days(-2, 1, 1) == -365 - 365
+    assert HistoryTime.date_to_days(-2, 12, 31) == -365 - 1
+
+    assert HistoryTime.date_to_days(-4, 1, 1) == -365 - 365 - 365 - 366
+    assert HistoryTime.date_to_days(-4, 12, 31) == -365 - 365 - 365 - 1
+
+
+def test_days_to_years():
+    assert HistoryTime.days_to_years(1) == (1, 1)
+    assert HistoryTime.days_to_years(365) == (1, 365)
+    assert HistoryTime.days_to_years(365 + 1) == (2, 1)
+    assert HistoryTime.days_to_years(365 + 365) == (2, 365)
+    assert HistoryTime.days_to_years(365 + 365 + 365) == (3, 365)
+    assert HistoryTime.days_to_years(365 + 365 + 365 + 365) == (4, 365)
+    assert HistoryTime.days_to_years(365 + 365 + 365 + 366) == (4, 366)
+    assert HistoryTime.days_to_years(365 + 365 + 365 + 366 + 1) == (5, 1)
+
+
+def test_days_to_months():
+    assert HistoryTime.days_to_months(1, False) == (1, 1)
+    assert HistoryTime.days_to_months(31, False) == (1, 31)
+
+    assert HistoryTime.days_to_months(31 + 1, False) == (2, 1)
+    assert HistoryTime.days_to_months(31 + 28, False) == (2, 28)
+
+    assert HistoryTime.days_to_months(31 + 29, True) == (2, 29)
+    assert HistoryTime.days_to_months(31 + 29, False) == (3, 1)
+
+    assert HistoryTime.days_to_months(365, True) == (12, 30)
+    assert HistoryTime.days_to_months(365, False) == (12, 31)
+    assert HistoryTime.days_to_months(366, True) == (12, 31)
+
+
+def test_days_to_date():
+    assert HistoryTime.days_to_date(1) == (1, 1, 1)
+    assert HistoryTime.days_to_date(31) == (1, 1, 31)
+    assert HistoryTime.days_to_date(31 + 1) == (1, 2, 1)
+    assert HistoryTime.days_to_date(31 + 28) == (1, 2, 28)
+    assert HistoryTime.days_to_date(31 + 28 + 1) == (1, 3, 1)
+    assert HistoryTime.days_to_date(365) == (1, 12, 31)
+
+    assert HistoryTime.days_to_date(365 + 1) == (2, 1, 1)
+    assert HistoryTime.days_to_date(365 + 365) == (2, 12, 31)
+
+    assert HistoryTime.days_to_date(365 + 365 + 1) == (3, 1, 1)
+    assert HistoryTime.days_to_date(365 + 365 + 365) == (3, 12, 31)
+
+    assert HistoryTime.days_to_date(365 + 365 + 365 + 1) == (4, 1, 1)
+    assert HistoryTime.days_to_date(365 + 365 + 365 + 365) == (4, 12, 30)
+    assert HistoryTime.days_to_date(365 + 365 + 365 + 366) == (4, 12, 31)
+
+    assert HistoryTime.days_to_date(-1) == (-1, 12, 31)
+    assert HistoryTime.days_to_date(-365) == (-1, 1, 1)
+
+    assert HistoryTime.days_to_date(-365 - 1) == (-2, 12, 31)
+    assert HistoryTime.days_to_date(-365 - 365) == (-2, 1, 1)
+
+    assert HistoryTime.days_to_date(-365 - 365 - 1) == (-3, 12, 31)
+    assert HistoryTime.days_to_date(-365 - 365 - 365) == (-3, 1, 1)
+
+    assert HistoryTime.days_to_date(-365 - 365 - 365 - 1) == (-4, 12, 31)
+    assert HistoryTime.days_to_date(-365 - 365 - 365 - 366) == (-4, 1, 1)
 
 
 def __log_error(text: str):
@@ -1098,6 +1163,10 @@ def main():
     test_years_to_days()
     test_month_to_days()
     test_date_to_days()
+
+    test_days_to_years()
+    test_days_to_months()
+    test_days_to_date()
 
     # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
     # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
