@@ -970,6 +970,44 @@ def test_days_to_date():
     assert HistoryTime.days_to_date(-365 - 365 - 365 - 366) == (-4, 1, 1)
 
 
+def test_months_to_seconds():
+    assert HistoryTime.months_to_seconds(1, True) == 0 * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(1, False) == 0 * HistoryTime.TICK_DAY
+
+    assert HistoryTime.months_to_seconds(2, True) == 31 * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(2, False) == 31 * HistoryTime.TICK_DAY
+
+    assert HistoryTime.months_to_seconds(3, True) == 31 + 29
+    assert HistoryTime.months_to_seconds(3, False) == 31 + 28
+
+    assert HistoryTime.months_to_seconds(4, True) == 31 + 29 + 31
+    assert HistoryTime.months_to_seconds(4, False) == 31 + 28 + 31
+
+    assert HistoryTime.months_to_seconds(5, True) == 31 + 29 + 31 + 30
+    assert HistoryTime.months_to_seconds(5, False) == 31 + 28 + 31 + 30
+
+    assert HistoryTime.months_to_seconds(6, True) == 31 + 29 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(6, False) == 31 + 28 + 31 + 30 + 31
+
+    assert HistoryTime.months_to_seconds(7, True) == 31 + 29 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_seconds(7, False) == 31 + 28 + 31 + 30 + 31 + 30
+
+    assert HistoryTime.months_to_seconds(8, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(8, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31
+
+    assert HistoryTime.months_to_seconds(9, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31
+    assert HistoryTime.months_to_seconds(9, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31
+
+    assert HistoryTime.months_to_seconds(10, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30
+    assert HistoryTime.months_to_seconds(10, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30
+
+    assert HistoryTime.months_to_seconds(11, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(11, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
+
+    assert HistoryTime.months_to_seconds(12, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_seconds(12, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+
+
 def __log_error(text: str):
     f.write(text)
     f.flush()
