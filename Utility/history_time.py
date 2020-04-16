@@ -570,7 +570,7 @@ class HistoryTime:
         :return: The seconds of months
         """
         month_days = HistoryTime.months_to_days(months, leap_year)
-        return HistoryTime.days_to_seconds(month_days)
+        return HistoryTime.days_to_seconds(month_days + 1)
 
     @staticmethod
     def years_to_seconds(year: int) -> int:
@@ -581,15 +581,15 @@ class HistoryTime:
         :return: The seconds of the years. The sign is the same to the year.
         """
         year_days = HistoryTime.years_to_days(year)
-        return HistoryTime.years_to_days(year_days)
+        sign = 1 if year_days >= 0 else -1
+        return sign * HistoryTime.days_to_seconds(abs(year_days) + 1)
 
     @staticmethod
     def date_to_seconds(year: int, month: int, day: int) -> int:
         year_seconds = HistoryTime.years_to_seconds(year)
         month_seconds = HistoryTime.months_to_seconds(month, HistoryTime.is_leap_year(year))
         day_seconds = HistoryTime.days_to_seconds(day)
-        return (year_seconds + month_seconds + day_seconds) if year > 0 else \
-               (year_seconds + month_seconds - day_seconds)
+        return year_seconds + month_seconds + day_seconds
 
     @staticmethod
     def date_time_to_seconds(year: int, month: int, day: int,
@@ -645,8 +645,8 @@ class HistoryTime:
         """
         days, remainder_sec = HistoryTime.seconds_to_days(abs(sec))
         years, remainder_day = HistoryTime.days_to_years(days)
-        remainder_sec += remainder_day * HistoryTime.TICK_DAY
-        if sec > 0:
+        remainder_sec += (remainder_day - 1) * HistoryTime.TICK_DAY
+        if sec >= 0:
             return years, remainder_sec
         else:
             return (-years, 0) if remainder_sec == 0 else \
@@ -836,6 +836,8 @@ class HistoryTime:
 f = open('history_time.log', 'wt')
 
 
+# --------------------------------- Test xxx -> days ---------------------------------
+
 def test_years_to_days():
     assert HistoryTime.years_to_days(1) == 0
     assert HistoryTime.years_to_days(2) == 365
@@ -912,6 +914,7 @@ def test_date_to_days():
     assert HistoryTime.date_to_days(-4, 1, 1) == -365 - 365 - 365 - 366
     assert HistoryTime.date_to_days(-4, 12, 31) == -365 - 365 - 365 - 1
 
+# --------------------------------- Test days -> xxx ---------------------------------
 
 def test_days_to_years():
     assert HistoryTime.days_to_years(1) == (1, 1)
@@ -970,6 +973,8 @@ def test_days_to_date():
     assert HistoryTime.days_to_date(-365 - 365 - 365 - 366) == (-4, 1, 1)
 
 
+# ------------------------------- Test xxx -> seconds -------------------------------
+
 def test_months_to_seconds():
     assert HistoryTime.months_to_seconds(1, True) == 0 * HistoryTime.TICK_DAY
     assert HistoryTime.months_to_seconds(1, False) == 0 * HistoryTime.TICK_DAY
@@ -977,35 +982,155 @@ def test_months_to_seconds():
     assert HistoryTime.months_to_seconds(2, True) == 31 * HistoryTime.TICK_DAY
     assert HistoryTime.months_to_seconds(2, False) == 31 * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(3, True) == 31 + 29
-    assert HistoryTime.months_to_seconds(3, False) == 31 + 28
+    assert HistoryTime.months_to_seconds(3, True) == (31 + 29) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(3, False) == (31 + 28) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(4, True) == 31 + 29 + 31
-    assert HistoryTime.months_to_seconds(4, False) == 31 + 28 + 31
+    assert HistoryTime.months_to_seconds(4, True) == (31 + 29 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(4, False) == (31 + 28 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(5, True) == 31 + 29 + 31 + 30
-    assert HistoryTime.months_to_seconds(5, False) == 31 + 28 + 31 + 30
+    assert HistoryTime.months_to_seconds(5, True) == (31 + 29 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(5, False) == (31 + 28 + 31 + 30) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(6, True) == 31 + 29 + 31 + 30 + 31
-    assert HistoryTime.months_to_seconds(6, False) == 31 + 28 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(6, True) == (31 + 29 + 31 + 30 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(6, False) == (31 + 28 + 31 + 30 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(7, True) == 31 + 29 + 31 + 30 + 31 + 30
-    assert HistoryTime.months_to_seconds(7, False) == 31 + 28 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_seconds(7, True) == (31 + 29 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(7, False) == (31 + 28 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(8, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31
-    assert HistoryTime.months_to_seconds(8, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(8, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(8, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(9, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31
-    assert HistoryTime.months_to_seconds(9, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31
+    assert HistoryTime.months_to_seconds(9, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(9, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(10, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30
-    assert HistoryTime.months_to_seconds(10, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30
+    assert HistoryTime.months_to_seconds(10, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(10, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(11, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
-    assert HistoryTime.months_to_seconds(11, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31
+    assert HistoryTime.months_to_seconds(11, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(11, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(12, True) == 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
-    assert HistoryTime.months_to_seconds(12, False) == 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+    assert HistoryTime.months_to_seconds(12, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(12, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
+
+
+def test_years_to_seconds():
+    assert HistoryTime.years_to_seconds(1) == 0 * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(2) == 365 * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(3) == (365 + 365) * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(4) == (365 + 365 + 365) * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(5) == (365 + 365 + 365 + 366) * HistoryTime.TICK_DAY
+
+    assert HistoryTime.years_to_seconds(-1) == -365 * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(-2) == (-365 - 365) * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(-3) == (-365 - 365 - 365) * HistoryTime.TICK_DAY
+    assert HistoryTime.years_to_seconds(-4) == (-365 - 365 - 365 - 366) * HistoryTime.TICK_DAY
+
+
+def test_date_to_seconds():
+    assert HistoryTime.date_to_seconds(1, 1, 1) == 0 * 86400
+    assert HistoryTime.date_to_seconds(1, 1, 2) == 1 * 86400
+    assert HistoryTime.date_to_seconds(1, 3, 1) == (31 + 28) * 86400
+    assert HistoryTime.date_to_seconds(1, 12, 31) == 364 * 86400
+
+    assert HistoryTime.date_to_seconds(4, 1, 1) == 365 * 3 * 86400
+    assert HistoryTime.date_to_seconds(4, 1, 2) == (365 * 3 + 1) * 86400
+    assert HistoryTime.date_to_seconds(4, 2, 1) == (365 * 3 + 31) * 86400
+    assert HistoryTime.date_to_seconds(4, 12, 31) == (365 * 3 + 366 - 1) * 86400
+
+    assert HistoryTime.date_to_seconds(5, 1, 1) == (365 * 3 + 366) * 86400
+    assert HistoryTime.date_to_seconds(5, 1, 2) == (365 * 3 + 366 + 1) * 86400
+    assert HistoryTime.date_to_seconds(5, 2, 1) == (365 * 3 + 366 + 31) * 86400
+    assert HistoryTime.date_to_seconds(5, 12, 31) == (365 * 3 + 366 + 365 - 1) * 86400
+
+    assert HistoryTime.date_to_seconds(-1, 1, 1) == -365 * 86400
+    assert HistoryTime.date_to_seconds(-1, 12, 31) == -1 * 86400
+
+    assert HistoryTime.date_to_seconds(-2, 1, 1) == (-365 - 365) * 86400
+    assert HistoryTime.date_to_seconds(-2, 12, 31) == (-365 - 1) * 86400
+
+    assert HistoryTime.date_to_seconds(-4, 1, 1) == (-365 - 365 - 365 - 366) * 86400
+    assert HistoryTime.date_to_seconds(-4, 12, 31) == (-365 - 365 - 365 - 1) * 86400
+
+
+def test_datetime_to_seconds():
+    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 1, 0, 0, 0)
+    assert ad_tick == 0
+
+    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 1, 23, 59, 59)
+    assert ad_tick == HistoryTime.TICK_DAY - 1
+
+    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 2, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_DAY
+
+    ad_tick = HistoryTime.date_time_to_seconds(1, 12, 31, 23, 59, 59)
+    assert ad_tick == HistoryTime.TICK_YEAR - 1
+
+    ad_tick = HistoryTime.date_time_to_seconds(2, 1, 1, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR
+
+    ad_tick = HistoryTime.date_time_to_seconds(4, 12, 31, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR * 4
+
+    ad_tick = HistoryTime.date_time_to_seconds(5, 1, 1, 0, 0, 0)
+    assert ad_tick == HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR
+
+
+# ------------------------------- Test seconds -> xxx -------------------------------
+
+def test_seconds_to_days():
+    assert HistoryTime.seconds_to_days(0) == (1, 0)
+    assert HistoryTime.seconds_to_days(1) == (1, 1)
+    assert HistoryTime.seconds_to_days(86400 - 1) == (1, 86400 - 1)
+    assert HistoryTime.seconds_to_days(86400) == (2, 0)
+
+
+def test_seconds_to_month():
+    assert HistoryTime.seconds_to_month(0, False) == (1, 0)
+    assert HistoryTime.seconds_to_month(1, False) == (1, 1)
+    assert HistoryTime.seconds_to_month(31 * 86400 - 1, False) == (1, 31 * 86400 - 1)
+    assert HistoryTime.seconds_to_month(31 * 86400, False) == (2, 0)
+
+
+def test_seconds_to_year():
+    assert HistoryTime.seconds_to_years(0) == (1, 0)
+    assert HistoryTime.seconds_to_years(1) == (1, 1)
+    assert HistoryTime.seconds_to_years(86400 * 365 - 1) == (1, 86400 * 365 - 1)
+    assert HistoryTime.seconds_to_years(86400 * 365) == (2, 0)
+
+    assert HistoryTime.seconds_to_years(-1) == (-1, -86400 * 365 + 1)
+    assert HistoryTime.seconds_to_years(-2) == (-1, -86400 * 365 + 2)
+    assert HistoryTime.seconds_to_years(-86400 * 365 + 1) == (-1, 1)
+    assert HistoryTime.seconds_to_years(-86400 * 365) == (-2, -86400 * 365 + 1)
+
+
+def test_seconds_to_date():
+    assert HistoryTime.seconds_to_date(0) == (1, 1, 1, 0)
+    assert HistoryTime.seconds_to_date(1) == (1, 1, 1, 1)
+    assert HistoryTime.seconds_to_date(86400 * 365 - 1) == (1, 12, 31, 86400 - 1)
+    assert HistoryTime.seconds_to_date(86400 * 365) == (2, 1, 1, 0)
+
+
+def test_seconds_to_datetime():
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(0)
+    assert (year, month, day, hour, minutes, sec) == (1, 1, 1, 0, 0, 0)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_DAY - 1)
+    assert (year, month, day, hour, minutes, sec) == (1, 1, 1, 23, 59, 59)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_DAY)
+    assert (year, month, day, hour, minutes, sec) == (1, 1, 2, 0, 0, 0)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR - 1)
+    assert (year, month, day, hour, minutes, sec) == (1, 12, 31, 23, 59, 59)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR)
+    assert (year, month, day, hour, minutes, sec) == (2, 1, 1, 0, 0, 0)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 4)
+    assert (year, month, day, hour, minutes, sec) == (4, 12, 31, 0, 0, 0)
+
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR)
+    assert (year, month, day, hour, minutes, sec) == (5, 1, 1, 0, 0, 0)
 
 
 def __log_error(text: str):
@@ -1079,52 +1204,6 @@ def test_time_text_to_history_times():
     times = HistoryTime.time_text_to_history_times('公元前1600年 - 公元前1046年')
     assert HistoryTime.seconds_to_date(times[0])[0] == -1600 and \
            HistoryTime.seconds_to_date(times[1])[0] == -1046
-
-
-def test_ad_since_tick():
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(0)
-    assert (year, month, day, hour, minutes, sec) == (1, 1, 1, 0, 0, 0)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_DAY - 1)
-    assert (year, month, day, hour, minutes, sec) == (1, 1, 1, 23, 59, 59)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_DAY)
-    assert (year, month, day, hour, minutes, sec) == (1, 1, 2, 0, 0, 0)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR - 1)
-    assert (year, month, day, hour, minutes, sec) == (1, 12, 31, 23, 59, 59)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR)
-    assert (year, month, day, hour, minutes, sec) == (2, 1, 1, 0, 0, 0)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 4)
-    assert (year, month, day, hour, minutes, sec) == (4, 12, 31, 0, 0, 0)
-
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR)
-    assert (year, month, day, hour, minutes, sec) == (5, 1, 1, 0, 0, 0)
-
-
-def test_datetime_to_tick():
-    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 1, 0, 0, 0)
-    assert ad_tick == 0
-
-    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 1, 23, 59, 59)
-    assert ad_tick == HistoryTime.TICK_DAY - 1
-
-    ad_tick = HistoryTime.date_time_to_seconds(1, 1, 2, 0, 0, 0)
-    assert ad_tick == HistoryTime.TICK_DAY
-
-    ad_tick = HistoryTime.date_time_to_seconds(1, 12, 31, 23, 59, 59)
-    assert ad_tick == HistoryTime.TICK_YEAR - 1
-
-    ad_tick = HistoryTime.date_time_to_seconds(2, 1, 1, 0, 0, 0)
-    assert ad_tick == HistoryTime.TICK_YEAR
-
-    ad_tick = HistoryTime.date_time_to_seconds(4, 12, 31, 0, 0, 0)
-    assert ad_tick == HistoryTime.TICK_YEAR * 4
-
-    ad_tick = HistoryTime.date_time_to_seconds(5, 1, 1, 0, 0, 0)
-    assert ad_tick == HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR
 
 
 def __verify_time_offset(origin: (int, int, int, int, int, int),
@@ -1206,6 +1285,17 @@ def main():
     test_days_to_months()
     test_days_to_date()
 
+    test_months_to_seconds()
+    test_years_to_seconds()
+    test_date_to_seconds()
+    test_datetime_to_seconds()
+
+    test_seconds_to_days()
+    test_seconds_to_month()
+    test_seconds_to_year()
+    test_seconds_to_date()
+    test_seconds_to_datetime()
+
     # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
     # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
     # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
@@ -1215,8 +1305,7 @@ def main():
     # test_history_time_year_month()
     # test_time_text_to_history_times()
 
-    # test_ad_since_tick()
-    # test_datetime_to_tick()
+    # test_seconds_to_datetime()
     #
     # test_time_offset()
     #
