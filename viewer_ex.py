@@ -343,6 +343,7 @@ class HistoryIndexTrack(TimeThreadBase):
             self.add_axis_items(bar)
             self.__index_bar_table[index] = bar
         self.__flag_layout_items = True
+        self.refresh()
 
     # ------------------------------------------ Gets ------------------------------------------
 
@@ -479,11 +480,15 @@ class HistoryIndexTrack(TimeThreadBase):
                     pass
 
     def __arrange_track_items(self):
-        for item in self.get_paint_items():
-            item.get_item_metrics().set_scale_range(*self.get_thread_metrics().get_scale_range())
-        # for track in self.__thread_tracks:
-        #     for bar in track.get_layout_bars():
-        #         bar.arrange_item(track.get_metrics())
+        # for item in self.get_paint_items():
+        #     item_metrics = item.get_item_metrics()
+        #     item_metrics.set_scale_range(*self.get_thread_metrics().get_scale_range())
+        #     item.arrange_item(item_metrics)
+        paint_items = self.get_paint_items()
+        for track in self.__thread_tracks:
+            for bar in track.get_layout_bars():
+                if bar in paint_items:
+                    bar.arrange_item(track.get_metrics())
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -624,7 +629,7 @@ class TimeAxis(QWidget):
         self.__offset = 0.0
         self.__scroll = 0.0
         self.__seeking = None
-        self.__total_pixel_offset = 0
+        self.__total_pixel_offset = None
 
         # Scale Step Selection
         self.__scale_selection = 0
@@ -752,6 +757,7 @@ class TimeAxis(QWidget):
                     else:
                         self.__right_history_threads.insert(i + 1, thread)
         self.__history_threads.append(thread)
+        self.__layout_updated = True
         self.repaint()
 
     def remove_history_thread(self, thread):
@@ -949,7 +955,7 @@ class TimeAxis(QWidget):
             self.__scroll = self.__tick_offset_mapping.a_to_b(self.__seeking)
             self.__offset = 0
             self.__seeking = None
-        if self.__total_pixel_offset != self.__scroll + self.__offset:
+        if self.__total_pixel_offset is None or self.__total_pixel_offset != self.__scroll + self.__offset:
             self.__scroll_updated = True
             self.__total_pixel_offset = self.__scroll + self.__offset
             tick_since = self.__tick_offset_mapping.b_to_a(self.__total_pixel_offset)
@@ -1035,11 +1041,9 @@ class TimeAxis(QWidget):
             thread.refresh()
 
     def update_thread_scale(self):
-        for thread in self.__left_history_threads:
+        for thread in self.__history_threads:
             thread.get_thread_metrics().set_scale_range(*self.__coordinate_metrics.get_scale_range())
-        for thread in self.__right_history_threads:
-            thread.get_thread_metrics().set_scale_range(*self.__coordinate_metrics.get_scale_range())
-        thread.refresh()
+            thread.refresh()
 
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
@@ -1175,7 +1179,7 @@ class TimeAxis(QWidget):
 
             # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
-            while False:
+            while True:
                 prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
                 delta_paint_tick = paint_tick - prev_paint_tick
