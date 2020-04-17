@@ -194,12 +194,12 @@ class HistoryIndexBar(AxisItem):
         if since == until:
             # If it's a single time event
             # Show Event Year
-            tip_text += ' : [' + str(HistoryTime.ad_seconds_to_date(since)[0]) + ']'
+            tip_text += ' : [' + str(HistoryTime.seconds_to_date(since)[0]) + ']'
         else:
             # If it's a period event.
-            since_year = HistoryTime.ad_seconds_to_date(since)[0]
-            current_year = HistoryTime.ad_seconds_to_date(int(on_tick))[0]
-            until_year = HistoryTime.ad_seconds_to_date(until)[0]
+            since_year = HistoryTime.seconds_to_date(since)[0]
+            current_year = HistoryTime.seconds_to_date(int(on_tick))[0]
+            until_year = HistoryTime.seconds_to_date(until)[0]
 
             # Show Current Year / Total Year
             tip_text += '(' + str(current_year - since_year + 1)
@@ -519,7 +519,7 @@ class TimeAxis(QWidget):
                    self.main_scale_offset[5]
 
         def estimate_closest_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            date = list(HistoryTime.ad_seconds_to_date_time(tick))
+            date = list(HistoryTime.seconds_to_date_time(tick))
             start_suppress = False
             for i in range(len(self.main_scale_offset)):
                 if self.main_scale_offset[i] == 0:
@@ -531,7 +531,7 @@ class TimeAxis(QWidget):
                 if date[i] == 0 and i <= 2:
                     # year, month, day start from 1
                     date[i] = 1
-            return HistoryTime.date_time_to_ad_seconds(*date)
+            return HistoryTime.date_time_to_seconds(*date)
 
         def next_main_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
             return HistoryTime.offset_ad_second(tick, *self.main_scale_offset)
@@ -555,7 +555,7 @@ class TimeAxis(QWidget):
                 if self.main_scale_offset[index] != 0:
                     formatter_index = index
 
-            date_time = HistoryTime.ad_seconds_to_date_time(tick)
+            date_time = HistoryTime.seconds_to_date_time(tick)
             date_time_text = formatter[formatter_index](date_time)
 
             if date_time[0] < 0:
@@ -1110,10 +1110,10 @@ class TimeAxis(QWidget):
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
             qp.drawText(x_main, main_scale_end + 20, main_scale_text)
 
-            # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+            # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
-            clock = Clock()
-            while False:
+            # clock = Clock()
+            while True:
                 prev_paint_tick = paint_tick
                 paint_tick = self.__scale.next_sub_scale(paint_tick)
                 delta_paint_tick = paint_tick - prev_paint_tick
@@ -1121,11 +1121,11 @@ class TimeAxis(QWidget):
                 if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
                     break
 
-                # print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+                # print("    Sub: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
                 x_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[x_sub] = paint_tick
                 qp.drawLine(x_sub, sub_scale_start, x_sub, sub_scale_end)
-            print('Paint sub scale: %sms' % clock.elapsed_ms())
+            # print('Paint sub scale: %sms' % clock.elapsed_ms())
 
             paint_tick = next_paint_tick
 
@@ -1173,7 +1173,7 @@ class TimeAxis(QWidget):
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
             qp.drawText(main_scale_end - 100, y_main, main_scale_text)
 
-            # print("Main: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+            # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
             while False:
                 prev_paint_tick = paint_tick
@@ -1183,7 +1183,7 @@ class TimeAxis(QWidget):
                 if paint_tick >= next_paint_tick or (next_paint_tick - paint_tick) / delta_paint_tick < 0.5:
                     break
 
-                # print("    Sub: " + str(HistoryTime.ad_seconds_to_date_time(paint_tick)))
+                # print("    Sub: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
                 y_sub = int(self.__coordinate_metrics.value_to_pixel(int(paint_tick)))
                 self.__optimise_pixel[y_sub] = paint_tick
                 qp.drawLine(sub_scale_start, y_sub, sub_scale_end, y_sub)
@@ -1302,7 +1302,7 @@ class TimeAxis(QWidget):
 
     def format_real_time_tip(self) -> str:
         # Show The Time From Mouse Position
-        year, month, day, _ = HistoryTime.ad_seconds_to_date(int(self.__mouse_on_scale_value))
+        year, month, day, _ = HistoryTime.seconds_to_date(int(self.__mouse_on_scale_value))
         tip_text = '(' + str(year) + ')'
 
         # Axis Item information

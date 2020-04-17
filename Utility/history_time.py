@@ -810,8 +810,8 @@ class HistoryTime:
         else:
             year += offset_year
 
-        month_days = HistoryTime.month_days(abs(year))
-        day = min(day, month_days[month])
+        month_days = HistoryTime.month_days(month, HistoryTime.is_leap_year(year))
+        day = min(day, month_days)
 
         return HistoryTime.date_time_to_seconds(year, month, day, 0, 0, 0) + remainder
 
@@ -836,6 +836,11 @@ class HistoryTime:
 # ----------------------------------------------------- Test Code ------------------------------------------------------
 
 f = open('history_time.log', 'wt')
+
+
+def __log_error(text: str):
+    f.write(text)
+    f.flush()
 
 
 # --------------------------------- Test xxx -> days ---------------------------------
@@ -1137,11 +1142,6 @@ def test_seconds_to_datetime():
     assert (year, month, day, hour, minutes, sec) == (5, 1, 1, 0, 0, 0)
 
 
-def __log_error(text: str):
-    f.write(text)
-    f.flush()
-
-
 def __verify_year_month(time_str, year_expect, month_expect):
     times = HistoryTime.time_text_to_history_times(time_str)
     year, month, day, _ = HistoryTime.seconds_to_date(times[0])
@@ -1238,9 +1238,10 @@ def __cross_verify_tick_datetime(*args):
 
 def test_batch_ad_conversion():
     for year in range(0, 3000):
+        leap_year = HistoryTime.is_leap_year(year + 1)
         for month in range(0, 12):
-            month_days = HistoryTime.month_days(year + 1)
-            for day in range(0, month_days[month + 1]):
+            month_days = HistoryTime.month_days(month + 1, leap_year)
+            for day in range(0, month_days):
                 for hour in [0, 8, 16, 23]:
                     for minute in [0, 30, 59]:
                         for second in [0, 30, 59]:
@@ -1250,9 +1251,10 @@ def test_batch_ad_conversion():
 
 def test_batch_bc_conversion():
     for year in range(0, -3000, -1):
+        leap_year = HistoryTime.is_leap_year(year - 1)
         for month in range(0, 12):
-            month_days = HistoryTime.month_days(abs(year - 1))
-            for day in range(0, month_days[month + 1]):
+            month_days = HistoryTime.month_days(month + 1, leap_year)
+            for day in range(0, month_days):
                 for hour in [0, 8, 16, 23]:
                     for minute in [0, 30, 59]:
                         for second in [0, 30, 59]:
@@ -1305,16 +1307,14 @@ def main():
     __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
     __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
 
-    # test_history_time_year()
-    # test_history_time_year_month()
-    # test_time_text_to_history_times()
+    test_history_time_year()
+    test_history_time_year_month()
+    test_time_text_to_history_times()
 
-    # test_seconds_to_datetime()
-    #
     # test_time_offset()
-    #
-    # test_batch_ad_conversion()
-    # test_batch_bc_conversion()
+
+    test_batch_ad_conversion()
+    test_batch_bc_conversion()
     # manual_check_continuity_of_datetime_to_tick()
 
     print('All test passed.')
