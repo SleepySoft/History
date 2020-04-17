@@ -596,7 +596,7 @@ class HistoryTime:
                              hours: int = 0, minutes: int = 0, seconds: int = 0) -> int:
         date_seconds = HistoryTime.date_to_seconds(year, month, day)
         time_seconds = HistoryTime.time_to_seconds(hours, minutes, seconds)
-        return (date_seconds + time_seconds) if year > 0 else (date_seconds - time_seconds)
+        return date_seconds + time_seconds
 
     # -------------------- seconds -> xxx --------------------
 
@@ -649,8 +649,10 @@ class HistoryTime:
         if sec >= 0:
             return years, remainder_sec
         else:
-            return (-years, 0) if remainder_sec == 0 else \
-                   (-years - 1, HistoryTime.year_ticks(HistoryTime.is_leap_year(years + 1)) - remainder_sec)
+            # Because the 0 second is assigned to CE. So the BCE should offset 1 second
+            result = (-years + 1, 0) if remainder_sec == 0 else \
+                     (-years, HistoryTime.year_ticks(HistoryTime.is_leap_year(years)) - remainder_sec)
+            return result
 
     @staticmethod
     def seconds_to_date(sec: int) ->(int, int, int, int):
@@ -1097,10 +1099,12 @@ def test_seconds_to_year():
     assert HistoryTime.seconds_to_years(86400 * 365 - 1) == (1, 86400 * 365 - 1)
     assert HistoryTime.seconds_to_years(86400 * 365) == (2, 0)
 
-    assert HistoryTime.seconds_to_years(-1) == (-1, -86400 * 365 + 1)
-    assert HistoryTime.seconds_to_years(-2) == (-1, -86400 * 365 + 2)
+    assert HistoryTime.seconds_to_years(-1) == (-1, abs(-86400 * 365 + 1))
+    assert HistoryTime.seconds_to_years(-2) == (-1, abs(-86400 * 365 + 2))
     assert HistoryTime.seconds_to_years(-86400 * 365 + 1) == (-1, 1)
-    assert HistoryTime.seconds_to_years(-86400 * 365) == (-2, -86400 * 365 + 1)
+    assert HistoryTime.seconds_to_years(-86400 * 365 * 2) == (-2, 0)
+    assert HistoryTime.seconds_to_years(-86400 * 365 * 3) == (-3, 0)
+    assert HistoryTime.seconds_to_years(-86400 * 365 * 4 - 86400) == (-4, 0)
 
 
 def test_seconds_to_date():
@@ -1296,10 +1300,10 @@ def main():
     test_seconds_to_date()
     test_seconds_to_datetime()
 
-    # __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
-    # __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
-    # __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
-    # __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
+    __cross_verify_tick_datetime(-3, 1, 1, 0, 0, 0)
+    __cross_verify_tick_datetime(-4, 1, 1, 0, 0, 30)
+    __cross_verify_tick_datetime(-4, 2, 29, 0, 0, 0)
+    __cross_verify_tick_datetime(-4, 12, 31, 0, 0, 0)
 
     # test_history_time_year()
     # test_history_time_year_month()
