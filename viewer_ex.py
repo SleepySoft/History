@@ -498,10 +498,7 @@ class HistoryIndexTrack(TimeThreadBase):
 class TimeAxis(QWidget):
 
     class Agent:
-        def __init__(self):
-            pass
-
-        def on_r_button_up(self, pos: QPoint):
+        def on_edit_record(self, record: HistoricalRecord) -> bool:
             pass
 
     class Scale:
@@ -566,7 +563,7 @@ class TimeAxis(QWidget):
             date_time_text = formatter[formatter_index](date_time)
 
             if year < 0:
-                date_time_text = 'BC' + date_time_text
+                date_time_text = 'BC ' + date_time_text
 
             return date_time_text
 
@@ -802,6 +799,17 @@ class TimeAxis(QWidget):
                 return thread
         return None
 
+    def tick_from_point(self, pos: QPoint) -> HistoryTime.TICK:
+        if self.__layout == LAYOUT_HORIZON:
+            pixel = pos.x()
+        else:
+            pixel = pos.y()
+        if pixel in self.__optimise_pixel.keys():
+            mouse_on_scale_value = self.__optimise_pixel[pixel]
+        else:
+            mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pixel)
+        return mouse_on_scale_value
+
     # --------------------------------------------------- UI Event ----------------------------------------------------
 
     def wheelEvent(self, event):
@@ -848,9 +856,9 @@ class TimeAxis(QWidget):
             self.__scroll += self.__offset
             self.__offset = 0
             self.repaint()
-        elif event.button() == QtCore.Qt.RightButton:
-            for agent in self.__agent:
-                agent.on_r_button_up(event.pos())
+        # elif event.button() == QtCore.Qt.RightButton:
+        #     for agent in self.__agent:
+        #         agent.on_r_button_up(event.pos())
 
     def mouseDoubleClickEvent(self,  event):
         now_pos = event.pos()
@@ -903,7 +911,6 @@ class TimeAxis(QWidget):
         # self.__history_editor.show()
         # self.__history_editor.raise_()
         self.__history_editor.exec_()
-        self.setFocus()
 
     # -------------------------------------------------- Calculation ---------------------------------------------------
 
@@ -1346,14 +1353,7 @@ class TimeAxis(QWidget):
             return
         if self.__mouse_on_coordinate != pos:
             self.__mouse_on_coordinate = pos
-            if self.__layout == LAYOUT_HORIZON:
-                pixel = pos.x()
-            else:
-                pixel = pos.y()
-            if pixel in self.__optimise_pixel.keys():
-                self.__mouse_on_scale_value = self.__optimise_pixel[pixel]
-            else:
-                self.__mouse_on_scale_value = self.__coordinate_metrics.pixel_to_value(pixel)
+            self.__mouse_on_scale_value = self.tick_from_point(pos)
             self.__mouse_on_item = self.axis_item_from_point(pos)
             self.repaint()
 
