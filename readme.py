@@ -9,7 +9,7 @@ ABOUT = '''
 '''
 
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
 
 HISTORY = '''
@@ -20,4 +20,6 @@ HISTORY = '''
   Optimise the axis display. Show different scale in different zooming level.
 20191218
   Fix some little bug. And add more history record.
+20220329
+  Optimise the painting process and support horizon layout.
 '''
