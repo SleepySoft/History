@@ -670,6 +670,7 @@ class TimeAxis(QWidget):
 
         self.__era = ''
         self.__layout = LAYOUT_VERTICAL
+        self.__old_layout = LAYOUT_VERTICAL
         # self.__layout = LAYOUT_HORIZON
 
         self.set_time_range(0, 2000 * HistoryTime.TICK_YEAR)
@@ -697,16 +698,19 @@ class TimeAxis(QWidget):
     def set_axis_offset(self, offset: float):
         if 0.0 <= offset <= 1.0:
             self.__axis_align_offset = offset
+            self.__layout_updated = True
         self.repaint()
 
     def set_time_range(self, since: HistoryTime.TICK, until: HistoryTime.TICK):
         self.auto_scale(min(since, until), max(since, until))
         self.__seeking = min(since, until)
+        self.__layout_updated = True
         self.repaint()
 
     def set_axis_layout(self, layout: int):
         if layout in [LAYOUT_HORIZON, LAYOUT_VERTICAL]:
             self.__layout = layout
+            # self.__layout != self.__old_layout causes self.__layout_updated = True
             self.repaint()
 
     def set_axis_scale_step(self, step: HistoryTime.TICK):
@@ -942,8 +946,11 @@ class TimeAxis(QWidget):
         width = wnd_size.width()
         height = wnd_size.height()
         # TODO: Pixel not start from 0 (border)
-        if self.__paint_area.width() != width or self.__paint_area.height() != height:
+        if self.__paint_area.width() != width or \
+                self.__paint_area.height() != height or \
+                self.__old_layout != self.__layout:
             self.__layout_updated = True
+            self.__old_layout = self.__layout
             self.__paint_area.setRect(0, 0, width, height)
             self.__coordinate_metrics.set_transverse_limit(0, height if self.__layout == LAYOUT_HORIZON else width)
             self.__coordinate_metrics.set_longitudinal_range(0, width if self.__layout == LAYOUT_HORIZON else height)
