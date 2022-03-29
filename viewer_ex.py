@@ -617,7 +617,7 @@ class TimeAxis(QWidget):
         self.__axis_left = 0
         self.__axis_right = 0
         self.__axis_space_w = 30
-        self.__axis_align_offset = 0.4
+        self.__axis_align_offset = 0.5
 
         # Thread metrics
         self.__thread_width = 0
