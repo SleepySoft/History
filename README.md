@@ -7,7 +7,14 @@ A distributed and open source history time line tool.
 sleepy_history##163.com
   
 # Readme CN   
+
+## 使用说明
+
+在线文档：http://sleepysoft.xyz/archives/217
+
+离线文档：Doc/HistoryReadme.pdf
   
+
 ##最近更新
 使用严格公元纪元时间绘制时间轴  
 > 公元元年1月1日秒数为0，秒数为负则为公元前  
