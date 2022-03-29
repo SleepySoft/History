@@ -1,0 +1,2 @@
+requests
+pyqt5==5.15

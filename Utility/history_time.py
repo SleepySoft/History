@@ -134,7 +134,7 @@ class HistoryTime:
     # ------------------------------------------------------------------------------------------------------------------
 
     @staticmethod
-    def tick_to_pytime(tick: HistoryTime.TICK) -> datetime.datetime:
+    def tick_to_pytime(tick: TICK) -> datetime.datetime:
         date_time = HistoryTime.seconds_to_date_time(tick)
         return datetime.datetime(*date_time)
 
