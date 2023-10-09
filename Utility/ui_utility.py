@@ -6,11 +6,11 @@ from functools import partial
 from types import SimpleNamespace
 
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QMainWindow, QApplication, QHBoxLayout, QWidget, QPushButton, \
     QDockWidget, QAction, qApp, QMessageBox, QDialog, QVBoxLayout, QLabel, QGroupBox, QBoxLayout, QTableWidget, \
-    QTableWidgetItem, QTabWidget, QLayout, QTextEdit, QListWidget, QListWidgetItem
+    QTableWidgetItem, QTabWidget, QLayout, QTextEdit, QListWidget, QListWidgetItem, QLineEdit, QToolTip
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -408,3 +408,26 @@ class EasyQListSuite(QWidget):
             item.setText(text)
             item.setData(Qt.UserRole, obj)
             self.__list_main.addItem(item)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+#                                                    EasyQListSuite
+# ----------------------------------------------------------------------------------------------------------------------
+
+class ShadowLineEdit(QLineEdit):
+    def __init__(self):
+        self.shadow_text = ''
+        super(ShadowLineEdit, self).__init__()
+
+    def mousePressEvent(self, event):
+        self.show_shadow_text()
+        super(ShadowLineEdit, self).mousePressEvent(event)
+
+    def set_shadow_text(self, text: str):
+        self.shadow_text = text
+        self.show_shadow_text()
+
+    def show_shadow_text(self):
+        pos = self.mapToGlobal(QPoint(0, -40))
+        QToolTip.setFont(QFont('SansSerif', 10))
+        QToolTip.showText(pos, self.shadow_text)

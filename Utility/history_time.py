@@ -5,12 +5,11 @@ import traceback
 import datetime
 from os import sys, path
 
-root_path = path.dirname(path.dirname(path.abspath(__file__)))
-
 try:
     from Utility.to_arab import *
     from Utility.history_public import *
 except Exception as e:
+    root_path = path.dirname(path.dirname(path.abspath(__file__)))
     sys.path.append(root_path)
     from Utility.to_arab import *
     from Utility.history_public import *
@@ -21,10 +20,23 @@ finally:
 def now_cn_str() -> str:
     return time.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
 
+
 # TODO: Use NLP to process nature language
 
 
 class HistoryTime:
+    """
+    这个类用来处理历史时间，类型为TICK，单位为秒，以公元纪元为零点。公元后为正，直至无穷；公元前为负，亦至无穷。
+    TICK是真实世界的时间刻度，而年月日是人为制定的历法。TICK和各种datetime格式并没有必然的对应关系。
+    公元前的月和日仅供参考，算法以公元前一日为公元前1年12月31日，公元前二日为公元前1年12月30日，以次类推。
+
+    这个类实现以下功能：
+        1. 将自然语言的时间表示转化为TICK，并未采用NLP而是使用了简单粗暴的方法，适用于历史文章中的时间表示方法
+            a) 常见的表示方法如：“公元前200年”，“距今1000年前”，“xx年五月”等，不支持年号。
+            b) 多个时间以“~”或“-”之类的分隔符分隔，例如“公元前200年 - 公元前300年”
+            c) 不支持星期
+            d) 同时支持标准时间日期格式：YYYY-mm-dd HH:MM:SS
+    """
 
     TICK = int
     TICK_SEC = 1
@@ -54,14 +66,15 @@ class HistoryTime:
 
     EFFECTIVE_TIME_DIGIT = 10
 
-    YEAR_FINDER = re.compile(r'(\d+年)')
-    MONTH_FINDER = re.compile(r'(\d+月)')
-    DAY_FINDER = re.compile(r'(\d+日)')
+    YEAR_FINDER = re.compile(r'(\d+?\s*年)')
+    MONTH_FINDER = re.compile(r'(\d+?\s*月)')
+    DAY_FINDER = re.compile(r'(\d+?\s*日)')
 
     # ------------------------------------------------------------------------
 
     SEPARATOR = [
         ',',
+        '，',
         '~',
         '～',
         '-',
@@ -109,26 +122,6 @@ class HistoryTime:
     def now_tick() -> TICK:
         return HistoryTime.pytime_to_tick(time.localtime(time.time()))
 
-    # ------------------------------- Constant -------------------------------
-
-    # @staticmethod
-    # def year(year: int = 1) -> TICK:
-    #     return year * HistoryTime.TICK_YEAR
-    #
-    # @staticmethod
-    # def month(month: int = 1) -> TICK:
-    #     month = max(month, 1)
-    #     month = min(month, 12)
-    #     return HistoryTime.TICK_MONTH[month - 1]
-    #
-    # @staticmethod
-    # def week(week: int = 1) -> TICK:
-    #     return int(week * HistoryTime.TICK_WEEK)
-    #
-    # @staticmethod
-    # def day(day: int = 1) -> TICK:
-    #     return int(day * HistoryTime.TICK_DAY)
-
     # ------------------------------------------------------------------------------------------------------------------
     # ---------------------------------------------------- Convert -----------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
@@ -141,7 +134,7 @@ class HistoryTime:
     @staticmethod
     def pytime_to_tick(ts: time.struct_time) -> TICK:
         return HistoryTime.date_time_to_seconds(ts.tm_year, ts.tm_mon, ts.tm_mday,
-                                                   ts.tm_hour, ts.tm_min, ts.tm_sec)
+                                                ts.tm_hour, ts.tm_min, ts.tm_sec)
 
     @staticmethod
     def time_str_to_tick(text: str):
@@ -174,41 +167,6 @@ class HistoryTime:
             pass
         return None
 
-    # @staticmethod
-    # def year_of_tick(tick: TICK) -> int:
-    #     return HistoryTime.seconds_to_years(tick)[0]
-    #
-    # @staticmethod
-    # def month_of_tick(tick: TICK) -> int:
-    #     return HistoryTime.seconds_to_date(tick)[1]
-    #
-    # @staticmethod
-    # def day_of_tick(tick: TICK) -> int:
-    #     return HistoryTime.date_of_tick(tick)[2]
-    #
-    # @staticmethod
-    # def date_of_tick(tick: TICK) -> (int, int, int):
-    #     sign = 1 if tick >= 0 else -1
-    #     day = 0
-    #     year = sign * int(abs(tick) / HistoryTime.TICK_YEAR)
-    #     month = 12
-    #     year_mod = abs(tick) % HistoryTime.TICK_YEAR
-    #     for i in range(0, len(HistoryTime.TICK_MONTH)):
-    #         if year_mod <= HistoryTime.TICK_MONTH[i]:
-    #             day_tick = year_mod if i == 0 else year_mod - HistoryTime.TICK_MONTH[i - 1]
-    #             day = day_tick / HistoryTime.day()
-    #             month = i + 1
-    #             break
-    #     return int(year), int(month), int(day)
-    #
-    # @staticmethod
-    # def decimal_year_to_tick(year: float) -> TICK:
-    #     return int(year * HistoryTime.TICK_YEAR)
-    #
-    # @staticmethod
-    # def tick_to_decimal_year(tick: TICK) -> float:
-    #     return HistoryTime.round_decimal_year(float(tick) / HistoryTime.TICK_YEAR)
-
     @staticmethod
     def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
         year, month, day, _ = HistoryTime.seconds_to_date(tick)
@@ -221,26 +179,6 @@ class HistoryTime:
         if show_time:
             pass
         return text
-
-    # ------------------------------- Calculation -------------------------------
-
-    # @staticmethod
-    # def round_decimal_year(year: float):
-    #     return round(year, HistoryTime.EFFECTIVE_TIME_DIGIT)
-    #
-    # @staticmethod
-    # def decimal_year_equal(digital1: float, digital2: float):
-    #     return abs(digital1 - digital2) < pow(1.0, -(HistoryTime.EFFECTIVE_TIME_DIGIT + 1))
-    #
-    # @staticmethod
-    # def build_history_time_tick(year: int = 0, month: int = 0, day: int = 0,
-    #                             hour: int = 0, minute: int = 0, second: int = 0,
-    #                             week: int = 0) -> TICK:
-    #     sign = 1 if year >= 0 else -1
-    #     tick = HistoryTime.year(abs(year)) + HistoryTime.month(month) + HistoryTime.day(day) + \
-    #         hour * HistoryTime.TICK_HOUR + minute * HistoryTime.TICK_MIN + second * HistoryTime.TICK_MIN + \
-    #         week * HistoryTime.TICK_WEEK
-    #     return sign * tick
 
     # ------------------------------------------------------------------------------------------------------------------
     # -------------------------------------------- Text Analysis and Parse ---------------------------------------------
@@ -256,14 +194,18 @@ class HistoryTime:
             sign = -1
         else:
             sign = 1
+
         arablized_str = text_cn_num_to_arab(time_str)
         day = HistoryTime.__get_first_item_except(HistoryTime.DAY_FINDER.findall(arablized_str), '日')
         year = HistoryTime.__get_first_item_except(HistoryTime.YEAR_FINDER.findall(arablized_str), '年')
         month = HistoryTime.__get_first_item_except(HistoryTime.MONTH_FINDER.findall(arablized_str), '月')
 
         if year == '':
-            number_str = int("".join(filter(str.isdigit, arablized_str)))
-            return HistoryTime.date_time_to_seconds(sign * int(number_str), 1, 1)
+            try:
+                number_str = int("".join(filter(str.isdigit, arablized_str)))
+                return HistoryTime.date_time_to_seconds(sign * int(number_str), 1, 1)
+            except Exception as e:
+                return 0
         else:
             year = sign * str_to_int(year)
             month = str_to_int(month)
@@ -466,7 +408,7 @@ class HistoryTime:
         """
         assert 1 <= month <= 12
         return HistoryTime.MONTH_DAYS_SUM_LEAP_YEAR[month - 1] if leap_year else \
-               HistoryTime.MONTH_DAYS_SUM[month - 1]
+            HistoryTime.MONTH_DAYS_SUM[month - 1]
 
     @staticmethod
     def date_to_days(year: int, month: int, day: int) -> int:
@@ -528,7 +470,7 @@ class HistoryTime:
         assert False
 
     @staticmethod
-    def days_to_date(days: int) ->(int, int, int):
+    def days_to_date(days: int) -> (int, int, int):
         """
         Calculate the date of days since 0001 CE or 0001 BCE
         :param days: Positive for CE and Negative for BCE.
@@ -656,130 +598,21 @@ class HistoryTime:
         else:
             # Because the 0 second is assigned to CE. So the BCE should offset 1 second
             result = (-years + 1, 0) if remainder_sec == 0 else \
-                     (-years, HistoryTime.year_ticks(HistoryTime.is_leap_year(years)) - remainder_sec)
+                (-years, HistoryTime.year_ticks(HistoryTime.is_leap_year(years)) - remainder_sec)
             return result
 
     @staticmethod
-    def seconds_to_date(sec: int) ->(int, int, int, int):
+    def seconds_to_date(sec: int) -> (int, int, int, int):
         year, remainder = HistoryTime.seconds_to_years(sec)
         month, remainder = HistoryTime.seconds_to_month(remainder, HistoryTime.is_leap_year(year))
         days, remainder = HistoryTime.seconds_to_days(remainder)
         return year, month, days, remainder
 
     @staticmethod
-    def seconds_to_date_time(sec: int) ->(int, int, int, int, int, int):
+    def seconds_to_date_time(sec: int) -> (int, int, int, int, int, int):
         year, month, days, remainder = HistoryTime.seconds_to_date(sec)
         hour, minute, second = HistoryTime.seconds_to_time(remainder)
         return year, month, days, hour, minute, second
-
-    # ---------------------------------- Offset Calculation ----------------------------------
-
-    # @staticmethod
-    # def offset_bc_year_to_ad(year: int) -> (int, int):
-    #     """
-    #     It's hard to calculate the Date of BC directly.
-    #     We can offset the AD origin for years.
-    #     Then minus the offset years from the result.
-    #     :param year: The year we want to offset.
-    #     :return: Tick - The tick after offset
-    #               Year - The years that we offset
-    #     """
-    #     if year >= 0:
-    #         return 0, year
-    #     offset_year = -year
-    #     offset_year_ticks = HistoryTime.years_to_seconds(offset_year)
-    #     # Note that there's no 0 year. So from -1 year to 1 year, it only shifts 1 year
-    #     # And if we offset it's absolute years, the original year is always 1
-    #     return offset_year_ticks, 1
-
-    # ---------------------------------- Second to Date Time ----------------------------------
-
-    # @staticmethod
-    # def seconds_to_time(sec: int) -> (int, int, int):
-    #     """
-    #     Convert seconds to hour, minutes and seconds
-    #     :param sec: Seconds
-    #     :return: Hour - 0 ~ max
-    #              Minutes - 0 ~ 59
-    #              Seconds - 0 ~ 59
-    #     """
-    #     hour = sec // HistoryTime.TICK_HOUR
-    #     sec_min = sec % HistoryTime.TICK_HOUR
-    #     minute = sec_min // HistoryTime.TICK_MIN
-    #     seconds = sec_min % HistoryTime.TICK_MIN
-    #     return hour, minute, seconds
-
-    # @staticmethod
-    # def seconds_to_date(sec: int) -> (int, int, int, int):
-    #     """
-    #     Convert AD since seconds to date
-    #     :param sec: Seconds since AD
-    #     :return: Year - 1 ~  max
-    #              Month - 1 ~12
-    #              Day - 1 ~ 31
-    #              Remainder of Seconds - 0 ~ 86400
-    #     """
-    #     if sec >= 0:
-    #         year, remainder = HistoryTime.seconds_to_years(sec)
-    #         month, remainder = HistoryTime.seconds_to_month(remainder, year + 1)
-    #         day, remainder = HistoryTime.days_to_seconds(remainder)
-    #         return year + 1, month, day + 1, remainder
-    #     else:
-    #         abs_year, remaining_sec = HistoryTime.seconds_to_years(-sec)
-    #         offset_year = abs_year if remaining_sec == 0 else abs_year + 1
-    #         offset_year_ticks = HistoryTime.years_to_seconds(offset_year)
-    #         offset_tick = sec + offset_year_ticks
-    #
-    #         month, remainder = HistoryTime.seconds_to_month(offset_tick, offset_year)
-    #         day, remainder = HistoryTime.days_to_seconds(remainder)
-    #
-    #         return -offset_year, month, day + 1, remainder
-
-    # @staticmethod
-    # def seconds_to_date_time(sec: int) -> (int, int, int, int, int, int):
-    #     """
-    #     Convert AD since seconds to date time
-    #     :param sec: Seconds since AD
-    #     :return: Year - 1 ~  max
-    #              Month - 1 ~12
-    #              Day - 1 ~ 31
-    #              Hour - 0 ~ 23
-    #              Minutes - 0 ~ 59
-    #              Seconds - 0 ~ 59
-    #     """
-    #     year, month, day, remainder = HistoryTime.seconds_to_date(sec)
-    #     hour, minute, seconds = HistoryTime.seconds_to_time(remainder)
-    #     return year, month, day, hour, minute, seconds
-
-    # ---------------------------------- Date Time to Second ----------------------------------
-
-    # @staticmethod
-    # def date_time_to_seconds(year: int, month: int, day: int,
-    #                             hours: int = 0, minutes: int = 0, seconds: int = 0) -> TICK:
-    #     assert 1 <= month <= 12
-    # 
-    #     month_sec = HistoryTime.month_ticks(abs(year))
-    #     offset_year_ticks, offset_year = HistoryTime.offset_bc_year_to_ad(year)
-    # 
-    #     offset_year = HistoryTime.__shrink_edge(offset_year)
-    #     month = HistoryTime.__shrink_edge(month)
-    #     day = HistoryTime.__shrink_edge(day)
-    # 
-    #     year_seconds = HistoryTime.years_to_seconds(offset_year)
-    #     month_seconds = month_sec[month]
-    #     day_seconds = day * HistoryTime.TICK_DAY
-    # 
-    #     ad_tick = year_seconds + month_seconds + day_seconds + HistoryTime.time_to_seconds(hours, minutes, seconds)
-    #     return ad_tick - offset_year_ticks
-    # 
-    # @staticmethod
-    # def __shrink_edge(num: int) -> int:
-    #     if num > 0:
-    #         return num - 1
-    #     if num < 0:
-    #         return num + 1
-    #     else:
-    #         return num
 
     # -------------------------------------- Time Delta --------------------------------------
 
@@ -838,7 +671,9 @@ class HistoryTime:
         return HistoryTime.days_to_date(days), offset_datetime[3], offset_datetime[4], offset_datetime[5]
 
 
+# ----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------- Test Code ------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 f = open('history_time.log', 'wt')
 
@@ -925,6 +760,7 @@ def test_date_to_days():
 
     assert HistoryTime.date_to_days(-4, 1, 1) == -365 - 365 - 365 - 366
     assert HistoryTime.date_to_days(-4, 12, 31) == -365 - 365 - 365 - 1
+
 
 # --------------------------------- Test days -> xxx ---------------------------------
 
@@ -1015,14 +851,20 @@ def test_months_to_seconds():
     assert HistoryTime.months_to_seconds(9, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31) * HistoryTime.TICK_DAY
     assert HistoryTime.months_to_seconds(9, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(10, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
-    assert HistoryTime.months_to_seconds(10, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(10, True) == (
+                31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(10, False) == (
+                31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(11, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
-    assert HistoryTime.months_to_seconds(11, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(11, True) == (
+                31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(11, False) == (
+                31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31) * HistoryTime.TICK_DAY
 
-    assert HistoryTime.months_to_seconds(12, True) == (31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
-    assert HistoryTime.months_to_seconds(12, False) == (31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(12, True) == (
+                31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
+    assert HistoryTime.months_to_seconds(12, False) == (
+                31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30) * HistoryTime.TICK_DAY
 
 
 def test_years_to_seconds():
@@ -1143,7 +985,8 @@ def test_seconds_to_datetime():
     year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 4)
     assert (year, month, day, hour, minutes, sec) == (4, 12, 31, 0, 0, 0)
 
-    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR)
+    year, month, day, hour, minutes, sec = HistoryTime.seconds_to_date_time(
+        HistoryTime.TICK_YEAR * 3 + HistoryTime.TICK_LEAP_YEAR)
     assert (year, month, day, hour, minutes, sec) == (5, 1, 1, 0, 0, 0)
 
 
@@ -1226,7 +1069,7 @@ def __verify_time_offset(origin: (int, int, int, int, int, int),
 
 def test_time_offset():
     __verify_time_offset((1, 12, 31, 0, 0, 0), (0, -12, 0, 0, 0, 0), (-1, 12, 31, 0, 0, 0))
-    __verify_time_offset((1, 12, 31, 0, 0, 0), (-1,  0, 0, 0, 0, 0), (-1, 12, 31, 0, 0, 0))
+    __verify_time_offset((1, 12, 31, 0, 0, 0), (-1, 0, 0, 0, 0, 0), (-1, 12, 31, 0, 0, 0))
     __verify_time_offset((1, 12, 31, 23, 59, 59), (0, -13, 0, 0, 0, 0), (-1, 11, 30, 23, 59, 59))
 
     __verify_time_offset((1, 3, 31, 0, 0, 0), (0, -1, 0, 0, 0, 0), (1, 2, 28, 0, 0, 0))
@@ -1347,8 +1190,3 @@ if __name__ == "__main__":
         exit()
     finally:
         pass
-
-
-
-
-

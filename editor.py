@@ -1,7 +1,8 @@
 import traceback
 
+from PyQt5.QtCore import QPoint
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
-    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog
+    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog, QToolTip
 
 from core import *
 from Utility.ui_utility import *
@@ -38,7 +39,7 @@ class HistoryRecordEditor(QWidget):
 
         self.__label_uuid = QLabel()
         self.__label_source = QLabel()
-        self.__line_time = QLineEdit()
+        self.__line_time = ShadowLineEdit()
         self.__line_location = QLineEdit()
         self.__line_people = QLineEdit()
         self.__line_organization = QLineEdit()
@@ -160,6 +161,8 @@ class HistoryRecordEditor(QWidget):
         self.setMinimumSize(700, 500)
 
     def config_ui(self):
+        self.__line_time.textChanged.connect(self.on_line_time_changed)
+
         self.__button_auto_time.clicked.connect(self.on_button_auto_time)
         self.__button_auto_location.clicked.connect(self.on_button_auto_location)
         self.__button_auto_people.clicked.connect(self.on_button_auto_people)
@@ -247,17 +250,26 @@ class HistoryRecordEditor(QWidget):
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
+    def on_line_time_changed(self):
+        raw_time_str = self.__line_time.text()
+        raw_time_strs = HistoryTime.split_normalize_time_text(raw_time_str)
+        history_ticks = [HistoryTime.time_str_to_history_time(s) for s in raw_time_strs]
+        history_time_strs = [HistoryTime.tick_to_standard_string(t, True) for t in history_ticks]
+        self.__line_time.set_shadow_text(', '.join(history_time_strs))
+
+    NOT_SUPPORT_TEMPLATE = 'In feature, we will use NLP or LLM to recognize the %s information from main text'
+
     def on_button_auto_time(self):
-        pass
+        QMessageBox.information(self, 'Not implemented', HistoryRecordEditor.NOT_SUPPORT_TEMPLATE % 'time')
 
     def on_button_auto_location(self):
-        pass
+        QMessageBox.information(self, 'Not implemented', HistoryRecordEditor.NOT_SUPPORT_TEMPLATE % 'location')
 
     def on_button_auto_people(self):
-        pass
+        QMessageBox.information(self, 'Not implemented', HistoryRecordEditor.NOT_SUPPORT_TEMPLATE % 'people')
 
     def on_button_auto_organization(self):
-        pass
+        QMessageBox.information(self, 'Not implemented', HistoryRecordEditor.NOT_SUPPORT_TEMPLATE % 'organization')
 
     def on_button_new(self):
         self.create_new_record()

@@ -5,7 +5,7 @@ import traceback
 
 # ----------------------------------------------------- Functions ------------------------------------------------------
 
-def str_to_int(text: str, default: int=0):
+def str_to_int(text: str, default: int = 0):
     try:
         return int(text)
     except Exception as e:
@@ -121,7 +121,7 @@ def test_upper_rough():
     assert math.isclose(upper_rough(10000), 10000)
     assert math.isclose(upper_rough(9999), 10000)
     assert math.isclose(upper_rough(9001), 10000)
-    assert math.isclose(upper_rough(8999),  9000)
+    assert math.isclose(upper_rough(8999), 9000)
     assert math.isclose(upper_rough(1.1), 2)
     # assert math.isclose(upper_rough(0.07), 0.07)
 
@@ -139,7 +139,7 @@ def test_lower_rough():
     assert math.isclose(lower_rough(10000), 10000)
     assert math.isclose(lower_rough(9999), 9000)
     assert math.isclose(lower_rough(9001), 9000)
-    assert math.isclose(lower_rough(8999),  8000)
+    assert math.isclose(lower_rough(8999), 8000)
     assert math.isclose(lower_rough(1.1), 1.0)
     # assert math.isclose(lower_rough(0.07), 0.07)
 
@@ -182,7 +182,3 @@ if __name__ == "__main__":
         exit()
     finally:
         pass
-
-
-
-
