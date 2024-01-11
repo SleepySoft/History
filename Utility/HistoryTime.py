@@ -64,6 +64,8 @@ YEAR_FINDER = re.compile(r'(\d+?\s*年)')
 MONTH_FINDER = re.compile(r'(\d+?\s*月)')
 DAY_FINDER = re.compile(r'(\d+?\s*日)')
 
+DEFAULT_DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 # ------------------------------------------------------------------------
 
 SEPARATOR = [
@@ -118,6 +120,31 @@ PREFIX_BCE = [
 SUPPORT_DATE_TIME_STR_FORMAT = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%H:%M:%S', '%Y%m%d']
 
 
+def time_str_to_tick(text: str):
+    dt = time_str_to_datetime(text)
+    if dt is not None:
+        return datetime_to_date_time_data(dt)
+    else:
+        return natural_language_time_to_tick(text)
+
+
+def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
+    dt = tick_to_datetime(tick)
+    if dt is not None:
+        return dt.strftime(DEFAULT_DATE_TIME_FORMAT)
+
+    year, month, day, hour, minute, second = tick_to_date_time_data(tick)
+    if year < 0:
+        text = f'{-year} BCE'
+    else:
+        text = str(year)
+    if show_date:
+        text += f'/{month}/{day}'
+    if show_time:
+        text += f'{hour:02d}:{minute:02d}:{second:02d}'
+    return text
+
+
 def time_str_to_datetime(text: str) -> datetime.datetime or None:
     """
     Try to convert standard time format to python datetime.
@@ -148,42 +175,28 @@ def tick_to_datetime(tick: TICK) -> datetime.datetime or None:
     date_time = tick_to_date_time_data(tick)
     try:
         return datetime.datetime(*date_time)
-    except Exception:
+    except Exception as e:
+        print(e)
         return None
     finally:
         pass
 
 
-def datetime_to_tick(ts: datetime) -> TICK:
+def datetime_to_tick(dt: datetime.datetime) -> TICK:
     """
     Convert python time format to History TICK
-    :param ts: datetime or time.
+    :param dt: datetime.
     :return: History TICK
     """
-    return date_time_data_to_tick(ts.tm_year, ts.tm_mon, ts.tm_mday,
-                                  ts.tm_hour, ts.tm_min, ts.tm_sec)
+    return date_time_data_to_tick(*datetime_to_date_time_data(dt))
 
 
-def time_str_to_tick(text: str):
-    dt = time_str_to_datetime(text)
-    return date_time_data_to_tick(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
-
-
-def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
-    year, month, day, _ = tick_to_date(tick)
-    if year < 0:
-        text = str(-year) + ' BCE'
-    else:
-        text = str(year) + ' CE'
-    if show_date:
-        text += ' ' + str(month) + '/' + str(day)
-    if show_time:
-        pass
-    return text
+def datetime_to_date_time_data(dt: datetime.datetime) -> Tuple[int, int, int, int, int, int]:
+    return dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second
 
 
 def now_tick() -> TICK:
-    return datetime_to_tick(time.localtime(time.time()))
+    return datetime_to_tick(datetime.datetime.now())
 
 
 # ------------------------------------------------------------------------------------------------------------------
@@ -195,7 +208,7 @@ def __get_first_item_except(items: list, expect: str):
     return items[0].replace(expect, '') if len(items) > 0 else ''
 
 
-def time_str_to_history_time(time_str: str) -> TICK:
+def natural_language_time_to_tick(time_str: str) -> TICK:
     if str_includes(time_str.lower().strip(), PREFIX_BCE):
         sign = -1
     else:
@@ -228,7 +241,7 @@ def time_str_to_history_time(time_str: str) -> TICK:
 
 def time_text_to_history_times(text: str) -> [TICK]:
     time_text_list = split_normalize_time_text(text)
-    return [time_str_to_history_time(time_text) for time_text in time_text_list]
+    return [natural_language_time_to_tick(time_text) for time_text in time_text_list]
 
 
 def split_normalize_time_text(text: str) -> [str]:

@@ -253,7 +253,7 @@ class HistoryRecordEditor(QWidget):
     def on_line_time_changed(self):
         raw_time_str = self.__line_time.text()
         raw_time_strs = HistoryTime.split_normalize_time_text(raw_time_str)
-        history_ticks = [HistoryTime.time_str_to_history_time(s) for s in raw_time_strs]
+        history_ticks = [HistoryTime.natural_language_time_to_tick(s) for s in raw_time_strs]
         history_time_strs = [HistoryTime.tick_to_standard_string(t, True) for t in history_ticks]
         self.__line_time.set_shadow_text(', '.join(history_time_strs))
 
