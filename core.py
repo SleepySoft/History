@@ -15,7 +15,7 @@ sys.path.append(path.dirname(__file__))
 
 from Utility.to_arab import *
 from Utility.history_public import *
-from Utility.history_time import *
+from Utility import HistoryTime
 
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------

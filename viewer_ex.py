@@ -194,12 +194,12 @@ class HistoryIndexBar(AxisItem):
         if since == until:
             # If it's a single time event
             # Show Event Year
-            tip_text += ' : [' + str(HistoryTime.seconds_to_date(since)[0]) + ']'
+            tip_text += ' : [' + str(HistoryTime.tick_to_date(since)[0]) + ']'
         else:
             # If it's a period event.
-            since_year = HistoryTime.seconds_to_date(since)[0]
-            current_year = HistoryTime.seconds_to_date(int(on_tick))[0]
-            until_year = HistoryTime.seconds_to_date(until)[0]
+            since_year = HistoryTime.tick_to_date(since)[0]
+            current_year = HistoryTime.tick_to_date(int(on_tick))[0]
+            until_year = HistoryTime.tick_to_date(until)[0]
 
             # Show Current Year / Total Year
             tip_text += '(' + str(current_year - since_year + 1)
@@ -521,7 +521,7 @@ class TimeAxis(QWidget):
                    self.main_scale_offset[5]
 
         def estimate_closest_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            date = list(HistoryTime.seconds_to_date_time(tick))
+            date = list(HistoryTime.tick_to_date_time_data(tick))
             start_suppress = False
             for i in range(len(self.main_scale_offset)):
                 if self.main_scale_offset[i] == 0:
@@ -533,13 +533,13 @@ class TimeAxis(QWidget):
                 if date[i] == 0 and i <= 2:
                     # year, month, day start from 1
                     date[i] = 1
-            return HistoryTime.date_time_to_seconds(*date)
+            return HistoryTime.date_time_data_to_tick(*date)
 
         def next_main_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            return HistoryTime.offset_ad_second(tick, *self.main_scale_offset)
+            return HistoryTime.offset_ad_second(tick, self.main_scale_offset)
 
         def next_sub_scale(self, tick: HistoryTime.TICK) -> HistoryTime.TICK:
-            return HistoryTime.offset_ad_second(tick, *self.sub_scale_offset)
+            return HistoryTime.offset_ad_second(tick, self.sub_scale_offset)
 
         def format_main_scale_text(self, tick: HistoryTime.TICK) -> str:
             formatter = [
@@ -557,7 +557,7 @@ class TimeAxis(QWidget):
                 if self.main_scale_offset[index] != 0:
                     formatter_index = index
 
-            date_time = list(HistoryTime.seconds_to_date_time(tick))
+            date_time = list(HistoryTime.tick_to_date_time_data(tick))
             year = date_time[0]
             date_time[0] = abs(year)
             date_time_text = formatter[formatter_index](date_time)
@@ -1342,7 +1342,7 @@ class TimeAxis(QWidget):
 
     def format_real_time_tip(self) -> str:
         # Show The Time From Mouse Position
-        year, month, day, _ = HistoryTime.seconds_to_date(int(self.__mouse_on_scale_value))
+        year, month, day, _ = HistoryTime.tick_to_date(int(self.__mouse_on_scale_value))
         tip_text = '(' + str(year) + ')'
 
         # Axis Item information

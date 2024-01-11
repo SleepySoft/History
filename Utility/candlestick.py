@@ -13,13 +13,13 @@ root_path = path.dirname(path.dirname(path.abspath(__file__)))
 
 try:
     from viewer_ex import *
-    from Utility.history_time import *
+    from Utility import HistoryTime
     from Utility.viewer_utility import *
 except Exception as e:
     sys.path.append(root_path)
 
     from viewer_ex import *
-    from Utility.history_time import *
+    from Utility import HistoryTime
     from Utility.viewer_utility import *
 finally:
     pass
@@ -157,7 +157,7 @@ def main():
     history_viewer.get_time_axis().set_axis_scale_step(HistoryTime.TICK_DAY)
     history_viewer.get_time_axis().set_axis_scale_step_limit(HistoryTime.TICK_DAY, HistoryTime.TICK_YEAR)
     history_viewer.get_time_axis().set_time_range(2010 * HistoryTime.TICK_YEAR, 2020 * HistoryTime.TICK_YEAR)
-    history_viewer.get_time_axis().set_axis_time_range_limit(HistoryTime.years_to_seconds(1990), HistoryTime.now_tick())
+    history_viewer.get_time_axis().set_axis_time_range_limit(HistoryTime.years_to_tick(1990), HistoryTime.now_tick())
     history_viewer.get_time_axis().add_history_thread(thread, ALIGN_RIGHT)
     history_viewer.exec()
 

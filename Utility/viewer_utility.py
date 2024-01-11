@@ -6,11 +6,11 @@ from PyQt5.QtCore import QRect, QPoint
 root_path = path.dirname(path.dirname(path.abspath(__file__)))
 
 try:
-    from Utility.history_time import *
+    from Utility import HistoryTime
     from Utility.history_public import *
 except Exception as e:
     sys.path.append(root_path)
-    from Utility.history_time import *
+    from Utility import HistoryTime
     from Utility.history_public import *
 finally:
     pass
