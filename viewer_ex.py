@@ -55,7 +55,7 @@ class AxisItem:
 
     # ---------------------------------------------------------
 
-    def get_index(self) ->HistoricalRecord:
+    def get_index(self) -> HistoricalRecord:
         return self.index
 
     def get_tip_text(self, on_tick: float) -> str:

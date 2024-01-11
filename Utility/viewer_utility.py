@@ -1,4 +1,6 @@
-from os import sys, path
+import sys
+import math
+from os import path
 
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtCore import QRect, QPoint
@@ -53,14 +55,27 @@ ALIGN_RIGHT = 8
 #                                                  class AxisMapping
 # ----------------------------------------------------------------------------------------------------------------------
 
+
 class AxisMapping:
+    """
+    处理从范围A到范围B的映射。
+
+    m = AxisMapping(10, 40, 0, 3000)    # A的范围是(10, 40), b的范围是(0 - 3000)
+
+    assert m.a_to_b(10) == 0            # A范围内的值10映射到B范围内的0
+    assert m.b_to_a(0) == 10            # 相应的B范围内的值0映射到A范围内10
+
+    assert m.a_to_b(25) == 1500         # A范围内的值25映射到B范围内的1500
+    assert m.b_to_a(1500) == 25         # 相应的B范围内的值1500映射到A范围内25
+
+    assert m.a_to_b(40) == 3000         # A范围内的值40映射到B范围内的3000
+    assert m.b_to_a(3000) == 40         # 相应的B范围内的值3000映射到A范围内40
+    """
     def __init__(self,
                  range_a_lower: float or int = 0, range_a_upper: float or int = 0,
                  range_b_lower: float or int = 0, range_b_upper: float or int = 0):
-        # al = a lower, ar = a reference
         self.__al = range_a_lower
         self.__ar = range_a_upper - range_a_lower
-        # bl = b lower, br = b reference
         self.__bl = range_b_lower
         self.__br = range_b_upper - range_b_lower
 
@@ -75,12 +90,16 @@ class AxisMapping:
     def set_range_ref(self, ref_a: float or int, ref_b: float or int,
                       origin_a: float or int = 0, origin_b: float or int = 0):
         """
-        Config the mapping by the reference length of range a and b.
-        :param ref_a: The reference length of range a
-        :param ref_b: The reference length of range b
-        :param origin_a: The origin (offset) of range a
-        :param origin_b: The origin (offset) of range b
+        通过参考长度和原点来配置映射。
+        :param ref_a: 范围A的参考长度
+        :param ref_b: 范围B的参考长度
+        :param origin_a: 范围A的原点（偏移量）
+        :param origin_b: 范围B的原点（偏移量）
         :return: None
+
+        这个方法允许你通过指定两个范围的参考长度和原点来配置数值映射。参考长度定义了每个范围的大小，原点定义了每个范围的起始位置。
+        例如，如果你想将一个0-10的范围映射到一个100-200的范围，你可以这样调用这个方法：set_range_ref(10, 100, 0, 100)。
+        这样，一个在范围A中的数值x将被映射到范围B中的数值y，其中y = (x / 10) * 100 + 100。
         """
         self.__al, self.__ar = origin_a, ref_a
         self.__bl, self.__br = origin_b, ref_b
@@ -93,7 +112,7 @@ class AxisMapping:
 
     @staticmethod
     def is_digit_zero(digit: float or int):
-        return digit == 0 if isinstance(digit, int) else digit < 0.0000001
+        return math.isclose(digit, 0, abs_tol=1e-9)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -101,6 +120,24 @@ class AxisMapping:
 # ----------------------------------------------------------------------------------------------------------------------
 
 class AxisMetrics:
+    """
+    将Item区域表征抽象为“横（transverse）”和“纵（longitudinal）”，
+    它与Rect的left, top, right, bottom对应如下：
+    当布局为纵向时，transverse_left, longitudinal_since, transverse_right, longitudinal_until
+    当布局为横向时，longitudinal_since, transverse_right, longitudinal_until, transverse_left
+    图示：
+
+                  longitudinal_since
+                        ┌────┐
+        transverse_left │    │     ----Flip counterclockwise---->        transverse_right
+                        │    │                                          ┌────────────────┐
+                        │    │                       longitudinal_since │                │ longitudinal_until
+                        │    │                                          └────────────────┘
+                        │    │ transverse_right                           transverse_left
+                        └────┘
+                  longitudinal_until
+
+    """
     def __init__(self):
         self.__scale_since = HistoryTime.TICK(0)
         self.__scale_until = HistoryTime.TICK(0)
@@ -251,23 +288,4 @@ class TrackContext:
         if bar in self.__layout_bars:
             self.__layout_bars.remove(bar)
         self.__layout_bars.append(bar)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
