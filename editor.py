@@ -1,9 +1,12 @@
 import traceback
 
-from PyQt5.QtCore import QPoint
+from PyQt5.QtCore import QPoint, QDateTime
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
-    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog, QToolTip
+    QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog, QToolTip, \
+    QCalendarWidget, QDateTimeEdit
 
+from Utility.DateTimePicker import DateTimePicker
+from Utility.HistoryTime import DEFAULT_DATE_TIME_FORMAT
 from core import *
 from Utility.ui_utility import *
 
@@ -44,6 +47,9 @@ class HistoryRecordEditor(QWidget):
         self.__line_people = QLineEdit()
         self.__line_organization = QLineEdit()
         self.__line_default_tags = QLineEdit()
+
+        self.__button_calendar = QPushButton('Calendar', self)
+        self.__button_calendar.clicked.connect(self.on_button_pick_date_time)
 
         self.__button_auto_time = QPushButton('Auto Detect')
         self.__button_auto_location = QPushButton('Auto Detect')
@@ -112,7 +118,10 @@ class HistoryRecordEditor(QWidget):
         row += 1
         # property_layout.addWidget(QLabel('Event Time'), 1, 0)
         property_layout.addWidget(self.__radio_time, row, 0)
-        property_layout.addWidget(self.__line_time, row, 1)
+        layout = QHBoxLayout()
+        layout.addWidget(self.__line_time)
+        layout.addWidget(self.__button_calendar)
+        property_layout.addLayout(layout, row, 1)
         property_layout.addWidget(self.__button_auto_time, row, 2)
         property_layout.addWidget(self.__check_time, row, 3)
 
@@ -200,6 +209,11 @@ class HistoryRecordEditor(QWidget):
                 self.__combo_records.setCurrentIndex(0)
                 self.on_combo_records()
             print('Cannot find the current record in combobox - use index 0.')
+
+    def on_button_pick_date_time(self):
+        dt, ok = DateTimePicker.pickDateTime()
+        if ok:
+            self.__line_time.setText(dt.strftime(DEFAULT_DATE_TIME_FORMAT))
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 

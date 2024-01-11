@@ -173,8 +173,10 @@ class TimeThreadBase:
 
 
 class HistoryIndexBar(AxisItem):
-    def __init__(self, index: HistoricalRecord, extra: dict = {}):
+    def __init__(self, index: HistoricalRecord, extra=None):
         super(HistoryIndexBar, self).__init__(index, extra)
+        if extra is None:
+            extra = {}
         self.__event_bk = QColor(243, 244, 246)
         self.__story_bk = QColor(185, 227, 217)
 
