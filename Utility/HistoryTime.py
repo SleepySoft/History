@@ -244,6 +244,29 @@ def time_text_to_history_times(text: str) -> [TICK]:
     return [natural_language_time_to_tick(time_text) for time_text in time_text_list]
 
 
+import re
+
+
+def split_string(s, separators):
+    # 匹配方括号“[]”包围的内容
+    bracket_content = re.findall(r'\[.*?\]', s)
+    # 移除方括号“[]”包围的内容
+    s = re.sub(r'\[.*?\]', '', s)
+
+    # 使用SEPARATOR列表中的分隔符进行分割
+    for sep in separators:
+        s = s.replace(sep, ' ')
+    s = s.split()
+
+    return s + bracket_content
+
+
+# 示例
+s = "我是一个[字符串]，我需要被分割。"
+separators = ["，", "。"]
+print(split_string(s, separators))
+
+
 def split_normalize_time_text(text: str) -> [str]:
     unified_time_str = text
     for space in SPACE_CHAR:
@@ -252,10 +275,16 @@ def split_normalize_time_text(text: str) -> [str]:
     for old_char, new_char in REPLACE_CHAR:
         unified_time_str = unified_time_str.replace(old_char, new_char)
 
-    for i in range(1, len(SEPARATOR)):
-        unified_time_str = unified_time_str.replace(SEPARATOR[i], SEPARATOR[0])
+    # 匹配方括号“[]”包围的内容
+    bracket_content = re.findall(r'\[.*?\]', unified_time_str)
+    # 移除方括号“[]”包围的内容
+    s = re.sub(r'\[.*?\]', '', unified_time_str)
 
-    time_str_list = unified_time_str.split(SEPARATOR[0])
+    # 使用SEPARATOR列表中的分隔符进行分割
+    for sep in SEPARATOR:
+        s = s.replace(sep, SEPARATOR[0])
+
+    time_str_list = bracket_content + s.split(SEPARATOR[0])
     time_str_list = [time_str.strip() for time_str in time_str_list if time_str.strip() != '']
 
     return time_str_list
