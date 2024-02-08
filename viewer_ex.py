@@ -1345,7 +1345,7 @@ class TimeAxis(QWidget):
     def format_real_time_tip(self) -> str:
         # Show The Time From Mouse Position
         year, month, day, _ = HistoryTime.tick_to_date(int(self.__mouse_on_scale_value))
-        tip_text = '(' + str(year) + ')'
+        tip_text = f'({year}/{month:02}/{day:02})'
 
         # Axis Item information
         if self.__mouse_on_item is not None:
