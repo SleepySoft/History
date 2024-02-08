@@ -17,6 +17,7 @@ import sys
 import math
 import datetime
 import traceback
+import typing
 from typing import Tuple
 
 try:
@@ -64,6 +65,9 @@ YEAR_FINDER = re.compile(r'(\d+?\s*年)')
 MONTH_FINDER = re.compile(r'(\d+?\s*月)')
 DAY_FINDER = re.compile(r'(\d+?\s*日)')
 
+DEFAULT_YEAR_FORMAT = "%Y"
+DEFAULT_DATE_FORMAT = "%Y-%m-%d"
+DEFAULT_TIME_FORMAT = "%H:%M:%S"
 DEFAULT_DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # ------------------------------------------------------------------------
@@ -116,38 +120,49 @@ PREFIX_BCE = [
 # ---------------------------------------------------- Convert -----------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
 
-
 SUPPORT_DATE_TIME_STR_FORMAT = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%H:%M:%S', '%Y%m%d']
 
 
-def time_str_to_tick(text: str):
-    dt = time_str_to_datetime(text)
-    if dt is not None:
-        return datetime_to_date_time_data(dt)
-    else:
-        return natural_language_time_to_tick(text)
+def now_tick() -> TICK:
+    """
+    Get now datetime in TICK
+    :return: TICK
+    """
+    return datetime_to_tick(datetime.datetime.now())
 
 
-def tick_to_standard_string(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
-    dt = tick_to_datetime(tick)
-    if dt is not None:
-        return dt.strftime(DEFAULT_DATE_TIME_FORMAT)
+def time_text_to_ticks(time_text: str):
+    """
+    *** All you need is this function ***
 
-    year, month, day, hour, minute, second = tick_to_date_time_data(tick)
-    if year < 0:
-        text = f'{-year} BCE'
-    else:
-        text = str(year)
-    if show_date:
-        text += f'/{month}/{day}'
-    if show_time:
-        text += f'{hour:02d}:{minute:02d}:{second:02d}'
-    return text
+    Convert time text to TICK. The time string can contain multiple sub time string which split by SEPARATOR.
+    Note that the text in '[]' will not be split. The standard datetime string has to be surrounded by '[]'.
+    It will try to convert each sub string by standard datetime format first, then try to convert as natural language.
+    :param time_text: Any time text
+    :return: The list of TICK
+    """
+    time_ticks = []
+    sub_time_texts = __split_natural_language_time_text(time_text)
+
+    print('------------------------------------------')
+    for sub_time_text in sub_time_texts:
+        # Try to convert to datetime
+        dt = time_str_to_datetime(sub_time_text)
+        if dt is not None:
+            tick = datetime_to_tick(dt)
+            print(f'{sub_time_text} (datetime) -> {tick}')
+        else:
+            tick = __single_natural_language_time_to_tick(sub_time_text)
+            print(f'{sub_time_text} -> {tick}')
+        if tick is not None:
+            time_ticks.append(tick)
+    print('------------------------------------------')
+    return time_ticks
 
 
 def time_str_to_datetime(text: str) -> datetime.datetime or None:
     """
-    Try to convert standard time format to python datetime.
+    Try to convert standard time format (only standard time format) to python datetime.
     Support format lists in SUPPORT_DATE_TIME_STR_FORMAT.
     Q: Why not use dateutil?
     A: Because the parse process is hard to control. We have to detect history date.
@@ -164,6 +179,34 @@ def time_str_to_datetime(text: str) -> datetime.datetime or None:
         finally:
             pass
     return None
+
+
+def format_tick(tick: TICK, show_date: bool = False, show_time: bool = False) -> str:
+    """
+    Format TICK to string. Default only format the year.
+    :param tick:
+    :param show_date:
+    :param show_time:
+    :return:
+    """
+
+    year, month, day, hour, minute, second = tick_to_date_time_data(tick)
+    if year < 0:
+        text = f'{-year}'
+    else:
+        text = str(year)
+    if show_date:
+        text += f'/{month}/{day}'
+    if show_time:
+        text += f'{hour:02d}:{minute:02d}:{second:02d}'
+    return text
+
+
+def format_datetime(dt: datetime.datetime, show_date: bool = True, show_time: bool = True):
+    text = dt.strftime(DEFAULT_DATE_FORMAT) if show_date else dt.strftime(DEFAULT_DATE_FORMAT)
+    if show_time:
+        text += ' ' + dt.strftime(DEFAULT_TIME_FORMAT)
+    return f'[{text}]' if show_date or show_time else text
 
 
 def tick_to_datetime(tick: TICK) -> datetime.datetime or None:
@@ -192,82 +235,23 @@ def datetime_to_tick(dt: datetime.datetime) -> TICK:
 
 
 def datetime_to_date_time_data(dt: datetime.datetime) -> Tuple[int, int, int, int, int, int]:
+    """
+    Convert datetime to (year, month, day, hour, minute, second)
+    """
     return dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second
-
-
-def now_tick() -> TICK:
-    return datetime_to_tick(datetime.datetime.now())
 
 
 # ------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------- Text Analysis and Parse ---------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------
 
-
-def __get_first_item_except(items: list, expect: str):
-    return items[0].replace(expect, '') if len(items) > 0 else ''
-
-
-def natural_language_time_to_tick(time_str: str) -> TICK:
-    if str_includes(time_str.lower().strip(), PREFIX_BCE):
-        sign = -1
-    else:
-        sign = 1
-
-    arablized_str = text_cn_num_to_arab(time_str)
-    day = __get_first_item_except(DAY_FINDER.findall(arablized_str), '日')
-    year = __get_first_item_except(YEAR_FINDER.findall(arablized_str), '年')
-    month = __get_first_item_except(MONTH_FINDER.findall(arablized_str), '月')
-
-    if year == '':
-        try:
-            number_str = int("".join(filter(str.isdigit, arablized_str)))
-            return date_time_data_to_tick(sign * int(number_str), 1, 1)
-        except Exception as e:
-            return 0
-    else:
-        year = sign * str_to_int(year)
-        month = str_to_int(month)
-        day = str_to_int(day)
-
-        year = 1 if year == 0 else year
-        month = max(month, 1)
-        month = min(month, 12)
-        day = max(day, 1)
-        day = min(day, month_days(month, is_leap_year(year)))
-
-        return date_time_data_to_tick(year, month, day)
-
-
-def time_text_to_history_times(text: str) -> [TICK]:
-    time_text_list = split_normalize_time_text(text)
-    return [natural_language_time_to_tick(time_text) for time_text in time_text_list]
-
-
-import re
-
-
-def split_string(s, separators):
-    # 匹配方括号“[]”包围的内容
-    bracket_content = re.findall(r'\[.*?\]', s)
-    # 移除方括号“[]”包围的内容
-    s = re.sub(r'\[.*?\]', '', s)
-
-    # 使用SEPARATOR列表中的分隔符进行分割
-    for sep in separators:
-        s = s.replace(sep, ' ')
-    s = s.split()
-
-    return s + bracket_content
-
-
-# 示例
-s = "我是一个[字符串]，我需要被分割。"
-separators = ["，", "。"]
-print(split_string(s, separators))
-
-
-def split_normalize_time_text(text: str) -> [str]:
+def __split_natural_language_time_text(text: str) -> [str]:
+    """
+    Split multiple natural language time text in one sentence to single time text array.
+    Note that the '[]' surrounding will be removed.
+    :param text: The natural language time text
+    :return: The list of single time text.
+    """
     unified_time_str = text
     for space in SPACE_CHAR:
         unified_time_str = unified_time_str.replace(space, '')
@@ -285,74 +269,121 @@ def split_normalize_time_text(text: str) -> [str]:
         s = s.replace(sep, SEPARATOR[0])
 
     time_str_list = bracket_content + s.split(SEPARATOR[0])
-    time_str_list = [time_str.strip() for time_str in time_str_list if time_str.strip() != '']
+    time_str_list = list(filter(None, (time_str.strip('[]').strip() for time_str in time_str_list)))
 
     return time_str_list
 
 
+def __get_first_item_except(items: list, expect: str):
+    return items[0].replace(expect, '') if len(items) > 0 else ''
+
+
+def __single_natural_language_time_to_tick(time_text: str) -> TICK or None:
+    """
+    Convert natural language time description to TICK.
+    Note that this analysis process does not apply to datetime format strings.
+    The best way should be using NLP.
+    :param time_text: The time string
+    :return: TICK
+    """
+    if str_includes(time_text.lower().strip(), PREFIX_BCE):
+        sign = -1
+    else:
+        sign = 1
+
+    arablized_str = text_cn_num_to_arab(time_text)
+    day = __get_first_item_except(DAY_FINDER.findall(arablized_str), '日')
+    year = __get_first_item_except(YEAR_FINDER.findall(arablized_str), '年')
+    month = __get_first_item_except(MONTH_FINDER.findall(arablized_str), '月')
+
+    if year == '':
+        try:
+            number_str = int("".join(filter(str.isdigit, arablized_str)))
+            return date_time_data_to_tick(sign * int(number_str), 1, 1)
+        except Exception as _:
+            return None
+    else:
+        year = sign * str_to_int(year)
+        month = str_to_int(month)
+        day = str_to_int(day)
+
+        year = 1 if year == 0 else year
+        month = max(month, 1)
+        month = min(month, 12)
+        day = max(day, 1)
+        day = min(day, month_days(month, is_leap_year(year)))
+
+        return date_time_data_to_tick(year, month, day)
+
+
+# def time_text_to_history_times(text: str) -> [TICK]:
+#     time_text_list = __split_natural_language_time_text(text)
+#     return [__single_natural_language_time_to_tick(time_text) for time_text in time_text_list]
+
+
 # ------------------------------------------------------------------------
 
-
-def standardize(time_str: str) -> ([float], [str]):
-    unified_time_str = time_str
-
-    for space in SPACE_CHAR:
-        unified_time_str = unified_time_str.replace(space, '')
-
-    for old_char, new_char in REPLACE_CHAR:
-        unified_time_str = unified_time_str.replace(old_char, new_char)
-
-    for i in range(1, len(SEPARATOR)):
-        unified_time_str = unified_time_str.replace(SEPARATOR[i], SEPARATOR[0])
-
-    time_list = []
-    error_list = []
-    sub_time_str_list = unified_time_str.split(SEPARATOR[0])
-    for sub_time_str in sub_time_str_list:
-        try:
-            num = parse_single_time_str(sub_time_str.strip())
-            time_list.append(num)
-        except Exception as e:
-            error_list.append(sub_time_str)
-            print('Parse time error: ' + sub_time_str + ' -> ' + str(e))
-        finally:
-            pass
-    return time_list, error_list
-
-
-def parse_single_time_str(time_str: str) -> float:
-    if time_str.lower().startswith(tuple(PREFIX_BCE)):
-        sign = -1
-    elif time_str.lower().startswith(tuple(PREFIX_CE)):
-        sign = 1
-    else:
-        sign = 1
-    # non_numeric_chars = ''.join(set(string.printable) - set(string.digits))
-    if '年' in time_str:
-        time_str = time_str[0: time_str.find('年')]
-    number_str = int("".join(filter(str.isdigit, time_str)))
-    # number_str = time_str.translate(non_numeric_chars)
-    return sign * float(number_str)
-
-
-def standard_time_to_str(std_time: float) -> str:
-    year = math.floor(std_time)
-    date = std_time - year
-    text = str(year)
-    if std_time < 0:
-        text = str(-year) + ' BCE'
-    else:
-        text = str(year) + ' CE'
-    return text
+#
+# def standardize(time_str: str) -> ([float], [str]):
+#     unified_time_str = time_str
+#
+#     for space in SPACE_CHAR:
+#         unified_time_str = unified_time_str.replace(space, '')
+#
+#     for old_char, new_char in REPLACE_CHAR:
+#         unified_time_str = unified_time_str.replace(old_char, new_char)
+#
+#     for i in range(1, len(SEPARATOR)):
+#         unified_time_str = unified_time_str.replace(SEPARATOR[i], SEPARATOR[0])
+#
+#     time_list = []
+#     error_list = []
+#     sub_time_str_list = unified_time_str.split(SEPARATOR[0])
+#     for sub_time_str in sub_time_str_list:
+#         try:
+#             num = parse_single_time_str(sub_time_str.strip())
+#             time_list.append(num)
+#         except Exception as e:
+#             error_list.append(sub_time_str)
+#             print('Parse time error: ' + sub_time_str + ' -> ' + str(e))
+#         finally:
+#             pass
+#     return time_list, error_list
+#
+#
+# def parse_single_time_str(time_str: str) -> float:
+#     if time_str.lower().startswith(tuple(PREFIX_BCE)):
+#         sign = -1
+#     elif time_str.lower().startswith(tuple(PREFIX_CE)):
+#         sign = 1
+#     else:
+#         sign = 1
+#     # non_numeric_chars = ''.join(set(string.printable) - set(string.digits))
+#     if '年' in time_str:
+#         time_str = time_str[0: time_str.find('年')]
+#     number_str = int("".join(filter(str.isdigit, time_str)))
+#     # number_str = time_str.translate(non_numeric_chars)
+#     return sign * float(number_str)
 
 
-def tick_to_cn_date_text(his_tick: TICK) -> str:
-    year, month, day, _ = tick_to_date(his_tick)
-    if year < 0:
-        text = '公元前' + str(-year) + '年'
-    else:
-        text = '公元' + str(-year) + '年'
-    return text + str(month) + '月' + str(day) + '日'
+# def standard_time_to_str(std_time: float) -> str:
+#     year = math.floor(std_time)
+#     date = std_time - year
+#     text = str(year)
+#     if std_time < 0:
+#         text = str(-year) + ' BCE'
+#     else:
+#         text = str(year) + ' CE'
+#     return text
+
+
+# def tick_to_cn_date_text(his_tick: TICK) -> str:
+#     year, month, day, _ = tick_to_date(his_tick)
+#     if year < 0:
+#         text = '公元前' + str(-year) + '年'
+#     else:
+#         text = '公元' + str(-year) + '年'
+#     return text + str(month) + '月' + str(day) + '日'
 
 
 # ------------------------------------------------------------------------------------------------------------------

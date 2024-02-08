@@ -194,7 +194,7 @@ class HistoryRecordEditor(QWidget):
 
         for i in range(0, len(sorted_records)):
             record = sorted_records[i]
-            self.__combo_records.addItem('[' + HistoryTime.tick_to_standard_string(record.since()) + '] ' +
+            self.__combo_records.addItem('[' + HistoryTime.format_tick(record.since()) + '] ' +
                                          record.uuid())
             self.__combo_records.setItemData(i, record.uuid())
             if record == self.__current_record:
@@ -213,7 +213,8 @@ class HistoryRecordEditor(QWidget):
     def on_button_pick_date_time(self):
         dt, ok = DateTimePicker.pickDateTime()
         if ok:
-            self.__line_time.setText(dt.strftime(DEFAULT_DATE_TIME_FORMAT))
+            time_str = HistoryTime.format_datetime(dt)
+            self.__line_time.setText(time_str)
 
     # ---------------------------------------------------- Features ----------------------------------------------------
 
@@ -266,9 +267,9 @@ class HistoryRecordEditor(QWidget):
 
     def on_line_time_changed(self):
         raw_time_str = self.__line_time.text()
-        raw_time_strs = HistoryTime.split_normalize_time_text(raw_time_str)
-        history_ticks = [HistoryTime.natural_language_time_to_tick(s) for s in raw_time_strs]
-        history_time_strs = [HistoryTime.tick_to_standard_string(t, True) for t in history_ticks]
+        raw_time_strs = HistoryTime.__split_natural_language_time_text(raw_time_str)
+        history_ticks = [HistoryTime.__single_natural_language_time_to_tick(s) for s in raw_time_strs]
+        history_time_strs = [HistoryTime.format_tick(t, True) for t in history_ticks]
         self.__line_time.set_shadow_text(', '.join(history_time_strs))
 
     NOT_SUPPORT_TEMPLATE = 'In feature, we will use NLP or LLM to recognize the %s information from main text'

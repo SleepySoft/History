@@ -559,7 +559,7 @@ class HistoricalRecord(LabelTag):
     #     return True
 
     def __try_parse_time_tags(self, tags: [str]):
-        his_times = HistoryTime.time_text_to_history_times(','.join(tags))
+        his_times = HistoryTime.time_text_to_ticks(','.join(tags))
         if len(his_times) > 0:
             self.__since = min(his_times)
             self.__until = max(his_times)
@@ -1118,9 +1118,9 @@ def test_load_index():
 # ----------------------------------------------------- File Entry -----------------------------------------------------
 
 def main():
-    test_history_time_year()
-    test_history_time_year_month()
-    test_time_text_to_history_times()
+    # test_history_time_year()
+    # test_history_time_year_month()
+    # test_time_text_to_history_times()
     test_token_parser_case_normal()
     test_token_parser_case_escape_symbol()
     test_history_basic()

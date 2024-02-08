@@ -119,7 +119,7 @@ def build_candle_stick(df: pd.DataFrame,
     candle_sticks = []
     for index, row in df.iterrows():
         time_data = row[time_field]
-        time_tick = HistoryTime.time_str_to_tick(time_data)
+        time_tick = HistoryTime.time_text_to_ticks(time_data)
         candle_stick = Candlestick(0, upper, time_tick,
                                    row[open_field], row[close_field],
                                    row[high_field], row[low_field])

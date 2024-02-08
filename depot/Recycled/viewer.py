@@ -817,7 +817,7 @@ class TimeAxis(QWidget):
     # ------------------------------------------ Art ------------------------------------------
 
     def format_real_time_tip(self) -> str:
-        tip_text = '(' + HistoryTime.standard_time_to_str(self.__mouse_on_scale_value) + ')'
+        tip_text = '(' + HistoryTime.format_tick(self.__mouse_on_scale_value) + ')'
         if self.__mouse_on_index is not None:
             since = self.__mouse_on_index.since()
             until = self.__mouse_on_index.until()
@@ -830,12 +830,11 @@ class TimeAxis(QWidget):
                 tip_text += abstract
 
             if since == until:
-                tip_text += ' : [' + HistoryTime.standard_time_to_str(since) + ']'
+                tip_text += ' : [' + HistoryTime.format_tick(since) + ']'
             else:
                 tip_text += '(' + str(math.floor(self.__mouse_on_scale_value - since + 1)) + \
                             '/' + str(math.floor(until - since)) + ') : ['
-                tip_text += HistoryTime.standard_time_to_str(since) + \
-                            ' - ' + HistoryTime.standard_time_to_str(until) + ']'
+                tip_text += HistoryTime.format_tick(since) + ' - ' + HistoryTime.format_tick(until) + ']'
         return tip_text
 
     # ------------------------------------- Real Time Tips ------------------------------------
