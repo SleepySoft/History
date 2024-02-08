@@ -211,7 +211,11 @@ class HistoryRecordEditor(QWidget):
             print('Cannot find the current record in combobox - use index 0.')
 
     def on_button_pick_date_time(self):
-        dt, ok = DateTimePicker.pickDateTime()
+        raw_time_str = self.__line_time.text()
+        history_ticks = HistoryTime.time_text_to_ticks(raw_time_str)
+        original_time = HistoryTime.tick_to_datetime(history_ticks[0]) if len(history_ticks) > 0 else None
+
+        dt, ok = DateTimePicker.pickDateTime(original_time)
         if ok:
             time_str = HistoryTime.format_datetime(dt)
             self.__line_time.setText(time_str)
@@ -267,9 +271,10 @@ class HistoryRecordEditor(QWidget):
 
     def on_line_time_changed(self):
         raw_time_str = self.__line_time.text()
-        raw_time_strs = HistoryTime.__split_natural_language_time_text(raw_time_str)
-        history_ticks = [HistoryTime.__single_natural_language_time_to_tick(s) for s in raw_time_strs]
+        history_ticks = HistoryTime.time_text_to_ticks(raw_time_str)
         history_time_strs = [HistoryTime.format_tick(t, True) for t in history_ticks]
+
+        # Show the standard date time format for reference and double check
         self.__line_time.set_shadow_text(', '.join(history_time_strs))
 
     NOT_SUPPORT_TEMPLATE = 'In feature, we will use NLP or LLM to recognize the %s information from main text'

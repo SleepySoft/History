@@ -1,16 +1,25 @@
-from datetime import datetime
+import datetime
 from typing import Tuple
 
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QDateTimeEdit, QDialog, QDialogButtonBox
-from PyQt5.QtCore import QDateTime
+from PyQt5.QtCore import QDateTime, QDate
 
 
 class DateTimePicker(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, dt: datetime.datetime = None, parent=None):
         super(DateTimePicker, self).__init__(parent)
 
         self.dateTimeEdit = QDateTimeEdit(self)
-        self.dateTimeEdit.setDateTime(QDateTime.currentDateTime())
+
+        # Set the range the same to datetime
+        # self.dateTimeEdit.setMinimumDate(QDate(1, 1, 1))
+        # self.dateTimeEdit.setMaximumDate(QDate(9999, 12, 31))
+
+        if dt is not None:
+            self.dateTimeEdit.setDateTime(dt)
+        else:
+            self.dateTimeEdit.setDateTime(QDateTime.currentDateTime())
+
         self.dateTimeEdit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
         self.dateTimeEdit.setCalendarPopup(True)
 
@@ -28,8 +37,8 @@ class DateTimePicker(QDialog):
         return self.dateTimeEdit.dateTime()
 
     @staticmethod
-    def pickDateTime(parent=None) -> Tuple[datetime, bool]:
-        dialog = DateTimePicker(parent)
+    def pickDateTime(dt: datetime.datetime = None, parent=None) -> Tuple[datetime.datetime, bool]:
+        dialog = DateTimePicker(dt, parent)
         result = dialog.exec_()
         dt = dialog.dateTime()
         return dt.toPyDateTime(), result == QDialog.Accepted
