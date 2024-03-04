@@ -9,10 +9,13 @@ ABOUT = '''
 '''
 
 
-VERSION = '0.4.0'
+VERSION = '0.5.0'
 
 
 HISTORY = '''
+20240304
+  Update the time text analysis method, support standard datetime format.
+  Can use for record life.
 20191118
   Refactor the scale calculation.
   Optimise the CN time text to digit.
