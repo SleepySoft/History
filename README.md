@@ -9,11 +9,15 @@ sleepy_history##163.com
 # Readme CN   
 
 ## 使用说明
+  
+20240305更新文档：
+
+[Viewer](doc/Readme_Viewer_CN.md)
+
 
 在线文档：http://sleepysoft.xyz/archives/217
 
 离线文档：Doc/HistoryReadme.pdf
-  
 
 ##最近更新
 使用严格公元纪元时间绘制时间轴  
