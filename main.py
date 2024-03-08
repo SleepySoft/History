@@ -201,6 +201,11 @@ class HistoryUi(QMainWindow):
         self.__menu_view = None
         self.__menu_help = None
 
+        self.__timer = QTimer(self)
+        self.__timer.timeout.connect(self.on_timer)
+
+        self.__timer_feature = set()
+
         self.__time_axis = TimeAxis()
         self.__time_axis.set_agent(self)
         self.__time_axis.set_history_core(self.__history)
@@ -355,6 +360,35 @@ class HistoryUi(QMainWindow):
                 docker.hide()
             else:
                 docker.show()
+
+    # Handle keyboard action at parent Widget
+
+    def keyPressEvent(self, event):
+        if event.key() in [Qt.Key_Up, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right]:
+            self.__timer_feature.add(event.key())
+            self.timer.start(100)
+        elif event.key() == Qt.Key_G and event.modifiers() == Qt.ControlModifier:
+            print('CTRL+G pressed')
+
+    def keyReleaseEvent(self, event):
+        if event.key() in [Qt.Key_Up, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right]:
+            self.__timer_feature.remove(event.key())
+
+        if not self.__timer_feature:
+            self.__timer.stop()
+
+    def on_timer(self):
+        pps = self.__time_axis.get_pixel_per_scale()
+        spg = self.__time_axis.get_scale_per_page()
+
+        if Qt.Key_Up in self.keys_pressed:
+            self.__time_axis.offset_scroll(-pps // 4)
+        if Qt.Key_Down in self.keys_pressed:
+            self.__time_axis.offset_scroll(pps // 4)
+        if Qt.Key_Left in self.keys_pressed:
+            self.__time_axis.offset_scroll(-pps * spg)
+        if Qt.Key_Right in self.keys_pressed:
+            self.__time_axis.offset_scroll(pps * spg)
 
     # ------------------------------ Right Click Menu ------------------------------
 

@@ -3,7 +3,7 @@ import time
 import random
 import traceback, math
 
-from PyQt5.QtCore import QRect, QPoint, QSize
+from PyQt5.QtCore import QRect, QPoint, QSize, QTimer
 from PyQt5.QtGui import QPainter, QColor, QFont, QPen, QPolygon, QFontMetrics
 
 from editor import *
@@ -659,8 +659,7 @@ class TimeAxis(QWidget):
         self.__l_pressing = False
         self.__l_down_point = None
 
-        # Real time tips
-
+        # Realtime tips
         self.__tip_font = QFont()
         self.__tip_font.setFamily("微软雅黑")
         self.__tip_font.setPointSize(8)
@@ -738,6 +737,20 @@ class TimeAxis(QWidget):
 
     def get_axis_offset(self) -> float:
         return self.__axis_align_offset
+
+    def get_pixel_per_scale(self) -> int:
+        return self.__pixel_per_scale
+
+    def get_scale_per_page(self) -> int:
+        return self.__scale_per_page
+
+    # ------------------------ Operation -------------------------
+
+    def jump_to_tick(self, tick: HistoryTime.TICK):
+        pass
+
+    def offset_scroll(self, offset: int):
+        self.__scroll += offset
 
     # ------------------------- Resource -------------------------
 
