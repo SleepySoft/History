@@ -1,19 +1,14 @@
 import os
-import re
-import math
-import time
+import sys
 import uuid
 import ntpath
-from functools import total_ordering
 
 import requests
-import traceback
 import posixpath
-from os import sys, path, listdir
+from os import path
 
 sys.path.append(path.dirname(__file__))
 
-from Utility.to_arab import *
 from Utility.history_public import *
 from Utility import HistoryTime
 
@@ -692,7 +687,7 @@ class HistoricalRecordLoader:
 
     def from_source(self, source: str) -> bool:
         if HistoricalRecordLoader.is_web_url(source):
-            return self.from_web()
+            return self.from_web(source)
         else:
             return self.from_file(HistoricalRecordLoader.source_to_absolute_path(source))
 

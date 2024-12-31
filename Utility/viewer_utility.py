@@ -204,13 +204,13 @@ class AxisMetrics:
 
     def rect(self) -> QRect:
         if self.__layout == LAYOUT_VERTICAL:
-            rect = QRect(self.__transverse_left, self.__longitudinal_since,
-                         self.__transverse_right - self.__transverse_left,
-                         self.__longitudinal_until - self.__longitudinal_since)
+            rect = QRect(int(self.__transverse_left), int(self.__longitudinal_since),
+                         int(self.__transverse_right - self.__transverse_left),
+                         int(self.__longitudinal_until - self.__longitudinal_since))
         else:
-            rect = QRect(self.__longitudinal_since, self.__transverse_right,
-                         self.__longitudinal_until - self.__longitudinal_since,
-                         self.__transverse_left - self.__transverse_right)
+            rect = QRect(int(self.__longitudinal_since), int(self.__transverse_right),
+                         int(self.__longitudinal_until - self.__longitudinal_since),
+                         int(self.__transverse_left - self.__transverse_right))
         return rect
 
     def copy(self, rhs):

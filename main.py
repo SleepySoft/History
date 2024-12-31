@@ -409,9 +409,13 @@ class HistoryUi(QMainWindow):
         if thread is None:
             opt_add_thread = menu.addAction("Add Thread")
         else:
-            opt_load_index = menu.addAction("Load Index")
+            opt_new_file = menu.addAction("New File")
             opt_load_file = menu.addAction("Load File")
-            opt_open_filter = menu.addAction("Use Filter")
+
+            # Incomplete function, removed
+            # opt_load_index = menu.addAction("Load Index")
+            # opt_open_filter = menu.addAction("Use Filter")
+
             opt_set_track_width = menu.addAction("Set Track Width")
             opt_remove_thread = menu.addAction("Remove Thread")
             opt_add_thread_left = menu.addAction("Add Thread On Left")
@@ -461,8 +465,15 @@ class HistoryUi(QMainWindow):
                 indexer.load_from_file(file_choose)
                 thread.set_thread_event_indexes(indexer.get_indexes())
 
+        elif action == opt_new_file:
+            file_choose, file_type = QFileDialog.getSaveFileName(self, 'New History File',
+                                                                 HistoricalRecordLoader.get_local_depot_root(),
+                                                                 'History Files (*.his)')
+            if file_choose != '':
+                pass
+
         elif action == opt_load_file:
-            file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Filter',
+            file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load History File',
                                                                  HistoricalRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.his)')
             if file_choose != '':
