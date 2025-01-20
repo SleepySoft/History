@@ -676,22 +676,33 @@ class HistoricalRecord(LabelTag):
 class HistoricalRecordLoader:
     def __init__(self):
         self.__records = []
+        self.__sources = {}
 
     def restore(self):
         self.__records.clear()
+        self.__sources.clear()
 
     def get_loaded_records(self) -> list:
         return self.__records
+
+    def get_loaded_sources(self) -> dict:
+        return self.__sources
+
+    def get_history_record_source(self, record: HistoricalRecord) -> str:
+        for source, records in self.__sources.items():
+            if record in records:
+                return source
+        return ''
 
     @staticmethod
     def to_local_depot(records: HistoricalRecord or [HistoricalRecord], depot: str, source: str) -> bool:
         base_name = os.path.basename(source)
         depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
         source = path.join(depot_path, base_name)
-        HistoricalRecordLoader.to_local_source(records, source)
+        return HistoricalRecordLoader.to_local_source(records, source)
 
     @staticmethod
-    def to_local_source(records: HistoricalRecord or [HistoricalRecord], source: str):
+    def to_local_source(records: HistoricalRecord or [HistoricalRecord], source: str) -> bool:
         if not isinstance(records, (list, tuple)):
             records = [records]
         try:
@@ -748,7 +759,9 @@ class HistoricalRecordLoader:
         try:
             r = requests.get(url)
             text = r.content.decode('utf-8')
-            self.from_text(text)
+            records = self.from_text(text)
+            # Build index of URL - Record Instance
+            self.__sources[url] = records
             return True
         except Exception as e:
             print('Error when fetching from web: ' + str(e))
@@ -760,7 +773,9 @@ class HistoricalRecordLoader:
         try:
             print('| => Load record: ' + file)
             with open(file, 'rt', encoding='utf-8') as f:
-                self.from_text(f.read(), file)
+                records = self.from_text(f.read(), file)
+                # Build index of File Name - Record Instance
+                self.__sources[file] = records
             return True
         except Exception as e:
             print(e)
@@ -769,7 +784,7 @@ class HistoricalRecordLoader:
         finally:
             pass
 
-    def from_text(self, text: str, source: str = ''):
+    def from_text(self, text: str, source: str = '') -> list:
         error_list = []
 
         parser = LabelTagParser()
@@ -777,11 +792,13 @@ class HistoricalRecordLoader:
 
         focus = ''
         record = None
+        records = []
         label_tags = parser.get_label_tags()
 
         for label, tags in label_tags:
             if label == '[START]':
-                self.yield_record(record)
+                if record is not None:
+                    records.append(record)
                 record = None
                 focus = ''
                 if len(tags) == 0:
@@ -795,15 +812,14 @@ class HistoricalRecordLoader:
                 record.set_focus_label(focus)
             record.set_label_tags(label, tags)
 
-            if focus != '' and label == focus:
-                self.yield_record(record)
+            if focus != '' and label == focus and record is not None:
+                records.append(record)
                 record = None
                 focus = ''
-        self.yield_record(record)
-
-    def yield_record(self, record):
-        if record is not None:
-            self.__records.append(record)
+        if record is None:
+            records.append(record)
+        self.__records += records
+        return records
 
     @staticmethod
     def is_web_url(_path: str):
