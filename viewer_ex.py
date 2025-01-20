@@ -105,7 +105,7 @@ class TimeThreadBase:
         clock = Clock()
         for item in self.__paint_items:
             item.paint(qp)
-        print('Paint %s items, timespends: %sms' % (len(self.__paint_items), clock.elapsed_ms()))
+        print('Paint %s items, time spends: %sms' % (len(self.__paint_items), clock.elapsed_ms()))
 
     def clear(self):
         self.__axis_items.clear()

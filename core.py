@@ -16,6 +16,15 @@ from Utility import HistoryTime
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
 
 class TokenParser:
+    """
+    This class is used for abstract tokens from text. You can specify characters like tokens, wrapper and escape symbol.
+
+    Tokens: Text will be split by token.
+    Wrapper: The text in wrapper will keep the same (not analysis, not split).
+    Escape symbol: Ambiguous characters can be escaped by specified escape symbol.
+
+    You can read following test_token_parser_*() to know more about its behaviour.
+    """
     def __init__(self):
         self.__text = ''
         self.__tokens = []
@@ -34,6 +43,9 @@ class TokenParser:
     # ========================================== Config parser ==========================================
 
     def config(self, tokens: list, wrappers: list, escape_symbols: list):
+        """
+        Function to set tokens, wrappers and escape symbols.
+        """
         self.__tokens = tokens
         self.__wrappers = wrappers
         self.__escape_symbols = escape_symbols
@@ -46,6 +58,9 @@ class TokenParser:
                     self.__tokens.append(token)
 
     def reset(self):
+        """
+        Reset parse context (start over).
+        """
         self.__mark_idx = 0
         self.__parse_idx = 0
 
@@ -53,6 +68,9 @@ class TokenParser:
         self.__wrapper_index = -1
 
     def attach(self, text: str):
+        """
+        Set the text to parse.
+        """
         self.__text = text
         self.__mark_idx = 0
         self.__parse_idx = 0
@@ -60,6 +78,9 @@ class TokenParser:
     # ========================================== Parse ==========================================
 
     def next_token(self) -> str:
+        """
+        Yield the next token. Update parse context.
+        """
         while not self.reaches_end():
             if self.__meet_token != '':
                 token = self.__meet_token
@@ -157,6 +178,19 @@ LABEL_TAG_ESCAPES_SYMBOLS = ['\\']
 
 
 class LabelTagParser:
+    """
+    Parse "LabelTag" format text. "LabelTag" format looks like this:
+
+      label1: tag, tag1, tag2, tag3; label2: tag5, tag6, tag7
+      label3: tag8, tag9    # Comments
+
+    This text will be parsed to list in dict:
+      {
+          label1: [tag1, tag2, tag3],
+          label1: [tag5, tag6, tag7],
+          label1: [tag8, tag9],
+      }
+    """
     def __init__(self):
         self.__last_tags = []
         self.__label_tags = []
@@ -265,6 +299,9 @@ class LabelTagParser:
 # --------------------------------------------------- class LabelTag ---------------------------------------------------
 
 class LabelTag:
+    """
+    Label tag structure wrapper.
+    """
     def __init__(self):
         self.__label_tags = {}
 
@@ -366,8 +403,17 @@ class LabelTag:
 # ----------------------------------------------- class HistoricalRecord -----------------------------------------------
 
 class HistoricalRecord(LabelTag):
-    # Five key labels of an record: time, location, people, organization, event
-    # Optional common labels: title, brief, uuid, author, tags
+    """
+    History record will store in LabelTag format.
+
+    Five key labels of a record: time, location, people, organization, event
+    Optional common labels: title, brief, uuid, author, tags
+
+    Every history record starts with [START] label. The "focus label" follows the [START] label. For example:
+
+        [START]: event          # The start of a history record. This record focused on event (by default).
+        [START]: people         # The start of a history record. This record focused on people.
+    """
 
     def __init__(self, source: str = ''):
         super(HistoricalRecord, self).__init__()
