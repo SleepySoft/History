@@ -235,7 +235,7 @@ class HistoryRecordEditor(QWidget):
 
     def edit_source(self, source: str, current_uuid: str = '') -> bool:
         # TODO: Do we need this?
-        loader = HistoricalRecordLoader()
+        loader = HistoryRecordLoader()
         if not loader.from_source(source):
             return False
         self.set_current_source(source)
@@ -248,11 +248,11 @@ class HistoryRecordEditor(QWidget):
                 break
 
         if self.__current_record is None:
-            self.__current_record = HistoricalRecord()
+            self.__current_record = HistoryRecord()
         self.update_combo_records()
         self.record_to_ui(self.__current_record)
 
-    def set_records(self, records: HistoricalRecord or [HistoricalRecord], source: str):
+    def set_records(self, records: HistoryRecord or [HistoryRecord], source: str):
         self.__records = records if isinstance(records, list) else [records]
         self.__current_record = self.__records[0]
         self.set_current_source(source)
@@ -261,10 +261,10 @@ class HistoryRecordEditor(QWidget):
     def get_source(self) -> str:
         return self.__source
 
-    def get_records(self) -> [HistoricalRecord]:
+    def get_records(self) -> [HistoryRecord]:
         return self.__records
 
-    def get_current_record(self) -> HistoricalRecord:
+    def get_current_record(self) -> HistoryRecord:
         return self.__current_record
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
@@ -305,7 +305,7 @@ class HistoryRecordEditor(QWidget):
 
     def on_button_apply(self):
         if self.__current_record is None:
-            self.__current_record = HistoricalRecord()
+            self.__current_record = HistoryRecord()
             self.__records.append(self.__current_record)
         else:
             self.__current_record.reset()
@@ -364,7 +364,7 @@ class HistoryRecordEditor(QWidget):
         restore_text_editor(self.__text_brief)
         restore_text_editor(self.__text_record)
 
-    def ui_to_record(self, record: HistoricalRecord) -> bool:
+    def ui_to_record(self, record: HistoryRecord) -> bool:
         input_time = self.__line_time.text()
         input_location = self.__line_location.text()
         input_people = self.__line_people.text()
@@ -420,7 +420,7 @@ class HistoryRecordEditor(QWidget):
 
         return True
 
-    def record_to_ui(self, record: HistoricalRecord or str):
+    def record_to_ui(self, record: HistoryRecord or str):
         self.clear_ui()
 
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
@@ -473,7 +473,7 @@ class HistoryRecordEditor(QWidget):
         self.__new_record()
 
     def __new_record(self):
-        self.__current_record = HistoricalRecord()
+        self.__current_record = HistoryRecord()
         self.__records.append(self.__current_record)
         if self.__source is None or self.__source == '':
             self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
@@ -602,14 +602,14 @@ class HistoryRecordBrowser(QWidget):
 
     @staticmethod
     def enumerate_local_depot() -> list:
-        depot_root = HistoricalRecordLoader.get_local_depot_root()
+        depot_root = HistoryRecordLoader.get_local_depot_root()
         items = os.listdir(depot_root)
         return [item for item in items if path.isdir(path.join(depot_root, item))]
 
     @staticmethod
     def enumerate_depot_record(depot: str) -> list:
         record_dir_file = []
-        depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
+        depot_path = HistoryRecordLoader.join_local_depot_path(depot)
         for parent, dirnames, filenames in os.walk(depot_path):
             for filename in filenames:
                 if filename.endswith('.his'):
@@ -674,7 +674,7 @@ class HistoryEditorDialog(QDialog):
 
         # TODO: Select depot
         # result = HistoricalRecordLoader.to_local_source(records, source)
-        result = HistoricalRecordLoader.to_local_source(records, source)
+        result = HistoryRecordLoader.to_local_source(records, source)
         if not result:
             return
 

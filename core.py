@@ -402,7 +402,7 @@ class LabelTag:
 
 # ----------------------------------------------- class HistoricalRecord -----------------------------------------------
 
-class HistoricalRecord(LabelTag):
+class HistoryRecord(LabelTag):
     """
     History record will store in LabelTag format.
 
@@ -416,7 +416,7 @@ class HistoricalRecord(LabelTag):
     """
 
     def __init__(self, source: str = ''):
-        super(HistoricalRecord, self).__init__()
+        super(HistoryRecord, self).__init__()
         self.__uuid = str(uuid.uuid4())
         self.__since = 0.0
         self.__until = 0.0
@@ -468,7 +468,7 @@ class HistoricalRecord(LabelTag):
     def reset(self):
         self.__focus_label = ''
         self.__record_source = ''
-        super(HistoricalRecord, self).reset()
+        super(HistoryRecord, self).reset()
 
     def set_source(self, source: str):
         self.__record_source = source
@@ -496,10 +496,10 @@ class HistoricalRecord(LabelTag):
         elif label == 'source':
             self.__record_source = str(tags[0])
             return
-        super(HistoricalRecord, self).add_tags(label, tags)
+        super(HistoryRecord, self).add_tags(label, tags)
 
     def to_index(self):
-        record = HistoricalRecord()
+        record = HistoryRecord()
         record.index_for(self)
         return record
 
@@ -559,7 +559,7 @@ class HistoricalRecord(LabelTag):
         text += LabelTagParser.label_tags_to_text('uuid', self.__uuid, new_line)
 
         # ---------------------- Dump common labels ----------------------
-        text += super(HistoricalRecord, self).dump_text(dump_list, compact)
+        text += super(HistoryRecord, self).dump_text(dump_list, compact)
 
         if self.__focus_label == 'index':
             text += LabelTagParser.label_tags_to_text('since', HistoryTime.tick_to_decimal_year(self.since()), new_line)
@@ -673,7 +673,7 @@ class HistoricalRecord(LabelTag):
 
 # --------------------------------------------------- class history ----------------------------------------------------
 
-class HistoricalRecordLoader:
+class HistoryRecordLoader:
     def __init__(self):
         self.__records = []
         self.__sources = {}
@@ -688,25 +688,25 @@ class HistoricalRecordLoader:
     def get_loaded_sources(self) -> dict:
         return self.__sources
 
-    def get_history_record_source(self, record: HistoricalRecord) -> str:
+    def get_history_record_source(self, record: HistoryRecord) -> str:
         for source, records in self.__sources.items():
             if record in records:
                 return source
         return ''
 
     @staticmethod
-    def to_local_depot(records: HistoricalRecord or [HistoricalRecord], depot: str, source: str) -> bool:
+    def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
         base_name = os.path.basename(source)
-        depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
+        depot_path = HistoryRecordLoader.join_local_depot_path(depot)
         source = path.join(depot_path, base_name)
-        return HistoricalRecordLoader.to_local_source(records, source)
+        return HistoryRecordLoader.to_local_source(records, source)
 
     @staticmethod
-    def to_local_source(records: HistoricalRecord or [HistoricalRecord], source: str) -> bool:
+    def to_local_source(records: HistoryRecord or [HistoryRecord], source: str) -> bool:
         if not isinstance(records, (list, tuple)):
             records = [records]
         try:
-            full_path = HistoricalRecordLoader.source_to_absolute_path(source)
+            full_path = HistoryRecordLoader.source_to_absolute_path(source)
             print('| <= Write record: ' + full_path)
             with open(full_path, 'wt', encoding='utf-8') as f:
                 for record in records:
@@ -722,7 +722,7 @@ class HistoricalRecordLoader:
 
     def from_local_depot(self, depot: str) -> int:
         try:
-            depot_path = HistoricalRecordLoader.join_local_depot_path(depot)
+            depot_path = HistoryRecordLoader.join_local_depot_path(depot)
             return self.from_directory(depot_path)
         except Exception as e:
             print(e)
@@ -733,7 +733,7 @@ class HistoricalRecordLoader:
 
     def from_directory(self, directory: str) -> int:
         try:
-            files = HistoricalRecordLoader.enumerate_local_path(directory)
+            files = HistoryRecordLoader.enumerate_local_path(directory)
             return self.from_files(files)
         except Exception as e:
             print(e)
@@ -743,10 +743,10 @@ class HistoricalRecordLoader:
             pass
 
     def from_source(self, source: str) -> bool:
-        if HistoricalRecordLoader.is_web_url(source):
+        if HistoryRecordLoader.is_web_url(source):
             return self.from_web(source)
         else:
-            return self.from_file(HistoricalRecordLoader.source_to_absolute_path(source))
+            return self.from_file(HistoryRecordLoader.source_to_absolute_path(source))
 
     def from_files(self, files: [str]) -> int:
         count = 0
@@ -808,7 +808,7 @@ class HistoricalRecordLoader:
                 continue
 
             if record is None:
-                record = HistoricalRecord(HistoricalRecordLoader.normalize_source(source))
+                record = HistoryRecord(HistoryRecordLoader.normalize_source(source))
                 record.set_focus_label(focus)
             record.set_label_tags(label, tags)
 
@@ -832,12 +832,12 @@ class HistoricalRecordLoader:
     @staticmethod
     def source_to_absolute_path(source: str) -> str:
         return source if \
-            HistoricalRecordLoader.is_absolute_path(source) else \
-            path.join(HistoricalRecordLoader.get_local_depot_root(), source)
+            HistoryRecordLoader.is_absolute_path(source) else \
+            path.join(HistoryRecordLoader.get_local_depot_root(), source)
 
     @staticmethod
     def normalize_source(source: str) -> str:
-        depot_root = HistoricalRecordLoader.get_local_depot_root()
+        depot_root = HistoryRecordLoader.get_local_depot_root()
         return source[len(depot_root) + 1:] if source.startswith(depot_root) else source
 
     @staticmethod
@@ -848,7 +848,7 @@ class HistoricalRecordLoader:
 
     @staticmethod
     def join_local_depot_path(depot: str) -> str:
-        root_path = HistoricalRecordLoader.get_local_depot_root()
+        root_path = HistoryRecordLoader.get_local_depot_root()
         depot_path = path.join(root_path, depot)
         return depot_path
 
@@ -869,7 +869,7 @@ class HistoricalRecordLoader:
 
 # ------------------------------------------- class HistoricalRecordIndexer --------------------------------------------
 
-class HistoricalRecordIndexer:
+class HistoryRecordIndexer:
     def __init__(self):
         self.__indexes = []
 
@@ -880,8 +880,8 @@ class HistoricalRecordIndexer:
         return self.__indexes
 
     def index_path(self, directory: str):
-        loader = HistoricalRecordLoader()
-        his_filels = HistoricalRecordLoader.enumerate_local_path(directory)
+        loader = HistoryRecordLoader()
+        his_filels = HistoryRecordLoader.enumerate_local_path(directory)
         for his_file in his_filels:
             loader.from_file(his_file)
             records = loader.get_loaded_records()
@@ -890,7 +890,7 @@ class HistoricalRecordIndexer:
 
     def index_records(self, records: list):
         for record in records:
-            index = HistoricalRecord()
+            index = HistoryRecord()
             index.index_for(record)
             self.__indexes.append(index)
 
@@ -907,7 +907,7 @@ class HistoricalRecordIndexer:
                 f.write(text + '\n')
 
     def load_from_file(self, file: str):
-        loader = HistoricalRecordLoader()
+        loader = HistoryRecordLoader()
         loader.from_file(file)
         self.__indexes = loader.get_loaded_records()
 
@@ -920,114 +920,159 @@ class HistoricalRecordIndexer:
 
 class History:
     def __init__(self):
-        self.__records = []
+        # { Source: [Records] }
+        self.__records_table = { }
         # Deprecated
-        self.__indexes = []
+        # self.__indexes = []
 
-    # ----------------------------------- Deprecated :Index -----------------------------------
+    # ----------------------------------- Deprecated : Index -----------------------------------
 
-    def set_indexes(self, indexes: [HistoricalRecord]):
-        self.__indexes.clear()
-        self.__indexes.extend(indexes)
-
-    def get_indexes(self) ->[HistoricalRecord]:
-        return self.__indexes
+    # def set_indexes(self, indexes: [HistoryRecord]):
+    #     self.__indexes.clear()
+    #     self.__indexes.extend(indexes)
+    #
+    # def get_indexes(self) ->[HistoryRecord]:
+    #     return self.__indexes
 
     # -------------------------------------- Gets / Sets --------------------------------------
 
-    def add_record(self, record: HistoricalRecord) -> bool:
-        if record is None or record.uuid() is None or record.uuid() == '':
-            return False
-        _uuid = record.uuid()
-        exists_record = self.get_record_by_uuid(_uuid)
-        if exists_record is not None:
-            self.__records.remove(exists_record)
-        self.__records.append(record)
-        return True
+    def get_source_list(self) -> list:
+        return list(self.__records_table.keys())
 
-    def remove_record(self, record: HistoricalRecord):
-        if record in self.__records:
-            self.__records.remove(record)
+    def map(self, map_func):
+        """
+        For each record, call map_func(source, record)
+            IN - source: The source of record
+            IN - record: The instance of record
+            Return - N/A
+        """
+        for source, records in self.__records_table:
+            for record in records:
+                map_func(source, record)
 
-    def add_records(self, records: [HistoricalRecord]):
-        for record in records:
-            self.add_record(record)
+    def filter(self, filter_func) -> list:
+        """
+        Filter records by filter_func(source, record)
+            IN - source: The source of record
+            IN - record: The instance of record
+            Return - True if accept this record else False.
+        """
+        collection = []
+        for source, records in self.__records_table:
+            for record in records:
+                if filter_func(source, record):
+                    collection.append(record)
+        return collection
 
-    def remove_records(self, records: [HistoricalRecord]):
-        for record in records:
-            self.remove_record(record)
-
-    def get_records(self) -> [HistoricalRecord]:
-        return self.__records
-
-    def attach_records(self, records: [HistoricalRecord]):
-        self.__records.clear()
-        self.__records.extend(records)
-
-    def clear_records(self):
-        self.__records.clear()
+    # def add_record(self, record: HistoryRecord) -> bool:
+    #     if record is None or record.uuid() is None or record.uuid() == '':
+    #         return False
+    #     _uuid = record.uuid()
+    #     exists_record = self.get_record_by_uuid(_uuid)
+    #     if exists_record is not None:
+    #         self.__records.remove(exists_record)
+    #     self.__records.append(record)
+    #     return True
+    #
+    # def remove_record(self, record: HistoryRecord):
+    #     if record in self.__records:
+    #         self.__records.remove(record)
+    #
+    # def add_records(self, records: [HistoryRecord]):
+    #     for record in records:
+    #         self.add_record(record)
+    #
+    # def remove_records(self, records: [HistoryRecord]):
+    #     for record in records:
+    #         self.remove_record(record)
+    #
+    # def get_records(self) -> [HistoryRecord]:
+    #     return self.__records
+    #
+    # def attach_records(self, records: [HistoryRecord]):
+    #     self.__records.clear()
+    #     self.__records.extend(records)
+    #
+    # def clear_records(self):
+    #     self.__records.clear()
 
     # --------------------------------------- Updates ---------------------------------------
 
-    def update_records(self, records: [HistoricalRecord]):
-        History.upsert_records(self.__records, records)
-
-    def update_indexes(self, indexes: [HistoricalRecord]):
-        History.upsert_records(self.__indexes, indexes)
+    # def update_records(self, records: [HistoryRecord]):
+    #     History.upsert_records(self.__records, records)
+    #
+    # def update_indexes(self, indexes: [HistoryRecord]):
+    #     History.upsert_records(self.__indexes, indexes)
 
     # --------------------------------------- Select ---------------------------------------
 
-    def get_record_by_uuid(self, _uuid: str) -> HistoricalRecord or None:
-        for record in self.__records:
-            if record.uuid() == _uuid:
-                return record
-        return None
+    def get_record_by_uuid(self, _uuid: str) -> HistoryRecord or None:
+        collection = self.filter(lambda _, r: r.uuid() == _uuid)
+        return collection[0] if len(collection) > 0 else None
 
-    def get_record_by_source(self, source: str) -> HistoricalRecord or None:
-        return [record for record in self.__records if record.source() == source]
+    def get_record_by_source(self, source: str) -> list:
+        return self.__records_table.get(source, [])
 
     def select_records(self, _uuid: str or [str] = None,
                        sources: str or [str] = None, focus_label: str = '',
                        include_label_tags: dict = None, include_all: bool = True,
-                       exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoricalRecord]:
-        records = self.__records.copy()
+                       exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoryRecord]:
 
+        # Step 1: Filter by UUID
         if _uuid is not None and len(_uuid) != 0:
-            if not isinstance(_uuid, (list, tuple)):
-                _uuid = [_uuid]
-            records = [record for record in records if record.uuid() in _uuid]
+            if isinstance(_uuid, (list, tuple)):
+                uuid_filter = lambda _, r: r.uuid() in _uuid
+            else:
+                uuid_filter = lambda _, r: r.uuid() == _uuid
+        else:
+            uuid_filter = lambda _, __: True
 
+        # Step 2: Filter by sources
         if sources is not None and len(sources) != 0:
-            if not isinstance(sources, (list, tuple)):
-                sources = [sources]
-            records = [record for record in records if record.source() in sources]
+            if isinstance(sources, (list, tuple)):
+                source_filter = lambda s, _: s in sources
+            else:
+                source_filter = lambda s, _: s == sources
+        else:
+            source_filter = lambda _, __: True
 
+        # Step 3: Filter by focus_label
         if focus_label is not None and focus_label != '':
-            records = [record for record in records if record.get_focus_label() == focus_label]
+            focus_label_filter = lambda _, r: r.get_focus_label() == focus_label
+        else:
+            focus_label_filter = lambda _, __: True
 
+        # Step 4: Filter by label tags
         if include_label_tags is not None or exclude_label_tags is not None:
-            records = [record for record in records if record.filter(include_label_tags, include_all,
-                                                                     exclude_label_tags, exclude_any)]
-        return records
+            include_label_tags_fiter = lambda _, r: r.filter(
+                include_label_tags, include_all, exclude_label_tags, exclude_any)
+        else:
+            include_label_tags_fiter = lambda _, __: True
+
+        return self.filter(lambda s, r:
+                           uuid_filter(s, r) and
+                           source_filter(s, r) and
+                           focus_label_filter(s, r) and
+                           include_label_tags_fiter(s, r))
 
     # ------------------------------------- Load -------------------------------------
 
-    def load_source(self, source: str) -> [HistoricalRecord]:
-        loader = HistoricalRecordLoader()
+    def load_source(self, source: str) -> [HistoryRecord]:
+        loader = HistoryRecordLoader()
         result = loader.from_source(source)
         if result:
             self.add_records(loader.get_loaded_records())
         return loader.get_loaded_records() if result else []
 
     def load_depot(self, depot: str) -> bool:
-        loader = HistoricalRecordLoader()
+        loader = HistoryRecordLoader()
         result = loader.from_local_depot(depot)
         if result:
             self.add_records(loader.get_loaded_records())
         return result != 0
 
     def load_path(self, _path: str):
-        loader = HistoricalRecordLoader()
+        loader = HistoryRecordLoader()
         result = loader.from_directory(_path)
         if result:
             self.add_records(loader.get_loaded_records())
@@ -1046,15 +1091,15 @@ class History:
     # ------------------------------- Static Methods -------------------------------
 
     @staticmethod
-    def sort_records(records: [HistoricalRecord]) -> [HistoricalRecord]:
+    def sort_records(records: [HistoryRecord]) -> [HistoryRecord]:
         return sorted(records, key=lambda x: x.since())
 
     @staticmethod
-    def unique_records(records: [HistoricalRecord]) -> [HistoricalRecord]:
+    def unique_records(records: [HistoryRecord]) -> [HistoryRecord]:
         return {r.uuid(): r for r in records}.values()
 
     @staticmethod
-    def upsert_records(records_list: [HistoricalRecord], records_new: [HistoricalRecord]):
+    def upsert_records(records_list: [HistoryRecord], records_new: [HistoryRecord]):
         new_records = {r.uuid(): r for r in records_new}
         for i in range(0, len(records_list)):
             _uuid = records_list[i].uuid()
@@ -1112,7 +1157,7 @@ def test_token_parser_case_escape_symbol():
 # -------------------------------- History --------------------------------
 
 def test_history_basic():
-    loader = HistoricalRecordLoader()
+    loader = HistoryRecordLoader()
     count = loader.from_local_depot('example')
 
     print('Load successful: ' + str(count))
@@ -1124,7 +1169,7 @@ def test_history_basic():
 
 
 def test_history_filter():
-    loader = HistoricalRecordLoader()
+    loader = HistoryRecordLoader()
     loader.from_local_depot('example')
 
     history = History()
@@ -1158,14 +1203,14 @@ def test_history_filter():
 # -------------------------------- Indexer --------------------------------
 
 def test_generate_index():
-    depot_path = HistoricalRecordLoader.join_local_depot_path('China')
-    indexer = HistoricalRecordIndexer()
+    depot_path = HistoryRecordLoader.join_local_depot_path('China')
+    indexer = HistoryRecordIndexer()
     indexer.index_path(depot_path)
     indexer.dump_to_file('test_history.index')
 
 
 def test_load_index():
-    indexer = HistoricalRecordIndexer()
+    indexer = HistoryRecordIndexer()
     indexer.load_from_file('test_history.index')
     history = History()
     history.update_indexes(indexer.get_indexes())

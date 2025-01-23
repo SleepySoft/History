@@ -71,7 +71,7 @@ class ThreadEditor(QWidget):
     def on_button_browse(self):
         file_choose, filetype = QFileDialog.getOpenFileName(self,
                                                             'Load Filter',
-                                                            HistoricalRecordLoader.get_local_depot_root(),
+                                                            HistoryRecordLoader.get_local_depot_root(),
                                                             'Filter Files (*.index)')
         if file_choose != '':
             self.__line_index.setText(file_choose)
@@ -298,7 +298,7 @@ class HistoryUi(QMainWindow):
     # ----------------------------- UI Events -----------------------------
 
     def on_menu_load_files(self):
-        root_path = HistoricalRecordLoader.get_local_depot_root()
+        root_path = HistoryRecordLoader.get_local_depot_root()
         fname, ftype = QFileDialog.getOpenFileNames(self,
                                                     'Select History Files',
                                                     root_path,
@@ -396,6 +396,7 @@ class HistoryUi(QMainWindow):
         align = self.__time_axis.align_from_point(pos)
         thread = self.__time_axis.thread_from_point(pos)
 
+        opt_new_record = None
         opt_load_file = None
         opt_load_index = None
         opt_open_filter = None
@@ -409,7 +410,7 @@ class HistoryUi(QMainWindow):
         if thread is None:
             opt_add_thread = menu.addAction("Add Thread")
         else:
-            opt_new_file = menu.addAction("New File")
+            opt_new_record = menu.addAction("New Record")
             opt_load_file = menu.addAction("Load File")
 
             # Incomplete function, removed
@@ -458,23 +459,24 @@ class HistoryUi(QMainWindow):
 
         elif action == opt_load_index:
             file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load Index',
-                                                                 HistoricalRecordLoader.get_local_depot_root(),
+                                                                 HistoryRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.index)')
             if file_choose != '':
-                indexer = HistoricalRecordIndexer()
+                indexer = HistoryRecordIndexer()
                 indexer.load_from_file(file_choose)
                 thread.set_thread_event_indexes(indexer.get_indexes())
 
-        elif action == opt_new_file:
-            file_choose, file_type = QFileDialog.getSaveFileName(self, 'New History File',
-                                                                 HistoricalRecordLoader.get_local_depot_root(),
-                                                                 'History Files (*.his)')
-            if file_choose != '':
-                pass
+        elif action == opt_new_record:
+            pass
+            # file_choose, file_type = QFileDialog.getSaveFileName(self, 'New History File',
+            #                                                      HistoricalRecordLoader.get_local_depot_root(),
+            #                                                      'History Files (*.his)')
+            # if file_choose != '':
+            #     pass
 
         elif action == opt_load_file:
             file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load History File',
-                                                                 HistoricalRecordLoader.get_local_depot_root(),
+                                                                 HistoryRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.his)')
             if file_choose != '':
                 records = self.__history.load_source(file_choose)

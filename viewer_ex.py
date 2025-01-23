@@ -45,7 +45,7 @@ class Clock:
 # ------------------------------------------------------ AxisItem ------------------------------------------------------
 
 class AxisItem:
-    def __init__(self, index: HistoricalRecord, extra: dict):
+    def __init__(self, index: HistoryRecord, extra: dict):
         self.extra = extra
         self.index = index
         self.item_metrics = AxisMetrics()
@@ -55,7 +55,7 @@ class AxisItem:
 
     # ---------------------------------------------------------
 
-    def get_index(self) -> HistoricalRecord:
+    def get_index(self) -> HistoryRecord:
         return self.index
 
     def get_tip_text(self, on_tick: float) -> str:
@@ -173,7 +173,7 @@ class TimeThreadBase:
 
 
 class HistoryIndexBar(AxisItem):
-    def __init__(self, index: HistoricalRecord, extra=None):
+    def __init__(self, index: HistoryRecord, extra=None):
         super(HistoryIndexBar, self).__init__(index, extra)
         if extra is None:
             extra = {}
@@ -295,7 +295,7 @@ class HistoryIndexBar(AxisItem):
         qp.drawRect(index_rect)
 
     @staticmethod
-    def paint_index_text(qp: QPainter, index: HistoricalRecord, index_rect: QRect, font: QFont):
+    def paint_index_text(qp: QPainter, index: HistoryRecord, index_rect: QRect, font: QFont):
         # qp.save()
         # qp.translate(rect.center())
         # qp.rotate(-90)
@@ -349,7 +349,7 @@ class HistoryIndexTrack(TimeThreadBase):
 
     # ------------------------------------------ Gets ------------------------------------------
 
-    def get_index_axis_item(self, index: HistoricalRecord) -> HistoryIndexBar:
+    def get_index_axis_item(self, index: HistoryRecord) -> HistoryIndexBar:
         bar = self.__index_bar_table.get(index, None)
         if bar is None:
             bar = HistoryIndexBar(index)
@@ -500,7 +500,7 @@ class HistoryIndexTrack(TimeThreadBase):
 class TimeAxis(QWidget):
 
     class Agent:
-        def on_edit_record(self, record: HistoricalRecord) -> bool:
+        def on_edit_record(self, record: HistoryRecord) -> bool:
             pass
 
     class Scale:
@@ -900,7 +900,7 @@ class TimeAxis(QWidget):
 
     # ----------------------------------------------------- Action -----------------------------------------------------
 
-    def popup_editor_for_index(self, index: HistoricalRecord):
+    def popup_editor_for_index(self, index: HistoryRecord):
         if index is None:
             print('None index.')
             return
@@ -1391,7 +1391,7 @@ class TimeAxis(QWidget):
         if records is None or len(records) == 0:
             return
 
-        indexer = HistoricalRecordIndexer()
+        indexer = HistoryRecordIndexer()
         indexer.index_records(records)
         indexes = indexer.get_indexes()
 
@@ -1438,7 +1438,7 @@ def main():
     app = QApplication(sys.argv)
 
     # Indexer
-    indexer = HistoricalRecordIndexer()
+    indexer = HistoryRecordIndexer()
     indexer.load_from_file('depot/history.index')
     indexer.print_indexes()
 

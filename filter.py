@@ -185,7 +185,7 @@ class FilterEditor(QWidget):
     # ---------------------------------------------------------------
 
     def __on_source_add(self):
-        root_path = HistoricalRecordLoader.get_local_depot_root()
+        root_path = HistoryRecordLoader.get_local_depot_root()
         fname, ftype = QFileDialog.getOpenFileNames(self,
                                                     'Select History Files',
                                                     root_path,
@@ -234,7 +234,7 @@ class FilterEditor(QWidget):
     def __on_btn_click_save(self):
         fileName_choose, filetype = QFileDialog.getSaveFileName(self,
                                                                 'Save Filter',
-                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                HistoryRecordLoader.get_local_depot_root(),
                                                                 'Filter Files (*.hisfilter)')
         if fileName_choose == '':
             return
@@ -248,7 +248,7 @@ class FilterEditor(QWidget):
     def __on_btn_click_load(self):
         fileName_choose, filetype = QFileDialog.getOpenFileName(self,
                                                                 'Load Filter',
-                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                HistoryRecordLoader.get_local_depot_root(),
                                                                 'Filter Files (*.hisfilter)')
         if fileName_choose == '':
             return
@@ -272,13 +272,13 @@ class FilterEditor(QWidget):
     def __on_btn_click_gen(self):
         fileName_choose, filetype = QFileDialog.getSaveFileName(self,
                                                                 'Generate Index',
-                                                                HistoricalRecordLoader.get_local_depot_root(),
+                                                                HistoryRecordLoader.get_local_depot_root(),
                                                                 'Filter Files (*.index)')
         if fileName_choose == '':
             return
 
         records = self.load_filter_records()
-        indexer = HistoricalRecordIndexer()
+        indexer = HistoryRecordIndexer()
         indexer.index_records(records)
         indexer.dump_to_file(fileName_choose)
 
@@ -305,10 +305,10 @@ class FilterEditor(QWidget):
         his_filter.set_exclude_tags_str(self.__excludes)
         return his_filter
 
-    def load_source_records(self) -> [HistoricalRecord]:
+    def load_source_records(self) -> [HistoryRecord]:
         records = []
         for source in self.__sources:
-            loader = HistoricalRecordLoader()
+            loader = HistoryRecordLoader()
             if path.isabs(source):
                 ret = loader.from_file(source)
             else:
@@ -318,7 +318,7 @@ class FilterEditor(QWidget):
             records.extend(loader.get_loaded_records())
         return records
 
-    def load_filter_records(self) -> [HistoricalRecord]:
+    def load_filter_records(self) -> [HistoryRecord]:
         history = self.__history if self.__history is not None else History()
 
         records = self.load_source_records()
