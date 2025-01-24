@@ -7,12 +7,10 @@ import requests
 import posixpath
 from os import path
 
-from PyQt5.QtSql import record
-
-sys.path.append(path.dirname(__file__))
-
 from Utility.history_public import *
 from Utility import HistoryTime
+
+sys.path.append(path.dirname(__file__))
 
 
 # ---------------------------------------------------- Token Parser ----------------------------------------------------
@@ -887,8 +885,13 @@ class HistoryRecordIndexer:
         return indexes
 
     @staticmethod
-    def index_records(records: list) -> list:
-        indexes = [r.to_index() for r in records]
+    def index_records(records: list or dict) -> list or dict:
+        if isinstance(records, (list, set, tuple)):
+            indexes = [r.to_index() for r in records]
+        elif isinstance(records, dict):
+            indexes = { s: [r.to_index() for r in rs] for s, rs in records}
+        else:
+            indexes = []
         return indexes
 
     @staticmethod
@@ -900,7 +903,7 @@ class HistoryRecordIndexer:
                 f.write(text + '\n')
 
     @staticmethod
-    def load_from_file(self, file: str):
+    def load_from_file(file: str):
         return HistoryRecordLoader.from_file(file)
 
 
@@ -1024,6 +1027,14 @@ class History:
     def get_record_by_source(self, source: str) -> list:
         return self.__source_records_table.get(source, [])
 
+    def get_records_by_sources(self, sources: list) -> dict:
+        return { s: self.__source_records_table.get(s, []) for s in sources }
+
+    def get_indices_by_sources(self, sources: str or list) -> dict:
+        if not isinstance(sources, (list, set, tuple)):
+            sources = [sources]
+        return HistoryRecordIndexer.index_records(self.get_records_by_sources(sources))
+
     def select_records(self, _uuid: str or [str] = None,
                        sources: str or [str] = None, focus_label: str = '',
                        include_label_tags: dict = None, include_all: bool = True,
@@ -1031,7 +1042,7 @@ class History:
 
         # Step 1: Filter by UUID
         if _uuid is not None and len(_uuid) != 0:
-            if isinstance(_uuid, (list, tuple)):
+            if isinstance(_uuid, (list, set, tuple)):
                 uuid_filter = lambda _, r: r.uuid() in _uuid
             else:
                 uuid_filter = lambda _, r: r.uuid() == _uuid
@@ -1040,7 +1051,7 @@ class History:
 
         # Step 2: Filter by sources
         if sources is not None and len(sources) != 0:
-            if isinstance(sources, (list, tuple)):
+            if isinstance(sources, (list, set, tuple)):
                 source_filter = lambda s, _: s in sources
             else:
                 source_filter = lambda s, _: s == sources
@@ -1068,73 +1079,31 @@ class History:
 
     # ------------------------------------- Load -------------------------------------
 
-    def load_source(self, source: str) -> list:
+    def load_source(self, source: str) -> dict:
         """
         Load from single source and add records to History.__records_table.
-        Return the new added source list.
+        Return the new added { source: records } dict.
         """
-        loader = HistoryRecordLoader()
-        result = loader.from_source(source)
-        return self.update_form_loader(loader) if result else []
+        records = HistoryRecordLoader.from_source(source)
+        self.__source_records_table.update(records)
+        return records
 
-    def load_depot(self, depot: str) -> list:
+    def load_depot(self, depot: str) -> dict:
         """
         Load from a depot and add records to History.__records_table.
-        Return the new added source list.
+        Return the new added { source: records } dict.
         """
-        loader = HistoryRecordLoader()
-        result = loader.from_local_depot(depot)
-        return self.update_form_loader(loader) if result else []
+        records = HistoryRecordLoader.from_local_depot(depot)
+        self.__source_records_table.update(records)
+        return records
 
-    def load_path(self, _path: str) -> list:
+    def load_path(self, _path: str) -> dict:
         """
         Load from a folder and add records to History.__records_table.
-        Return the new added source list.
+        Return the new added { source: records } dict.
         """
-        loader = HistoryRecordLoader()
-        result = loader.from_directory(_path)
-        return self.update_form_loader(loader) if result else []
-
-    def update_form_loader(self, loader: HistoryRecordLoader) -> list:
-        sources = loader.get_loaded_sources()
-        self.__source_records_table.update(sources)
-        return list(sources.keys())
-
-    @staticmethod
-    def from_text(text: str, source: str = '') -> list:
-        error_list = []
-
-        parser = LabelTagParser()
-        parser.parse(text)
-
-        focus = ''
-        record = None
-        records = []
-        label_tags = parser.get_label_tags()
-
-        for label, tags in label_tags:
-            if label == '[START]':
-                if record is not None:
-                    records.append(record)
-                record = None
-                focus = ''
-                if len(tags) == 0:
-                    error_list.append('Missing start section.')
-                else:
-                    focus = tags[0]
-                continue
-
-            if record is None:
-                record = HistoryRecord(HistoryRecordLoader.normalize_source(source))
-                record.set_focus_label(focus)
-            record.set_label_tags(label, tags)
-
-            if focus != '' and label == focus and record is not None:
-                records.append(record)
-                record = None
-                focus = ''
-        if record is not None:
-            records.append(record)
+        records = HistoryRecordLoader.from_directory(_path)
+        self.__source_records_table.update(records)
         return records
 
     # ----------------------------------- Print -----------------------------------

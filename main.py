@@ -462,9 +462,8 @@ class HistoryUi(QMainWindow):
                                                                  HistoryRecordLoader.get_local_depot_root(),
                                                                  'Filter Files (*.index)')
             if file_choose != '':
-                indexer = HistoryRecordIndexer()
-                indexer.load_from_file(file_choose)
-                thread.set_thread_event_indexes(indexer.get_indexes())
+                indices = HistoryRecordIndexer.load_from_file(file_choose)
+                thread.set_thread_event_indexes(indices)
 
         elif action == opt_new_record:
             pass
