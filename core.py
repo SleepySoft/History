@@ -7,6 +7,8 @@ import requests
 import posixpath
 from os import path
 
+from PyQt5.QtSql import record
+
 sys.path.append(path.dirname(__file__))
 
 from Utility.history_public import *
@@ -675,116 +677,119 @@ class HistoryRecord(LabelTag):
 
 class HistoryRecordLoader:
     def __init__(self):
-        self.__records = []
-        self.__sources = {}
+        pass
+        # self.__source_records_table = []
 
-    def restore(self):
-        self.__records.clear()
-        self.__sources.clear()
+    # def restore(self):
+    #     self.__records.clear()
+    #     self.__sources.clear()
+    #
+    # def get_loaded_records(self) -> list:
+    #     return self.__records
+    #
+    # def get_loaded_sources(self) -> dict:
+    #     return self.__sources
+    #
+    # def get_history_record_source(self, record: HistoryRecord) -> str:
+    #     for source, records in self.__sources.items():
+    #         if record in records:
+    #             return source
+    #     return ''
 
-    def get_loaded_records(self) -> list:
-        return self.__records
-
-    def get_loaded_sources(self) -> dict:
-        return self.__sources
-
-    def get_history_record_source(self, record: HistoryRecord) -> str:
-        for source, records in self.__sources.items():
-            if record in records:
-                return source
-        return ''
+    # @staticmethod
+    # def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
+    #     base_name = os.path.basename(source)
+    #     depot_path = HistoryRecordLoader.join_local_depot_path(depot)
+    #     source = path.join(depot_path, base_name)
+    #     return HistoryRecordLoader.to_local_source(records, source)
+    #
+    # @staticmethod
+    # def to_local_source(records: HistoryRecord or [HistoryRecord], source: str) -> bool:
+    #     if not isinstance(records, (list, tuple)):
+    #         records = [records]
+    #     try:
+    #         full_path = HistoryRecordLoader.source_to_absolute_path(source)
+    #         print('| <= Write record: ' + full_path)
+    #         with open(full_path, 'wt', encoding='utf-8') as f:
+    #             for record in records:
+    #                 text = record.dump_record()
+    #                 f.write(text)
+    #         return True
+    #     except Exception as e:
+    #         print(e)
+    #         print(traceback.format_exc())
+    #         return False
+    #     finally:
+    #         pass
 
     @staticmethod
-    def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
-        base_name = os.path.basename(source)
-        depot_path = HistoryRecordLoader.join_local_depot_path(depot)
-        source = path.join(depot_path, base_name)
-        return HistoryRecordLoader.to_local_source(records, source)
-
-    @staticmethod
-    def to_local_source(records: HistoryRecord or [HistoryRecord], source: str) -> bool:
-        if not isinstance(records, (list, tuple)):
-            records = [records]
-        try:
-            full_path = HistoryRecordLoader.source_to_absolute_path(source)
-            print('| <= Write record: ' + full_path)
-            with open(full_path, 'wt', encoding='utf-8') as f:
-                for record in records:
-                    text = record.dump_record()
-                    f.write(text)
-            return True
-        except Exception as e:
-            print(e)
-            print(traceback.format_exc())
-            return False
-        finally:
-            pass
-
-    def from_local_depot(self, depot: str) -> int:
+    def from_local_depot(depot: str) -> dict:
         try:
             depot_path = HistoryRecordLoader.join_local_depot_path(depot)
-            return self.from_directory(depot_path)
+            return HistoryRecordLoader.from_directory(depot_path)
         except Exception as e:
             print(e)
             print(traceback.format_exc())
-            return 0
+            return {}
         finally:
             pass
 
-    def from_directory(self, directory: str) -> int:
+    @staticmethod
+    def from_directory(directory: str) -> dict:
         try:
             files = HistoryRecordLoader.enumerate_local_path(directory)
-            return self.from_files(files)
+            return HistoryRecordLoader.from_files(files)
         except Exception as e:
             print(e)
             print(traceback.format_exc())
-            return 0
+            return {}
         finally:
             pass
 
-    def from_source(self, source: str) -> bool:
+    @staticmethod
+    def from_source(source: str) -> dict:
         if HistoryRecordLoader.is_web_url(source):
-            return self.from_web(source)
+            return HistoryRecordLoader.from_web(source)
         else:
-            return self.from_file(HistoryRecordLoader.source_to_absolute_path(source))
+            return HistoryRecordLoader.from_file(HistoryRecordLoader.source_to_absolute_path(source))
 
-    def from_files(self, files: [str]) -> int:
-        count = 0
+    @staticmethod
+    def from_files(files: [str]) -> dict:
+        records = {}
         for file in files:
-            if self.from_file(file):
-                count += 1
-        return count
+            r = HistoryRecordLoader.from_file(file)
+            records.update(r)
+        return records
 
-    def from_web(self, url: str) -> bool:
+    @staticmethod
+    def from_web(url: str) -> dict:
         try:
             r = requests.get(url)
             text = r.content.decode('utf-8')
-            records = self.from_text(text)
-            # Build index of URL - Record Instance
-            self.__sources[url] = records
-            return True
+            records = HistoryRecordLoader.from_text(text, url)
+            return records
         except Exception as e:
             print('Error when fetching from web: ' + str(e))
-            return False
+            return {}
         finally:
             pass
 
-    def from_file(self, file: str) -> bool:
+    @staticmethod
+    def from_file(file: str) -> dict:
         try:
             print('| => Load record: ' + file)
             with open(file, 'rt', encoding='utf-8') as f:
-                records = self.from_text(f.read(), file)
-                # Build index of File Name - Record Instance
-                self.__sources[file] = records
-            return True
+                records = HistoryRecordLoader.from_text(f.read(), file)
+            return records
         except Exception as e:
             print(e)
             print(traceback.format_exc())
-            return False
+            return {}
         finally:
             pass
 
-    def from_text(self, text: str, source: str = '') -> list:
+    @staticmethod
+    def from_text(text: str, source: str = '') -> dict:
         error_list = []
 
         parser = LabelTagParser()
@@ -818,8 +823,7 @@ class HistoryRecordLoader:
                 focus = ''
         if record is not None:
             records.append(record)
-        self.__records += records
-        return records
+        return { source: records }
 
     @staticmethod
     def is_web_url(_path: str):
@@ -870,50 +874,34 @@ class HistoryRecordLoader:
 # ------------------------------------------- class HistoricalRecordIndexer --------------------------------------------
 
 class HistoryRecordIndexer:
+    """
+    Functions for easily indexing. Index is a simplified history record.
+    """
     def __init__(self):
-        self.__indexes = []
+        pass
 
-    def restore(self):
-        self.__indexes = []
+    @staticmethod
+    def index_path(directory: str):
+        records = HistoryRecordLoader.from_directory(directory)
+        indexes = { source: HistoryRecordIndexer.index_records(records) for source, records in records.items() }
+        return indexes
 
-    def get_indexes(self) -> list:
-        return self.__indexes
+    @staticmethod
+    def index_records(records: list) -> list:
+        indexes = [r.to_index() for r in records]
+        return indexes
 
-    def index_path(self, directory: str):
-        loader = HistoryRecordLoader()
-        his_filels = HistoryRecordLoader.enumerate_local_path(directory)
-        for his_file in his_filels:
-            loader.from_file(his_file)
-            records = loader.get_loaded_records()
-            self.index_records(records)
-            loader.restore()
-
-    def index_records(self, records: list):
-        for record in records:
-            index = HistoryRecord()
-            index.index_for(record)
-            self.__indexes.append(index)
-
-    def replace_index_prefix(self, prefix_old: str, prefix_new: str):
-        for index in self.__indexes:
-            if index.source.startswith(prefix_old):
-                index.source.replace(prefix_old, prefix_new)
-
-    def dump_to_file(self, file: str):
+    @staticmethod
+    def dump_to_file(indexes, file: str):
         print('| => Write record: ' + file)
         with open(file, 'wt', encoding='utf-8') as f:
-            for index in self.__indexes:
+            for index in indexes:
                 text = index.dump_record(True)
                 f.write(text + '\n')
 
+    @staticmethod
     def load_from_file(self, file: str):
-        loader = HistoryRecordLoader()
-        loader.from_file(file)
-        self.__indexes = loader.get_loaded_records()
-
-    def print_indexes(self):
-        for index in self.__indexes:
-            print(index)
+        return HistoryRecordLoader.from_file(file)
 
 
 # --------------------------------------------------- class history ----------------------------------------------------
@@ -929,24 +917,24 @@ class History:
     INVALID_SOURCE = '!@#$%&*?'         # These symbols can't be file name or url
 
     def __init__(self):
-        # { Source: [Records] }
-        self.__records_table = { }
-        # Deprecated
-        # self.__indexes = []
-
-    # ----------------------------------- Deprecated : Index -----------------------------------
-
-    # def set_indexes(self, indexes: [HistoryRecord]):
-    #     self.__indexes.clear()
-    #     self.__indexes.extend(indexes)
-    #
-    # def get_indexes(self) ->[HistoryRecord]:
-    #     return self.__indexes
+        self.__source_records_table = { }       # { Source: [Records] }
 
     # -------------------------------------- Gets / Sets --------------------------------------
 
     def get_source_list(self) -> list:
-        return list(self.__records_table.keys())
+        return list(self.__source_records_table.keys())
+
+    def remove_source(self, source: str):
+        if source in self.__source_records_table.keys():
+            del self.__source_records_table[source]
+
+    def reset_history(self):
+        self.__source_records_table.clear()
+
+    def merge_history(self, history):
+        self.__source_records_table.update(history.__source_records_table)
+
+    # --------------------------------- Higher-order function ---------------------------------
 
     def map(self, map_func):
         """
@@ -955,9 +943,20 @@ class History:
             IN - record: The instance of record
             Return - N/A
         """
-        for source, records in self.__records_table.items():
+        for source, records in self.__source_records_table.items():
             for record in records:
                 map_func(source, record)
+
+    def pop(self, pop_selector) -> list:
+        pop_list = []
+        for source, records in self.__source_records_table.items():
+            i = 0
+            while i < len(records):
+                if pop_selector(source, records):
+                    pop_list.append(records.pop(i))
+                else:
+                    i += 1
+        return pop_list
 
     def filter(self, filter_func) -> list:
         """
@@ -967,7 +966,7 @@ class History:
             Return - True if accept this record else False.
         """
         collection = []
-        for source, records in self.__records_table.items():
+        for source, records in self.__source_records_table.items():
             for record in records:
                 if record is None:
                     print('Warning: Unexpected None record.')
@@ -1023,7 +1022,7 @@ class History:
         return collection[0] if len(collection) > 0 else None
 
     def get_record_by_source(self, source: str) -> list:
-        return self.__records_table.get(source, [])
+        return self.__source_records_table.get(source, [])
 
     def select_records(self, _uuid: str or [str] = None,
                        sources: str or [str] = None, focus_label: str = '',
@@ -1098,8 +1097,45 @@ class History:
 
     def update_form_loader(self, loader: HistoryRecordLoader) -> list:
         sources = loader.get_loaded_sources()
-        self.__records_table.update(sources)
+        self.__source_records_table.update(sources)
         return list(sources.keys())
+
+    @staticmethod
+    def from_text(text: str, source: str = '') -> list:
+        error_list = []
+
+        parser = LabelTagParser()
+        parser.parse(text)
+
+        focus = ''
+        record = None
+        records = []
+        label_tags = parser.get_label_tags()
+
+        for label, tags in label_tags:
+            if label == '[START]':
+                if record is not None:
+                    records.append(record)
+                record = None
+                focus = ''
+                if len(tags) == 0:
+                    error_list.append('Missing start section.')
+                else:
+                    focus = tags[0]
+                continue
+
+            if record is None:
+                record = HistoryRecord(HistoryRecordLoader.normalize_source(source))
+                record.set_focus_label(focus)
+            record.set_label_tags(label, tags)
+
+            if focus != '' and label == focus and record is not None:
+                records.append(record)
+                record = None
+                focus = ''
+        if record is not None:
+            records.append(record)
+        return records
 
     # ----------------------------------- Print -----------------------------------
 
