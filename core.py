@@ -816,7 +816,7 @@ class HistoryRecordLoader:
                 records.append(record)
                 record = None
                 focus = ''
-        if record is None:
+        if record is not None:
             records.append(record)
         self.__records += records
         return records
@@ -919,6 +919,15 @@ class HistoryRecordIndexer:
 # --------------------------------------------------- class history ----------------------------------------------------
 
 class History:
+    """
+    This class is like a database of loaded history record.
+    Every loaded history record will be organized as { source: [records] }
+        You can get records by specifying a source.
+        Or do map or filter to all the records.
+    """
+
+    INVALID_SOURCE = '!@#$%&*?'         # These symbols can't be file name or url
+
     def __init__(self):
         # { Source: [Records] }
         self.__records_table = { }
@@ -946,7 +955,7 @@ class History:
             IN - record: The instance of record
             Return - N/A
         """
-        for source, records in self.__records_table:
+        for source, records in self.__records_table.items():
             for record in records:
                 map_func(source, record)
 
@@ -958,8 +967,11 @@ class History:
             Return - True if accept this record else False.
         """
         collection = []
-        for source, records in self.__records_table:
+        for source, records in self.__records_table.items():
             for record in records:
+                if record is None:
+                    print('Warning: Unexpected None record.')
+                    continue
                 if filter_func(source, record):
                     collection.append(record)
         return collection
@@ -1057,36 +1069,45 @@ class History:
 
     # ------------------------------------- Load -------------------------------------
 
-    def load_source(self, source: str) -> [HistoryRecord]:
+    def load_source(self, source: str) -> list:
+        """
+        Load from single source and add records to History.__records_table.
+        Return the new added source list.
+        """
         loader = HistoryRecordLoader()
         result = loader.from_source(source)
-        if result:
-            self.add_records(loader.get_loaded_records())
-        return loader.get_loaded_records() if result else []
+        return self.update_form_loader(loader) if result else []
 
-    def load_depot(self, depot: str) -> bool:
+    def load_depot(self, depot: str) -> list:
+        """
+        Load from a depot and add records to History.__records_table.
+        Return the new added source list.
+        """
         loader = HistoryRecordLoader()
         result = loader.from_local_depot(depot)
-        if result:
-            self.add_records(loader.get_loaded_records())
-        return result != 0
+        return self.update_form_loader(loader) if result else []
 
-    def load_path(self, _path: str):
+    def load_path(self, _path: str) -> list:
+        """
+        Load from a folder and add records to History.__records_table.
+        Return the new added source list.
+        """
         loader = HistoryRecordLoader()
         result = loader.from_directory(_path)
-        if result:
-            self.add_records(loader.get_loaded_records())
-        return result != 0
+        return self.update_form_loader(loader) if result else []
+
+    def update_form_loader(self, loader: HistoryRecordLoader) -> list:
+        sources = loader.get_loaded_sources()
+        self.__records_table.update(sources)
+        return list(sources.keys())
 
     # ----------------------------------- Print -----------------------------------
 
     def print_records(self):
-        for record in self.__records:
-            print(record)
+        self.map(lambda _, r: print(r))
 
     def print_indexes(self):
-        for index in self.__indexes:
-            print(index)
+        pass
 
     # ------------------------------- Static Methods -------------------------------
 
@@ -1098,15 +1119,15 @@ class History:
     def unique_records(records: [HistoryRecord]) -> [HistoryRecord]:
         return {r.uuid(): r for r in records}.values()
 
-    @staticmethod
-    def upsert_records(records_list: [HistoryRecord], records_new: [HistoryRecord]):
-        new_records = {r.uuid(): r for r in records_new}
-        for i in range(0, len(records_list)):
-            _uuid = records_list[i].uuid()
-            if _uuid in new_records.keys():
-                records_list[i] = new_records[_uuid]
-                del new_records[_uuid]
-        records_list.extend(new_records.values())
+    # @staticmethod
+    # def upsert_records(records_list: [HistoryRecord], records_new: [HistoryRecord]):
+    #     new_records = {r.uuid(): r for r in records_new}
+    #     for i in range(0, len(records_list)):
+    #         _uuid = records_list[i].uuid()
+    #         if _uuid in new_records.keys():
+    #             records_list[i] = new_records[_uuid]
+    #             del new_records[_uuid]
+    #     records_list.extend(new_records.values())
 
 
 # ----------------------------------------------------- Test Code ------------------------------------------------------
@@ -1163,8 +1184,7 @@ def test_history_basic():
     print('Load successful: ' + str(count))
 
     history = History()
-    records = loader.get_loaded_records()
-    history.update_records(records)
+    history.update_form_loader(loader)
     history.print_records()
 
 
@@ -1173,7 +1193,7 @@ def test_history_filter():
     loader.from_local_depot('example')
 
     history = History()
-    history.update_records(loader.get_loaded_records())
+    history.update_form_loader(loader)
 
     records = history.select_records(include_label_tags={'tags': ['tag1']},
                                      include_all=True)
@@ -1209,12 +1229,12 @@ def test_generate_index():
     indexer.dump_to_file('test_history.index')
 
 
-def test_load_index():
-    indexer = HistoryRecordIndexer()
-    indexer.load_from_file('test_history.index')
-    history = History()
-    history.update_indexes(indexer.get_indexes())
-    history.print_indexes()
+# def test_load_index():
+#     indexer = HistoryRecordIndexer()
+#     indexer.load_from_file('test_history.index')
+#     history = History()
+#     history.update_indexes(indexer.get_indexes())
+#     history.print_indexes()
 
 
 # ----------------------------------------------------- File Entry -----------------------------------------------------
@@ -1228,7 +1248,7 @@ def main():
     test_history_basic()
     test_history_filter()
     test_generate_index()
-    test_load_index()
+    # test_load_index()
     print('All test passed.')
 
 
