@@ -263,6 +263,10 @@ class AxisMetrics:
 # ----------------------------------------------------------------------------------------------------------------------
 
 class TrackContext:
+    """
+    Record a track's metrics and the records that assigned to it.
+    Calculate track available space (has_space()).
+    """
     def __init__(self):
         self.__metrics = None
         self.__layout_bars = []

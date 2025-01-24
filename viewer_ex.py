@@ -15,6 +15,9 @@ from Utility.history_public import *
 # ------------------------------------------------------- Clock --------------------------------------------------------
 
 class Clock:
+    """
+    A clock class to count the elapsed time.
+    """
     def __init__(self, start_flag: bool = True):
         self.__start_time = time.time()
         self.__start_flag = start_flag
@@ -45,6 +48,9 @@ class Clock:
 # ------------------------------------------------------ AxisItem ------------------------------------------------------
 
 class AxisItem:
+    """
+    The base class (interface) of Axis Item which will be paint on time axis / viewer.
+    """
     def __init__(self, index: HistoryRecord, extra: dict):
         self.extra = extra
         self.index = index
@@ -90,6 +96,17 @@ class AxisItem:
 # --------------------------------------------------- TimeThreadBase ---------------------------------------------------
 
 class TimeThreadBase:
+    """
+    The base class of history tread. It hosts all items that could be paint.
+    It only selects items and call their paint() function, but not care about the layout of each item.
+        Members:
+            __axis_items: All items that can be painted
+            __paint_items: Based on current display time range, select the items that to be painted.
+            __metrics: The metrics of this thread, which is set outside.
+            __paint_color: The background color of this thread, which is set outside.
+            __min_track_width: The minimal track width. The width of this thread divides track width is the track count.
+    """
+
     REFERENCE_TRACK_WIDTH = 50
 
     def __init__(self):
@@ -173,6 +190,10 @@ class TimeThreadBase:
 
 
 class HistoryIndexBar(AxisItem):
+    """
+    The basic implementation of history bar. Includes both period record (story) and single time record (event).
+    """
+
     def __init__(self, index: HistoryRecord, extra=None):
         super(HistoryIndexBar, self).__init__(index, extra)
         if extra is None:
@@ -317,6 +338,30 @@ class HistoryIndexBar(AxisItem):
 # ----------------------------------------------------------------------------------------------------------------------
 
 class HistoryIndexTrack(TimeThreadBase):
+    """
+    The implementation of history thread. It will lay out all its items and manage all its tracks.
+    This is the most complex part of history UI. Because layout algorithm has limitations and considerations:
+        1. The width of period record (story) depends on the time axis scale,
+           but the width of single time record (event) is constant.
+           So I only to lay out the single time record (event) on the first track.
+        2. If you do dynamic layout (layout only when items are to be displayed), the layout will be unstable,
+           that is, the layout will be different when scrolling from top to bottom and from bottom to top.
+           The phenomenon is that an item will be laid out on different columns when user scrolling freely.
+    So this class will re-layout all items when layout/item changed.
+        For minimalize the calculation. I just split the whole layout in serval steps and update them as less as possible.
+        See __update_paint_parameters() for more information.
+
+    Members:
+        __event_indexes: The record index that need to display (only using the index, not full record).
+        __index_bar_table: For each index, build a HistoryIndexBar for it.
+        __thread_tracks: Each track has a TrackContext. See the comments in TrackContext.
+
+        __thread_track_count: The track count depends on thread's width ad track width.
+        __thread_track_width: Track width.
+
+        __flag_*: Layout calculation step flag.
+    """
+
     REFERENCE_TRACK_WIDTH = 50
 
     def __init__(self):
@@ -498,6 +543,9 @@ class HistoryIndexTrack(TimeThreadBase):
 # ----------------------------------------------------------------------------------------------------------------------
 
 class TimeAxis(QWidget):
+    """
+    The main UI of history viewer. All threads and bars are displayed on it.
+    """
 
     class Agent:
         def on_edit_record(self, record: HistoryRecord) -> bool:
@@ -1449,7 +1497,7 @@ def main():
 
     # History
     history = History()
-    history.update_indexes(indexer.get_indexes())
+    # history.update_indexes(indexer.get_indexes())
 
     # HistoryViewerDialog
     history_viewer = HistoryViewerDialog()
