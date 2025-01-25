@@ -439,7 +439,7 @@ class HistoryUi(QMainWindow):
             self.__thread_color_selection += 1
             new_thread.set_thread_color(THREAD_BACKGROUND_COLORS[self.__thread_color_selection %
                                                                  len(THREAD_BACKGROUND_COLORS)])
-            new_thread.set_thread_event_indexes([])
+            new_thread.set_thread_event_indexes({})
             new_thread.set_thread_min_track_width(HistoryIndexTrack.REFERENCE_TRACK_WIDTH)
             self.__time_axis.add_history_thread(new_thread, align, thread)
 
@@ -479,7 +479,7 @@ class HistoryUi(QMainWindow):
                                                                  'Filter Files (*.his)')
             if file_choose != '':
                 records = self.__history.load_source(file_choose)
-                thread.set_thread_event_indexes([record.to_index() for record in records])
+                thread.set_thread_event_indexes(HistoryRecordIndexer.index_records(records))
 
         elif action == opt_open_filter:
             wnd = FilterEditor()
@@ -488,12 +488,13 @@ class HistoryUi(QMainWindow):
             dlg.exec()
             if dlg.is_ok():
                 his_filter = wnd.ui_to_filter()
+                # TODO: Now it means to filter all records.
                 records = self.__history.select_records(
                     sources=his_filter.get_sources(),
                     focus_label=his_filter.get_focus_label(),
                     include_label_tags=his_filter.get_include_tags(), include_all=False,
                     exclude_label_tags=his_filter.get_exclude_tags(), exclude_any=True)
-                thread.set_thread_event_indexes([record.to_index() for record in records])
+                thread.set_thread_event_indexes({ 'filter': HistoryRecordIndexer.index_records(records) })
 
         else:
             return

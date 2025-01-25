@@ -381,18 +381,23 @@ class HistoryIndexTrack(TimeThreadBase):
 
     # ------------------------------------------ Sets ------------------------------------------
 
-    def set_thread_event_indexes(self, indexes: list):
+    def set_thread_event_indexes(self, indexes: dict):
         self.clear()
         self.__event_indexes = indexes
         self.__index_bar_table.clear()
-        for index in self.__event_indexes:
-            bar = HistoryIndexBar(index)
-            self.add_axis_items(bar)
-            self.__index_bar_table[index] = bar
+
+        for source, indices in indexes.items():
+            for index in indices:
+                bar = HistoryIndexBar(index)
+                self.add_axis_items(bar)
+                self.__index_bar_table[index] = bar
         self.__flag_layout_items = True
         self.refresh()
 
     # ------------------------------------------ Gets ------------------------------------------
+
+    def get_display_sources(self) -> list:
+        return list(self.__event_indexes)
 
     def get_index_axis_item(self, index: HistoryRecord) -> HistoryIndexBar:
         bar = self.__index_bar_table.get(index, None)
@@ -1486,14 +1491,12 @@ def main():
     app = QApplication(sys.argv)
 
     # Indexer
-    indexer = HistoryRecordIndexer()
-    indexer.load_from_file('depot/history.index')
-    indexer.print_indexes()
+    indices = HistoryRecordIndexer.load_from_file('depot/history.index')
 
     # Threads
     thread = HistoryIndexTrack()
     thread.set_thread_color(THREAD_BACKGROUND_COLORS[0])
-    thread.set_thread_event_indexes(indexer.get_indexes())
+    thread.set_thread_event_indexes(indices)
 
     # History
     history = History()

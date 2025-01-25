@@ -1100,7 +1100,7 @@ class History:
     def load_path(self, _path: str) -> dict:
         """
         Load from a folder and add records to History.__records_table.
-        Return the new added { source: records } dict.
+        Return the new added { source: records } dict.EE
         """
         records = HistoryRecordLoader.from_directory(_path)
         self.__source_records_table.update(records)
