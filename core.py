@@ -889,7 +889,7 @@ class HistoryRecordIndexer:
         if isinstance(records, (list, set, tuple)):
             indexes = [r.to_index() for r in records]
         elif isinstance(records, dict):
-            indexes = { s: [r.to_index() for r in rs] for s, rs in records}
+            indexes = { s: [r.to_index() for r in rs] for s, rs in records.items()}
         else:
             indexes = []
         return indexes

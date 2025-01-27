@@ -1,4 +1,5 @@
 import copy
+import itertools
 import time
 import random
 import traceback, math
@@ -122,7 +123,7 @@ class TimeThreadBase:
         clock = Clock()
         for item in self.__paint_items:
             item.paint(qp)
-        print('Paint %s items, time spends: %sms' % (len(self.__paint_items), clock.elapsed_ms()))
+        # print('Paint %s items, time spends: %sms' % (len(self.__paint_items), clock.elapsed_ms()))
 
     def clear(self):
         self.__axis_items.clear()
@@ -353,6 +354,7 @@ class HistoryIndexTrack(TimeThreadBase):
 
     Members:
         __event_indexes: The record index that need to display (only using the index, not full record).
+                         20250126 - Change it from list to dict, which is { source: indices }
         __index_bar_table: For each index, build a HistoryIndexBar for it.
         __thread_tracks: Each track has a TrackContext. See the comments in TrackContext.
 
@@ -367,7 +369,7 @@ class HistoryIndexTrack(TimeThreadBase):
     def __init__(self):
         super(HistoryIndexTrack, self).__init__()
         
-        self.__event_indexes = []
+        self.__event_indexes = {}
         self.__index_bar_table = {}
 
         self.__thread_tracks = []
@@ -396,8 +398,11 @@ class HistoryIndexTrack(TimeThreadBase):
 
     # ------------------------------------------ Gets ------------------------------------------
 
-    def get_display_sources(self) -> list:
-        return list(self.__event_indexes)
+    def get_display_sources(self) -> [str]:
+        return list(self.__event_indexes.keys())
+
+    def get_all_index_items(self) -> [HistoryRecord]:
+        return list(itertools.chain(*self.__event_indexes.values()))
 
     def get_index_axis_item(self, index: HistoryRecord) -> HistoryIndexBar:
         bar = self.__index_bar_table.get(index, None)
@@ -498,7 +503,7 @@ class HistoryIndexTrack(TimeThreadBase):
             self.__thread_tracks[track_index].set_metrics(track_metrics)
 
     def __layout_track_items(self):
-        layout_indexes = self.__event_indexes.copy()
+        layout_indexes = self.get_all_index_items()
         layout_indexes.sort(key=lambda item: item.until() - item.since(), reverse=True)
 
         overlap_count = 0
@@ -992,16 +997,16 @@ class TimeAxis(QWidget):
         self.check_update_paint_area()
         self.check_update_pixel_scale()
         self.check_update_scroll_offset()
-        print('Check update: %sms' % clock.elapsed_ms())
+        # print('Check update: %sms' % clock.elapsed_ms())
 
         if self.__layout_updated or self.__scale_updated:
             clock.reset()
             self.update_thread_layout()
-            print('Update thread layout: %sms' % clock.elapsed_ms())
+            # print('Update thread layout: %sms' % clock.elapsed_ms())
         if self.__scale_updated or self.__scroll_updated:
             clock.reset()
             self.update_thread_scale()
-            print('Update thread scale: %sms' % clock.elapsed_ms())
+            # print('Update thread scale: %sms' % clock.elapsed_ms())
 
         self.__scale_updated = False
         self.__layout_updated = False
@@ -1152,7 +1157,7 @@ class TimeAxis(QWidget):
     # ----------------------------------------------------- Paint ------------------------------------------------------
 
     def paintEvent(self, event):
-        print('--------------------------------------------------------------------------------------')
+        # print('--------------------------------------------------------------------------------------')
 
         clock = Clock()
         start = time.process_time()
@@ -1168,15 +1173,15 @@ class TimeAxis(QWidget):
             self.paint_horizon_scale(qp)
         else:
             self.paint_vertical_scale(qp)
-        print('Paint axis: %sms' % clock.elapsed_ms())
+        # print('Paint axis: %sms' % clock.elapsed_ms())
 
         clock.reset()
         self.paint_threads(qp)
-        print('Paint threads: %sms' % clock.elapsed_ms())
+        # print('Paint threads: %sms' % clock.elapsed_ms())
 
         clock.reset()
         self.paint_real_time_tips(qp)
-        print('Paint real time tips: %sms' % clock.elapsed_ms())
+        # print('Paint real time tips: %sms' % clock.elapsed_ms())
 
         qp.end()
 
@@ -1185,7 +1190,7 @@ class TimeAxis(QWidget):
         # print('Offset = %s, Step = %s; Pixel = %s, Value = %s' %
         #       (self.__scroll + self.__offset, self.__main_scale,
         #        self.__mouse_on_coordinate.y(), self.__mouse_on_scale_value))
-        print('------------------- Axis paint spends time: %ss -------------------' % (end - start))
+        # print('------------------- Axis paint spends time: %ss -------------------' % (end - start))
 
     def paint_background(self, qp: QPainter):
         qp.setBrush(AXIS_BACKGROUND_COLORS[2])
