@@ -674,25 +674,28 @@ class HistoryRecord(LabelTag):
 # --------------------------------------------------- class history ----------------------------------------------------
 
 class HistoryRecordLoader:
-    def __init__(self):
-        pass
-        # self.__source_records_table = []
 
-    # def restore(self):
-    #     self.__records.clear()
-    #     self.__sources.clear()
-    #
-    # def get_loaded_records(self) -> list:
-    #     return self.__records
-    #
-    # def get_loaded_sources(self) -> dict:
-    #     return self.__sources
-    #
-    # def get_history_record_source(self, record: HistoryRecord) -> str:
-    #     for source, records in self.__sources.items():
-    #         if record in records:
-    #             return source
-    #     return ''
+    ERROR_CODE_TYPE = str
+
+    E_SUCCESS = 'Success'
+    E_FAIL = 'Fail'
+    E_SOURCE_NOT_EXISTS = 'Source not exists.'
+    E_SOURCE_INVALID = 'Source invalid'
+    E_SOURCE_READONLY = 'Source read-only'
+    E_SOURCE_NOT_SUPPORT = 'Source not support'
+
+    INVALID_SOURCE = '!@#$%&*?'         # These symbols can't be file name or url
+
+    # ---------------------------------------- Save ----------------------------------------
+
+    @staticmethod
+    def to_source(source: str, records: HistoryRecord or [HistoryRecord]) -> ERROR_CODE_TYPE:
+        if source == HistoryRecordLoader.INVALID_SOURCE:
+            return HistoryRecordLoader.E_SOURCE_INVALID
+        if HistoryRecordLoader.is_web_url(source):
+            print('Web source: not support yet.')
+            return HistoryRecordLoader.E_SOURCE_NOT_SUPPORT
+        HistoryRecordLoader.to_local_source(source, records)
 
     # @staticmethod
     # def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
@@ -700,25 +703,27 @@ class HistoryRecordLoader:
     #     depot_path = HistoryRecordLoader.join_local_depot_path(depot)
     #     source = path.join(depot_path, base_name)
     #     return HistoryRecordLoader.to_local_source(records, source)
-    #
-    # @staticmethod
-    # def to_local_source(records: HistoryRecord or [HistoryRecord], source: str) -> bool:
-    #     if not isinstance(records, (list, tuple)):
-    #         records = [records]
-    #     try:
-    #         full_path = HistoryRecordLoader.source_to_absolute_path(source)
-    #         print('| <= Write record: ' + full_path)
-    #         with open(full_path, 'wt', encoding='utf-8') as f:
-    #             for record in records:
-    #                 text = record.dump_record()
-    #                 f.write(text)
-    #         return True
-    #     except Exception as e:
-    #         print(e)
-    #         print(traceback.format_exc())
-    #         return False
-    #     finally:
-    #         pass
+
+    @staticmethod
+    def to_local_source(source: str, records: HistoryRecord or [HistoryRecord]) -> ERROR_CODE_TYPE:
+        if not isinstance(records, (list, tuple)):
+            records = [records]
+        try:
+            full_path = HistoryRecordLoader.source_to_absolute_path(source)
+            print(f'| <= Write record: {full_path}')
+            with open(full_path, 'wt', encoding='utf-8') as f:
+                for record in records:
+                    text = record.dump_record()
+                    f.write(text)
+            return HistoryRecordLoader.E_SUCCESS
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+            return HistoryRecordLoader.E_FAIL
+        finally:
+            pass
+
+    # ---------------------------------------- Load ----------------------------------------
 
     @staticmethod
     def from_local_depot(depot: str) -> dict:
@@ -823,6 +828,8 @@ class HistoryRecordLoader:
             records.append(record)
         return { source: records }
 
+    # -------------------------------------- Assistance --------------------------------------
+
     @staticmethod
     def is_web_url(_path: str):
         return _path.startswith('http') or _path.startswith('ftp')
@@ -917,8 +924,6 @@ class History:
         Or do map or filter to all the records.
     """
 
-    INVALID_SOURCE = '!@#$%&*?'         # These symbols can't be file name or url
-
     def __init__(self):
         self.__source_records_table = { }       # { Source: [Records] }
 
@@ -945,13 +950,19 @@ class History:
 
             # Append to the end of records list. Because records will be sorted by its time before layout.
             # So we don't care about the order of records in upsert.
-            if source not in self.__source_records_table.keys():
+            if source not in self.__source_records_table:
                 self.__source_records_table[source] = [record]
             else:
                 self.__source_records_table[source].append(record)
 
+    def change_source(self, old_source: str, new_source: str) -> bool:
+        if old_source in self.__source_records_table and new_source not in self.__source_records_table:
+            self.__source_records_table[new_source] = self.__source_records_table.pop(old_source)
+            return True
+        return False
+
     def remove_source(self, source: str):
-        if source in self.__source_records_table.keys():
+        if source in self.__source_records_table:
             del self.__source_records_table[source]
 
     def reset_history(self):
@@ -1090,6 +1101,13 @@ class History:
         records = HistoryRecordLoader.from_directory(_path)
         self.__source_records_table.update(records)
         return records
+
+    # ------------------------------------- Save -------------------------------------
+
+    def save_source(self, source: str) -> int:
+        if source not in self.__source_records_table:
+            return History.E_SOURCE_NOT_EXISTS
+        HistoryRecordLoader
 
     # ----------------------------------- Print -----------------------------------
 

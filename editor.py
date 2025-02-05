@@ -679,28 +679,10 @@ class HistoryEditorDialog(QDialog):
         if source is None or source == '':
             source = path.join(self.__current_depot, records[0].uuid() + '.his')
 
-        # TODO: Select depot
-        # result = HistoricalRecordLoader.to_local_source(records, source)
-        result = HistoryRecordLoader.to_local_source(records, source)
-        if not result:
-            return
+        result = HistoryRecordLoader.to_source(source, records)
 
-        # result = False
-        # if len(self.__records) == 0:
-        #     source = str(self.__current_record.uuid()) + '.his'
-        # else:
-        #     # The whole file should be updated
-        #     if self.__current_record not in self.__records:
-        #         self.__records.append(self.__current_record)
-        #     source = self.__records[0].source()
-        #     if source is None or len(source) == 0:
-        #         source = str(self.__current_record.uuid()) + '.his'
-        #         result = History.Loader().to_local_depot(self.__records, 'China', source)
-
-        tips = 'Save Successful.' if result else 'Save Fail.'
-        if len(source) > 0:
-            tips += '\nSave File: ' + source
-        QMessageBox.information(self, 'Save', tips, QMessageBox.Ok)
+        tips = f'Save to {source} ' + ('successful.' if result == HistoryRecordLoader.E_SUCCESS else f'fail: {result}')
+        QMessageBox.information(self, 'Save Result', tips, QMessageBox.Ok)
 
         self.history_browser.refresh()
 

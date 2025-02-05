@@ -1444,6 +1444,7 @@ class TimeAxis(QWidget):
             print('Unexpected Error: History editor is None.')
             return
 
+        source = self.__history_editor.get_history_editor().get_source()
         records = self.__history_editor.get_history_editor().get_records()
 
         if records is None or len(records) == 0:
@@ -1453,7 +1454,7 @@ class TimeAxis(QWidget):
         # indexer.index_records(records)
         # indexes = indexer.get_indexes()
 
-        self.__history_core.update_records(records)
+        self.__history_core.upsert_records(source, records)
         # self.__history_core.update_indexes(indexes)
 
         # Because I wrote editor and viewer separately. The save code locates in editor. So just call it.
