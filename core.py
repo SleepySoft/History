@@ -418,8 +418,8 @@ class HistoryRecord(LabelTag):
     def __init__(self, source: str = ''):
         super(HistoryRecord, self).__init__()
         self.__uuid = str(uuid.uuid4())
-        self.__since = 0.0
-        self.__until = 0.0
+        self.__since = 0
+        self.__until = 0
         self.__focus_label = ''
         self.__record_source = source
 
@@ -439,6 +439,19 @@ class HistoryRecord(LabelTag):
 
     def get_focus_label(self) -> str:
         return self.__focus_label
+
+    def copy_uuid_from(self, record):
+        self.__uuid = record.__uuid
+
+    def duplicate_from(self, record, includes_uuid: bool):
+        self.__since = record.__since
+        self.__until = record.__until
+        self.__focus_label = record.__focus_label
+        self.__record_source = record.__record_source
+
+        if includes_uuid:
+            self.__uuid = record.__uuid
+        self.__label_tags = record.__label_tags
 
     # -------------------------------------------
 
@@ -696,6 +709,7 @@ class HistoryRecordLoader:
             print('Web source: not support yet.')
             return HistoryRecordLoader.E_SOURCE_NOT_SUPPORT
         HistoryRecordLoader.to_local_source(source, records)
+        return HistoryRecordLoader.E_SUCCESS
 
     # @staticmethod
     # def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
@@ -935,9 +949,8 @@ class History:
     # --------------------------------------- Management ---------------------------------------
 
     def remove_record(self, record: HistoryRecord):
-        collection = self.filter(lambda _, r: r.uuid() == record.uuid())
-        for s, _r in collection.items():
-            self.__source_records_table[s].remove(_r)
+        pop_records = self.pop(lambda _, r: r.uuid() == record.uuid())
+        print(f'Removed records count: {len(pop_records)}')
 
     def remove_records(self, records: [HistoryRecord]):
         for record in records:
@@ -986,7 +999,7 @@ class History:
         for source, records in self.__source_records_table.items():
             i = 0
             while i < len(records):
-                if pop_selector(source, records):
+                if pop_selector(source, records[i]):
                     pop_list.append(records.pop(i))
                 else:
                     i += 1
@@ -1104,10 +1117,10 @@ class History:
 
     # ------------------------------------- Save -------------------------------------
 
-    def save_source(self, source: str) -> int:
+    def save_source(self, source: str) -> HistoryRecordLoader.ERROR_CODE_TYPE:
         if source not in self.__source_records_table:
-            return History.E_SOURCE_NOT_EXISTS
-        HistoryRecordLoader
+            return HistoryRecordLoader.E_SOURCE_NOT_EXISTS
+        return HistoryRecordLoader.to_source(source, self.__source_records_table[source])
 
     # ----------------------------------- Print -----------------------------------
 
@@ -1186,22 +1199,14 @@ def test_token_parser_case_escape_symbol():
 # -------------------------------- History --------------------------------
 
 def test_history_basic():
-    loader = HistoryRecordLoader()
-    count = loader.from_local_depot('example')
-
-    print('Load successful: ' + str(count))
-
     history = History()
-    history.update_form_loader(loader)
+    history.load_depot('example')
     history.print_records()
 
 
 def test_history_filter():
-    loader = HistoryRecordLoader()
-    loader.from_local_depot('example')
-
     history = History()
-    history.update_form_loader(loader)
+    history.load_depot('example')
 
     records = history.select_records(include_label_tags={'tags': ['tag1']},
                                      include_all=True)

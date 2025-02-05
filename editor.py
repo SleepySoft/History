@@ -14,6 +14,12 @@ from Utility.ui_utility import *
 # ---------------------------------------------- class HistoryRecordEditor ---------------------------------------------
 
 class HistoryRecordEditor(QWidget):
+    """
+    Update 20250205: For avoiding multiple record list.
+                     HistoryRecordEditor only record editing history record and the source it belongs to.
+                     The full history record list MUST get from class History.
+
+    """
 
     class Agent:
         def __init__(self):
@@ -30,7 +36,6 @@ class HistoryRecordEditor(QWidget):
 
         self.__history = history
 
-        self.__records = []
         self.__source = ''
         self.__current_record = None
         self.__operation_agents = []
@@ -192,7 +197,8 @@ class HistoryRecordEditor(QWidget):
         self.__ignore_combo = True
         self.__combo_records.clear()
 
-        sorted_records = History.sort_records(self.__records)
+        records = self.__history.get_record_by_source(self.__source)
+        sorted_records = History.sort_records(records)
 
         for i in range(0, len(sorted_records)):
             record = sorted_records[i]
@@ -227,50 +233,40 @@ class HistoryRecordEditor(QWidget):
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
 
-    def set_current_depot(self, depot: str):
-        self.__current_depot = depot
-        print('| Editor current depot: ' + depot)
-
-    def set_current_source(self, source: str):
-        self.__source = source
-        print('Editor current source: ' + source)
-
     def edit_source(self, source: str, current_uuid: str = '') -> bool:
-        # # TODO: Do we need this?
-        # loader = HistoryRecordLoader()
-        # if not loader.from_source(source):
-        #     return False
-        self.set_current_source(source)
-        # self.__records = loader.get_loaded_records()
-        self.__records = self.__history.get_record_by_source(source)
+        if source not in self.__history.get_source_list():
+            self.__history.load_source(source)
+        records = self.__history.get_record_by_source(source)
+
+        self.__set_current_source(source)
         self.__current_record = None
 
-        for record in self.__records:
+        for record in records:
             if current_uuid is None or current_uuid == '' or record.uuid() == current_uuid:
                 self.__current_record = record
                 break
 
         if self.__current_record is None:
             self.__current_record = HistoryRecord()
+
         self.update_combo_records()
         self.record_to_ui(self.__current_record)
 
         return True
 
-    def set_records(self, records: HistoryRecord or [HistoryRecord], source: str):
-        self.__records = records if isinstance(records, list) else [records]
-        self.__current_record = self.__records[0]
-        self.set_current_source(source)
-        self.update_combo_records()
-
     def get_source(self) -> str:
         return self.__source
 
-    def get_records(self) -> [HistoryRecord]:
-        return self.__records
-
     def get_current_record(self) -> HistoryRecord:
         return self.__current_record
+
+    def __set_current_depot(self, depot: str):
+        self.__current_depot = depot
+        print('| Editor current depot: ' + depot)
+
+    def __set_current_source(self, source: str):
+        self.__source = source
+        print('Editor current source: ' + source)
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
 
@@ -303,20 +299,24 @@ class HistoryRecordEditor(QWidget):
         self.create_new_file()
 
     def on_button_del(self):
-        if self.__current_record in self.__records:
-            self.__records.remove(self.__current_record)
-        self.__current_record = None
-        self.update_combo_records()
+        if self.__current_record is not None:
+            records = self.__history.pop(lambda _, r: r.uuid() == self.__current_record.uuid())
+            print(f'Popped records: {records}')
+            self.__current_record = None
+            self.update_combo_records()
 
     def on_button_apply(self):
-        if self.__current_record is None:
-            self.__current_record = HistoryRecord()
-            self.__records.append(self.__current_record)
-        else:
-            self.__current_record.reset()
+        new_record = HistoryRecord()
+        if self.__current_record is not None:
+            new_record.copy_uuid_from(self.__current_record)
+        new_record.set_source(self.__source)
 
-        if not self.ui_to_record(self.__current_record):
+        if not self.ui_to_record(new_record):
+            print('Update data from UI FAIL.')
             return
+
+        self.__history.upsert_records(self.__source, new_record)
+        self.__current_record = new_record
 
         for agent in self.__operation_agents:
             agent.on_apply()
@@ -474,7 +474,7 @@ class HistoryRecordEditor(QWidget):
 
     def __new_file(self):
         self.__records.clear()
-        self.set_current_source('')
+        self.__set_current_source('')
         self.__new_record()
 
     def __new_record(self):
@@ -482,7 +482,7 @@ class HistoryRecordEditor(QWidget):
         self.__records.append(self.__current_record)
         if self.__source is None or self.__source == '':
             self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
-            self.set_current_source(self.__source)
+            self.__set_current_source(self.__source)
         self.__current_record.set_source(self.__source)
 
     def __look_for_record(self, _uuid: str):
@@ -625,6 +625,9 @@ class HistoryRecordBrowser(QWidget):
 # --------------------------------------------- class HistoryEditorDialog ----------------------------------------------
 
 class HistoryEditorDialog(QDialog):
+    """
+    Includes browser and editor. If we're editing specify record, the browser will hide.
+    """
     def __init__(self,
                  history: History,
                  editor_agent: HistoryRecordEditor.Agent = None,
@@ -634,7 +637,7 @@ class HistoryEditorDialog(QDialog):
         self.__history = history
         self.__current_depot = 'default'
 
-        self.history_editor = HistoryRecordEditor(self)
+        self.history_editor = HistoryRecordEditor(history, self)
         self.history_editor.add_agent(editor_agent if editor_agent is not None else self)
 
         self.history_browser = HistoryRecordBrowser(self)
@@ -650,7 +653,7 @@ class HistoryEditorDialog(QDialog):
                             QtCore.Qt.WindowSystemMenuHint)
 
         self.__current_depot = self.history_browser.get_current_depot()
-        self.history_editor.set_current_depot(self.__current_depot)
+        self.history_editor.__set_current_depot(self.__current_depot)
 
     # def showEvent(self, event):
     #     self.setFocus()
@@ -669,17 +672,7 @@ class HistoryEditorDialog(QDialog):
 
     def on_apply(self):
         source = self.history_editor.get_source()
-        records = self.history_editor.get_records()
-
-        if records is None or len(records) == 0:
-            return
-
-        if source is None or source == '':
-            source = records[0].source()
-        if source is None or source == '':
-            source = path.join(self.__current_depot, records[0].uuid() + '.his')
-
-        result = HistoryRecordLoader.to_source(source, records)
+        result = self.__history.save_source(source)
 
         tips = f'Save to {source} ' + ('successful.' if result == HistoryRecordLoader.E_SUCCESS else f'fail: {result}')
         QMessageBox.information(self, 'Save Result', tips, QMessageBox.Ok)
@@ -693,7 +686,7 @@ class HistoryEditorDialog(QDialog):
 
     def on_select_depot(self, depot: str):
         self.__current_depot = depot
-        self.history_editor.set_current_depot(depot)
+        self.history_editor.__set_current_depot(depot)
 
     def on_select_record(self, record: str):
         self.history_editor.edit_source(record)
@@ -703,7 +696,8 @@ class HistoryEditorDialog(QDialog):
 
 def main():
     app = QApplication(sys.argv)
-    HistoryEditorDialog().exec()
+    history = History()
+    HistoryEditorDialog(history).exec()
 
 
 # ----------------------------------------------------------------------------------------------------------------------

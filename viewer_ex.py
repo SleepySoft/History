@@ -982,7 +982,7 @@ class TimeAxis(QWidget):
         self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
         self.__history_editor.show_browser(False)
 
-        # # To avoid lossing focus
+        # # To avoid losing focus
         # self.__history_editor.setWindowFlags(Qt.Popup)
         # self.__history_editor.setAttribute(Qt.WA_QuitOnClose)
         # self.__history_editor.show()
@@ -1439,26 +1439,13 @@ class TimeAxis(QWidget):
 
     # ------------------------------- HistoryRecordEditor.Agent -------------------------------
 
-    def on_apply(self):
+    def on_apply(self, new_record: HistoryRecord):
         if self.__history_editor is None:
             print('Unexpected Error: History editor is None.')
             return
 
-        source = self.__history_editor.get_history_editor().get_source()
-        records = self.__history_editor.get_history_editor().get_records()
-
-        if records is None or len(records) == 0:
-            return
-
-        # indexer = HistoryRecordIndexer()
-        # indexer.index_records(records)
-        # indexes = indexer.get_indexes()
-
-        self.__history_core.upsert_records(source, records)
-        # self.__history_core.update_indexes(indexes)
-
-        # Because I wrote editor and viewer separately. The save code locates in editor. So just call it.
-        # TODO: It should be a better place.
+        # Because I wrote editor and viewer separately.
+        # The save code locates in editor. So just call it.
         self.__history_editor.on_apply()
         self.__history_editor.close()
 
