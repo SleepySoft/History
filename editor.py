@@ -260,7 +260,7 @@ class HistoryRecordEditor(QWidget):
     def get_current_record(self) -> HistoryRecord:
         return self.__current_record
 
-    def __set_current_depot(self, depot: str):
+    def set_current_depot(self, depot: str):
         self.__current_depot = depot
         print('| Editor current depot: ' + depot)
 
@@ -330,7 +330,7 @@ class HistoryRecordEditor(QWidget):
             return
 
         _uuid = self.__combo_records.currentData()
-        record = self.__look_for_record(_uuid)
+        record = self.__history.get_record_by_uuid(_uuid)
 
         if record is None:
             print('Cannot find record for uuid: ' + _uuid)
@@ -484,12 +484,6 @@ class HistoryRecordEditor(QWidget):
             self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
             self.__set_current_source(self.__source)
         self.__current_record.set_source(self.__source)
-
-    def __look_for_record(self, _uuid: str):
-        for record in self.__records:
-            if record.uuid() == _uuid:
-                return record
-        return None
 
 
 # --------------------------------------------- class HistoryRecordBrowser ---------------------------------------------
@@ -653,7 +647,7 @@ class HistoryEditorDialog(QDialog):
                             QtCore.Qt.WindowSystemMenuHint)
 
         self.__current_depot = self.history_browser.get_current_depot()
-        self.history_editor.__set_current_depot(self.__current_depot)
+        self.history_editor.set_current_depot(self.__current_depot)
 
     # def showEvent(self, event):
     #     self.setFocus()
@@ -686,7 +680,7 @@ class HistoryEditorDialog(QDialog):
 
     def on_select_depot(self, depot: str):
         self.__current_depot = depot
-        self.history_editor.__set_current_depot(depot)
+        self.history_editor.set_current_depot(depot)
 
     def on_select_record(self, record: str):
         self.history_editor.edit_source(record)

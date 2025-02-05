@@ -957,6 +957,8 @@ class History:
             self.remove_record(record)
 
     def upsert_records(self, source: str, records: [HistoryRecord]):
+        if isinstance(records, HistoryRecord):
+            records = [records]
         for record in records:
             # Remove exists records, which means upsert is doing a replacement update.
             self.remove_record(record)
