@@ -25,8 +25,10 @@ class HistoryRecordEditor(QWidget):
         def on_cancel(self):
             pass
 
-    def __init__(self, parent: QWidget):
+    def __init__(self, history: History, parent: QWidget):
         super(HistoryRecordEditor, self).__init__(parent)
+
+        self.__history = history
 
         self.__records = []
         self.__source = ''
@@ -234,12 +236,13 @@ class HistoryRecordEditor(QWidget):
         print('Editor current source: ' + source)
 
     def edit_source(self, source: str, current_uuid: str = '') -> bool:
-        # TODO: Do we need this?
-        loader = HistoryRecordLoader()
-        if not loader.from_source(source):
-            return False
+        # # TODO: Do we need this?
+        # loader = HistoryRecordLoader()
+        # if not loader.from_source(source):
+        #     return False
         self.set_current_source(source)
-        self.__records = loader.get_loaded_records()
+        # self.__records = loader.get_loaded_records()
+        self.__records = self.__history.get_record_by_source(source)
         self.__current_record = None
 
         for record in self.__records:
@@ -251,6 +254,8 @@ class HistoryRecordEditor(QWidget):
             self.__current_record = HistoryRecord()
         self.update_combo_records()
         self.record_to_ui(self.__current_record)
+
+        return True
 
     def set_records(self, records: HistoryRecord or [HistoryRecord], source: str):
         self.__records = records if isinstance(records, list) else [records]
@@ -621,10 +626,12 @@ class HistoryRecordBrowser(QWidget):
 
 class HistoryEditorDialog(QDialog):
     def __init__(self,
+                 history: History,
                  editor_agent: HistoryRecordEditor.Agent = None,
                  browser_agent: HistoryRecordBrowser.Agent = None):
         super(HistoryEditorDialog, self).__init__()
 
+        self.__history = history
         self.__current_depot = 'default'
 
         self.history_editor = HistoryRecordEditor(self)

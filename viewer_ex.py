@@ -978,7 +978,7 @@ class TimeAxis(QWidget):
         #     # It's a full record
         #     records = [index]
 
-        self.__history_editor = HistoryEditorDialog(editor_agent=self)
+        self.__history_editor = HistoryEditorDialog(self.__history_core, editor_agent=self)
         self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
         self.__history_editor.show_browser(False)
 
@@ -1449,14 +1449,15 @@ class TimeAxis(QWidget):
         if records is None or len(records) == 0:
             return
 
-        indexer = HistoryRecordIndexer()
-        indexer.index_records(records)
-        indexes = indexer.get_indexes()
+        # indexer = HistoryRecordIndexer()
+        # indexer.index_records(records)
+        # indexes = indexer.get_indexes()
 
-        # TODO: Maybe we should named it as update_*()
         self.__history_core.update_records(records)
-        self.__history_core.update_indexes(indexes)
+        # self.__history_core.update_indexes(indexes)
 
+        # Because I wrote editor and viewer separately. The save code locates in editor. So just call it.
+        # TODO: It should be a better place.
         self.__history_editor.on_apply()
         self.__history_editor.close()
 

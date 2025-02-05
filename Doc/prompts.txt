@@ -1,0 +1,14 @@
+我有这样的一个数据：self.__source_records_table = { }
+其中key为source，value为HistoryRecord的list。
+HistoryRecord有source()及uuid()函数。
+
+我想实现这样一个函数：def upsert_records(self, source: str, records: [HistoryRecord]):
+
+将records更新到self.__source_records_table，对应source（key）的list（value）中，如果存在uuid相同的项目，则更新或替换对应项目，否则追加。
+如果records中有项目存在于其它source下（通过uuid判断），那么将该项目从其它source下的list中移除，并打印一个警告。
+
+检查整个__source_records_table：
+    是否存在uuid冲突？
+    是否存在同一个HistoryRecord实例被加入到不同的source下？
+    表中的source是否与HistoryRecord中的source()相同？
+将所有发现的问题返回为一个列表。如果有其它更好的设计或建议请提出。

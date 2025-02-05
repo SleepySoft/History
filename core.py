@@ -927,15 +927,35 @@ class History:
     def get_source_list(self) -> list:
         return list(self.__source_records_table.keys())
 
+    # --------------------------------------- Management ---------------------------------------
+
+    def remove_record(self, record: HistoryRecord):
+        collection = self.filter(lambda _, r: r.uuid() == record.uuid())
+        for s, _r in collection.items():
+            self.__source_records_table[s].remove(_r)
+
+    def remove_records(self, records: [HistoryRecord]):
+        for record in records:
+            self.remove_record(record)
+
+    def upsert_records(self, source: str, records: [HistoryRecord]):
+        for record in records:
+            # Remove exists records, which means upsert is doing a replacement update.
+            self.remove_record(record)
+
+            # Append to the end of records list. Because records will be sorted by its time before layout.
+            # So we don't care about the order of records in upsert.
+            if source not in self.__source_records_table.keys():
+                self.__source_records_table[source] = [record]
+            else:
+                self.__source_records_table[source].append(record)
+
     def remove_source(self, source: str):
         if source in self.__source_records_table.keys():
             del self.__source_records_table[source]
 
     def reset_history(self):
         self.__source_records_table.clear()
-
-    def merge_history(self, history):
-        self.__source_records_table.update(history.__source_records_table)
 
     # --------------------------------- Higher-order function ---------------------------------
 
@@ -961,68 +981,32 @@ class History:
                     i += 1
         return pop_list
 
-    def filter(self, filter_func) -> list:
+    def filter(self, filter_func) -> dict:
         """
         Filter records by filter_func(source, record)
             IN - source: The source of record
             IN - record: The instance of record
             Return - True if accept this record else False.
         """
-        collection = []
+        collection = {}
         for source, records in self.__source_records_table.items():
             for record in records:
                 if record is None:
                     print('Warning: Unexpected None record.')
                     continue
                 if filter_func(source, record):
-                    collection.append(record)
+                    if source not in collection.keys():
+                        collection[source] = [record]
+                    else:
+                        collection[source].append(record)
         return collection
-
-    # def add_record(self, record: HistoryRecord) -> bool:
-    #     if record is None or record.uuid() is None or record.uuid() == '':
-    #         return False
-    #     _uuid = record.uuid()
-    #     exists_record = self.get_record_by_uuid(_uuid)
-    #     if exists_record is not None:
-    #         self.__records.remove(exists_record)
-    #     self.__records.append(record)
-    #     return True
-    #
-    # def remove_record(self, record: HistoryRecord):
-    #     if record in self.__records:
-    #         self.__records.remove(record)
-    #
-    # def add_records(self, records: [HistoryRecord]):
-    #     for record in records:
-    #         self.add_record(record)
-    #
-    # def remove_records(self, records: [HistoryRecord]):
-    #     for record in records:
-    #         self.remove_record(record)
-    #
-    # def get_records(self) -> [HistoryRecord]:
-    #     return self.__records
-    #
-    # def attach_records(self, records: [HistoryRecord]):
-    #     self.__records.clear()
-    #     self.__records.extend(records)
-    #
-    # def clear_records(self):
-    #     self.__records.clear()
-
-    # --------------------------------------- Updates ---------------------------------------
-
-    # def update_records(self, records: [HistoryRecord]):
-    #     History.upsert_records(self.__records, records)
-    #
-    # def update_indexes(self, indexes: [HistoryRecord]):
-    #     History.upsert_records(self.__indexes, indexes)
 
     # --------------------------------------- Select ---------------------------------------
 
     def get_record_by_uuid(self, _uuid: str) -> HistoryRecord or None:
         collection = self.filter(lambda _, r: r.uuid() == _uuid)
-        return collection[0] if len(collection) > 0 else None
+        records = [item for sublist in collection.values() for item in sublist]
+        return records[0] if len(records) > 0 else None
 
     def get_record_by_source(self, source: str) -> list:
         return self.__source_records_table.get(source, [])
@@ -1071,11 +1055,12 @@ class History:
         else:
             include_label_tags_fiter = lambda _, __: True
 
-        return self.filter(lambda s, r:
-                           uuid_filter(s, r) and
-                           source_filter(s, r) and
-                           focus_label_filter(s, r) and
-                           include_label_tags_fiter(s, r))
+        collection = self.filter(lambda s, r:
+                                 uuid_filter(s, r) and
+                                 source_filter(s, r) and
+                                 focus_label_filter(s, r) and
+                                 include_label_tags_fiter(s, r))
+        return [item for sublist in collection.values() for item in sublist]
 
     # ------------------------------------- Load -------------------------------------
 
