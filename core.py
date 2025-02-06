@@ -734,6 +734,8 @@ class HistoryRecordLoader:
 
     @staticmethod
     def to_local_source(source: str, records: HistoryRecord or [HistoryRecord]) -> ERROR_CODE_TYPE:
+        if not records:
+            return HistoryRecordLoader.E_SOURCE_INVALID
         if not isinstance(records, (list, tuple)):
             records = [records]
         try:

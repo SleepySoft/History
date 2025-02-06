@@ -220,8 +220,9 @@ class HistoryUi(QMainWindow):
         self.statusBar().showMessage('Ready')
         self.setCentralWidget(self.__time_axis)
         # self.showFullScreen()
-        self.resize(1280, 800)
-        self.move(QApplication.desktop().screen().rect().center() - self.rect().center())
+        # self.resize(1280, 800)
+        # self.move(QApplication.desktop().screen().rect().center() - self.rect().center())
+        resize_widget_to_screen_percentage(self, 80)
 
     def __init_menu(self):
         menu_bar = self.menuBar()

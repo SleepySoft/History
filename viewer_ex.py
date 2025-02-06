@@ -1446,7 +1446,7 @@ class TimeAxis(QWidget):
 
     # ------------------------------- HistoryRecordEditor.Agent -------------------------------
 
-    def on_apply(self, new_record: HistoryRecord):
+    def on_apply(self):
         if self.__history_editor is None:
             print('Unexpected Error: History editor is None.')
             return

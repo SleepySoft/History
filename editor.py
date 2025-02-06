@@ -39,8 +39,6 @@ class HistoryRecordEditor(QWidget):
         self.__current_record = None
         self.__operation_agents = []
 
-        self.__ignore_combo = False
-
         self.__tab_main = QTabWidget()
         self.__current_depot = 'default'
         # self.__combo_depot = QComboBox()
@@ -193,7 +191,6 @@ class HistoryRecordEditor(QWidget):
 
     def update_combo_records(self):
         index = -1
-        self.__ignore_combo = True
         self.__combo_records.clear()
 
         records = self.__history.get_record_by_source(self.__source)
@@ -212,18 +209,27 @@ class HistoryRecordEditor(QWidget):
             self.__combo_records.setItemData(i, record.uuid())
             if record == self.__current_record:
                 index = i
-        self.__ignore_combo = False
 
-        if index >= 0:
+        if index == 0:
+            # When adding the first item, the index will change from -1 to 0, which will invoke on_combo_records().
+            # But the item data is not prepared at this time.
+            # However, if we setCurrentIndex(0) here, because the index has no change.
+            # So the on_combo_records() will not be invoked.
+            # Manual call this function for workaround.
+            self.on_combo_records()
+        elif index > 0:
             self.__combo_records.setCurrentIndex(index)
         else:
-            # Record is not in history. Should be a file just loaded.
-            if self.__combo_records.count() > 0:
-                self.__combo_records.setCurrentIndex(0)
-                self.on_combo_records()
-                print('Cannot find the current record in combobox - use index 0.')
-            else:
-                print('Cannot find the current record in combobox - empty record list.')
+            print('Cannot find the current record in combobox - empty record list.')
+
+        # else:
+        #     # Record is not in history. Should be a file just loaded.
+        #     if self.__combo_records.count() > 0:
+        #         # self.__combo_records.setCurrentIndex(0)
+        #         self.on_combo_records()
+        #         print('Cannot find the current record in combobox - use index 0.')
+        #     else:
+        #         print('Cannot find the current record in combobox - empty record list.')
 
     def on_button_pick_date_time(self):
         raw_time_str = self.__line_time.text()
@@ -322,7 +328,7 @@ class HistoryRecordEditor(QWidget):
             self.update_combo_records()
 
     def on_button_apply(self):
-        if self.__source_valid():
+        if not self.__source_valid():
             # Should create a new file.
             file_choose, _ = QFileDialog.getSaveFileName(self, 'New History File',
                                                                  HistoryRecordLoader.get_local_depot_root(),
@@ -352,14 +358,18 @@ class HistoryRecordEditor(QWidget):
             agent.on_cancel()
 
     def on_combo_records(self):
-        if self.__ignore_combo:
-            return
+        print(f'ComboBox select - {self.__combo_records.currentIndex()}')
 
         _uuid = self.__combo_records.currentData()
+        if _uuid is None:
+            # When we add first item. The current index changed (-1 -> 0).
+            # The function will be invoked, But the item data has not been added yet.
+            return
+
         record = self.__history.get_record_by_uuid(_uuid)
 
         if record is None:
-            print('Cannot find record for uuid: ' + _uuid)
+            print(f'Cannot find record for uuid: {_uuid}')
             return
 
         self.__current_record = record
