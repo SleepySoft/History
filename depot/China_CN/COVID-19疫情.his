@@ -1,0 +1,56 @@
+[START]: event
+uuid: 0fc9e163-b52f-4808-8c2c-2a3849fc666d
+time: """[2020-01-23 ] - [2020-04-08 ]"""
+title: 武汉封城
+event: end
+[START]: event
+uuid: bfb57db2-9263-446b-a55c-f72f367fd395
+event: end
+time: [2019-12-12]
+title: """COVID-19 疫情开始"""
+[START]: event
+uuid: e8c1d843-6daf-4c16-8789-eb53c57fc21f
+event: end
+time: [2020-01-25]
+title: 上海关闭非必要的公共设施
+[START]: event
+uuid: 8446107c-e73b-400c-8f91-a1aebff0f4d0
+brief: 上海启动了一级响应机制，取消了所有大型公共活动
+event: end
+time: [2020-01-24]
+title: 上海启动一级响应机制
+[START]: event
+uuid: 27c07b8e-4301-47dd-b957-d173b01a6fe0
+event: end
+time: 2020年1月26日
+title: 上海暂停所有跨省客运服务
+[START]: event
+uuid: 80f795d7-ed83-484c-a230-55c358c55e2c
+event: end
+time: 2020年1月27日
+title: 上海要求所有企业不得早于2月9日复工
+[START]: event
+uuid: 4d0a826b-dd42-4b03-b746-e95407478d9d
+brief: """3月28日：上海开始实施分区管控措施，将全市分为封控区、管控区和防范区。
+封控区：实行“区域封闭、足不出户、服务上门”的管理措施。
+管控区：实行“人不出小区、严禁聚集”的管理措施。
+防范区：实行“强化社会面管控，严格限制人员聚集规模”的管理措施。"""
+event: end
+time: 2022年3月28日
+title: 上海开始实施分区管控措施
+[START]: event
+uuid: 7b4fee6f-f1ec-4237-98f8-4f9285e84c82
+event: end
+time: """2022年4月1日 - 2022年6月1日"""
+title: 上海封城
+[START]: event
+uuid: 30f6fa05-e839-4721-81ab-d851bcc578ef
+event: end
+time: 2022年12月7日
+title: 全国解除动态清零政策
+[START]: event
+uuid: a393207b-cfec-42ee-af52-1448a52faa1a
+brief: 2月10日起，企业逐步恢复工作，同时采取了错峰上班等措施来减少人员聚集。
+event: end
+time: 2020年2月10日
+title: 上海企业逐步恢复工作
