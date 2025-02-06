@@ -563,6 +563,7 @@ class HistoryUi(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setAttribute(Qt.AA_EnableHighDpiScaling)
     main_wnd = HistoryUi()
     main_wnd.show()
     app.exec_()

@@ -456,7 +456,19 @@ class ShadowLineEdit(QLineEdit):
         self.shadow_text = text
         self.show_shadow_text()
 
+    # def show_shadow_text(self):
+    #     pos = self.mapToGlobal(QPoint(0, -40))
+    #     QToolTip.setFont(QFont('SansSerif', 10))
+    #     QToolTip.showText(pos, self.shadow_text)
+
     def show_shadow_text(self):
-        pos = self.mapToGlobal(QPoint(0, -40))
+        pos = self.mapToGlobal(QPoint(0, 0))
+        rect = self.geometry()
+
+        if pos.y() - rect.height() - 40 > 0:
+            tip_pos = QPoint(pos.x(), pos.y() - rect.height() - 40)
+        else:
+            tip_pos = QPoint(pos.x(), pos.y() + rect.height() + 10)
+
         QToolTip.setFont(QFont('SansSerif', 10))
-        QToolTip.showText(pos, self.shadow_text)
+        QToolTip.showText(tip_pos, self.shadow_text)

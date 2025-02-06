@@ -743,6 +743,7 @@ class HistoryEditorDialog(QDialog):
 
 def main():
     app = QApplication(sys.argv)
+    app.setAttribute(Qt.AA_EnableHighDpiScaling)
     history = History()
     HistoryEditorDialog(history).exec()
 
