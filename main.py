@@ -298,12 +298,12 @@ class HistoryUi(QMainWindow):
     # ----------------------------- UI Events -----------------------------
 
     def on_menu_load_files(self):
-        root_path = HistoryRecordLoader.get_local_depot_root()
+        depot_root = HistoryRecordLoader.get_local_depot_root()
         fname, ftype = QFileDialog.getOpenFileNames(self,
                                                     'Select History Files',
-                                                    root_path,
+                                                    depot_root,
                                                     'History Files (*.his)')
-        sources = [f[len(root_path):] if f.startswith(root_path) else f for f in fname]
+        sources = [f[len(depot_root):] if f.startswith(depot_root) else f for f in fname]
         for source in sources:
             self.__history.load_source(source)
 
@@ -316,7 +316,7 @@ class HistoryUi(QMainWindow):
             self.__history.load_depot(depot)
 
     def on_menu_record_editor(self):
-        editor = HistoryEditorDialog()
+        editor = HistoryEditorDialog(self.__history)
         editor.exec()
 
     def on_menu_filter_editor(self):
@@ -394,7 +394,7 @@ class HistoryUi(QMainWindow):
 
     def on_custom_menu(self, pos: QPoint):
         align = self.__time_axis.align_from_point(pos)
-        thread = self.__time_axis.thread_from_point(pos)
+        thread: HistoryIndexTrack = self.__time_axis.thread_from_point(pos)     # It should be base but ...
 
         opt_new_record = None
         opt_load_file = None
@@ -410,17 +410,22 @@ class HistoryUi(QMainWindow):
         if thread is None:
             opt_add_thread = menu.addAction("Add Thread")
         else:
-            opt_new_record = menu.addAction("New Record")
             opt_load_file = menu.addAction("Load File")
+            opt_new_record = menu.addAction("New Record")
+
+            menu.addSeparator()
 
             # Incomplete function, removed
             # opt_load_index = menu.addAction("Load Index")
             # opt_open_filter = menu.addAction("Use Filter")
 
             opt_set_track_width = menu.addAction("Set Track Width")
-            opt_remove_thread = menu.addAction("Remove Thread")
             opt_add_thread_left = menu.addAction("Add Thread On Left")
             opt_add_thread_right = menu.addAction("Add Thread On Right")
+
+            menu.addSeparator()
+
+            opt_remove_thread = menu.addAction("Remove This Thread")
 
         action = menu.exec_(self.__time_axis.mapToGlobal(pos))
         if action is None:
@@ -465,14 +470,6 @@ class HistoryUi(QMainWindow):
                 indices = HistoryRecordIndexer.load_from_file(file_choose)
                 thread.set_thread_event_indexes(indices)
 
-        elif action == opt_new_record:
-            pass
-            # file_choose, file_type = QFileDialog.getSaveFileName(self, 'New History File',
-            #                                                      HistoricalRecordLoader.get_local_depot_root(),
-            #                                                      'History Files (*.his)')
-            # if file_choose != '':
-            #     pass
-
         elif action == opt_load_file:
             file_choose, file_type = QFileDialog.getOpenFileName(self, 'Load History File',
                                                                  HistoryRecordLoader.get_local_depot_root(),
@@ -480,6 +477,21 @@ class HistoryUi(QMainWindow):
             if file_choose != '':
                 records = self.__history.load_source(file_choose)
                 thread.set_thread_event_indexes(HistoryRecordIndexer.index_records(records))
+
+        elif action == opt_new_record:
+            sources = thread.get_display_sources()
+            if sources:
+                source = sources[0]
+            else:
+                # No resource has been loaded. Create a new one.
+                source = ''
+                pass
+            self.__time_axis.popup_editor_for_new_record(source)
+            # file_choose, file_type = QFileDialog.getSaveFileName(self, 'New History File',
+            #                                                      HistoricalRecordLoader.get_local_depot_root(),
+            #                                                      'History Files (*.his)')
+            # if file_choose != '':
+            #     pass
 
         elif action == opt_open_filter:
             wnd = FilterEditor()

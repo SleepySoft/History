@@ -90,6 +90,8 @@ class HistoryRecordEditor(QWidget):
         self.init_ui()
         self.config_ui()
 
+        self.create_new_file()
+
     def init_ui(self):
         root_layout = QVBoxLayout()
 
@@ -174,7 +176,8 @@ class HistoryRecordEditor(QWidget):
         layout = create_new_tab(self.__tab_main, 'Label Tag Editor')
         layout.addWidget(self.__table_tags)
 
-        self.setMinimumSize(700, 500)
+        self.setWindowTitle('History Record Editor')
+        self.setMinimumSize(1024, 768)
 
     def config_ui(self):
         self.__line_time.textChanged.connect(self.on_line_time_changed)
@@ -200,6 +203,12 @@ class HistoryRecordEditor(QWidget):
         records = self.__history.get_record_by_source(self.__source)
         sorted_records = History.sort_records(records)
 
+        if self.__current_record:
+            # Check whether current record is in the list. If not, it should be a new-created record.
+            matching_records = list(filter(lambda r: r.uuid() == self.__current_record.uuid(), sorted_records))
+            if not matching_records:
+                sorted_records.append(self.__current_record)
+
         for i in range(0, len(sorted_records)):
             record = sorted_records[i]
             self.__combo_records.addItem('[' + HistoryTime.format_tick(record.since()) + '] ' +
@@ -211,12 +220,14 @@ class HistoryRecordEditor(QWidget):
 
         if index >= 0:
             self.__combo_records.setCurrentIndex(index)
-            self.on_combo_records()
         else:
+            # Record is not in history. Should be a file just loaded.
             if self.__combo_records.count() > 0:
                 self.__combo_records.setCurrentIndex(0)
                 self.on_combo_records()
-            print('Cannot find the current record in combobox - use index 0.')
+                print('Cannot find the current record in combobox - use index 0.')
+            else:
+                print('Cannot find the current record in combobox - empty record list.')
 
     def on_button_pick_date_time(self):
         raw_time_str = self.__line_time.text()
@@ -233,24 +244,47 @@ class HistoryRecordEditor(QWidget):
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
 
-    def edit_source(self, source: str, current_uuid: str = '') -> bool:
-        if source not in self.__history.get_source_list():
+    def edit_record(self, source: str, edit_record_uuid: str = '') -> bool:
+        """
+        Edit or create a record in a source.
+            source - The source the contains the edit record.
+                     If source is empty or None, editor will ask to create a new source when saving record editing.
+            edit_record_uuid - The uuid of a record that to be edited.
+                               If current_uuid is None or '', that means create a new record.
+        """
+        if source and source not in self.__history.get_source_list():
             self.__history.load_source(source)
         records = self.__history.get_record_by_source(source)
 
         self.__set_current_source(source)
         self.__current_record = None
 
-        for record in records:
-            if current_uuid is None or current_uuid == '' or record.uuid() == current_uuid:
-                self.__current_record = record
-                break
+        if edit_record_uuid:
+            matching_records = list(filter(lambda record: record.uuid() == edit_record_uuid, records))
+            if matching_records:
+                self.__current_record = matching_records[0]
 
         if self.__current_record is None:
             self.__current_record = HistoryRecord()
 
         self.update_combo_records()
         self.record_to_ui(self.__current_record)
+
+        return True
+
+    def edit_source(self, source: str) -> bool:
+        """
+        Open and browse/edit a source. It will open a source and show the first record as default.
+        If this source has no record. I will create a new one by default.
+            source - Unlike edit_record(). This parameter cannot be empty or None.
+        """
+        if source and source not in self.__history.get_source_list():
+            self.__history.load_source(source)
+
+        self.__set_current_source(source)
+        self.__current_record = None
+
+        self.update_combo_records()
 
         return True
 
@@ -306,6 +340,16 @@ class HistoryRecordEditor(QWidget):
             self.update_combo_records()
 
     def on_button_apply(self):
+        if self.__source_valid():
+            # Should create a new file.
+            file_choose, _ = QFileDialog.getSaveFileName(self, 'New History File',
+                                                                 HistoryRecordLoader.get_local_depot_root(),
+                                                                 'History Files (*.his)')
+            if file_choose:
+                self.__source = file_choose
+            else:
+                return
+
         new_record = HistoryRecord()
         if self.__current_record is not None:
             new_record.copy_uuid_from(self.__current_record)
@@ -429,7 +473,7 @@ class HistoryRecordEditor(QWidget):
         self.clear_ui()
 
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))
-        self.__label_source.setText(self.__source)
+        self.__display_source()
         self.__line_time.setText(LabelTagParser.tags_to_text(record.time()))
 
         self.__line_location.setText(LabelTagParser.tags_to_text(record.get_tags('location')))
@@ -450,15 +494,16 @@ class HistoryRecordEditor(QWidget):
         self.clear_ui()
         self.update_combo_records()
         self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
-        self.__label_source.setText(self.__source)
+        self.__display_source()
 
     def create_new_file(self):
         self.__new_file()
+        self.create_new_record()
 
-        self.clear_ui()
-        self.update_combo_records()
-        self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
-        self.__label_source.setText(self.__source)
+        # self.clear_ui()
+        # self.update_combo_records()
+        # self.__label_uuid.setText(LabelTagParser.tags_to_text(self.__current_record.uuid()))
+        # self.__display_source()
 
         # self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
         # self.__records.clear()
@@ -473,17 +518,23 @@ class HistoryRecordEditor(QWidget):
     # ------------------------------------------------------------------------------
 
     def __new_file(self):
-        self.__records.clear()
         self.__set_current_source('')
         self.__new_record()
 
     def __new_record(self):
         self.__current_record = HistoryRecord()
-        self.__records.append(self.__current_record)
-        if self.__source is None or self.__source == '':
-            self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
-            self.__set_current_source(self.__source)
-        self.__current_record.set_source(self.__source)
+        # self.__records.append(self.__current_record)
+        # if self.__source is None or self.__source == '':
+        #     self.__source = path.join(self.__current_depot, str(self.__current_record.uuid()) + '.his')
+        #     self.__set_current_source(self.__source)
+        # self.__current_record.set_source(self.__source)
+
+    def __source_valid(self):
+        return self.__source and self.__source != HistoryRecordLoader.INVALID_SOURCE
+
+    def __display_source(self):
+        text = self.__source if self.__source_valid() else 'No Source - Will ask for a source when saving record.'
+        self.__label_source.setText(text)
 
 
 # --------------------------------------------- class HistoryRecordBrowser ---------------------------------------------
@@ -683,7 +734,7 @@ class HistoryEditorDialog(QDialog):
         self.history_editor.set_current_depot(depot)
 
     def on_select_record(self, record: str):
-        self.history_editor.edit_source(record)
+        self.history_editor.edit_record(record)
 
 
 # ------------------------------------------------ File Entry : main() -------------------------------------------------
