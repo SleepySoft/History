@@ -979,7 +979,7 @@ class TimeAxis(QWidget):
         #     records = [index]
 
         self.__history_editor = HistoryEditorDialog(self.__history_core, editor_agent=self)
-        self.__history_editor.get_history_editor().edit_record(index.source(), index.uuid())
+        self.__history_editor.get_history_editor().edit_source(index.source(), index.uuid())
         self.__history_editor.show_browser(False)
 
         # # To avoid losing focus
@@ -991,7 +991,7 @@ class TimeAxis(QWidget):
 
     def popup_editor_for_new_record(self, source: str):
         self.__history_editor = HistoryEditorDialog(self.__history_core, editor_agent=self)
-        self.__history_editor.get_history_editor().edit_record(source, '')
+        self.__history_editor.get_history_editor().edit_source(source, '')
         # self.__history_editor.show_browser(False)
 
         self.__history_editor.exec_()

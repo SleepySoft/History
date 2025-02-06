@@ -49,6 +49,35 @@ def restore_text_editor(editor: QTextEdit):
     editor.setTextColor(Qt.black)
     editor.setTextBackgroundColor(Qt.white)
 
+from PyQt5.QtWidgets import QWidget
+
+def resize_widget_to_screen_percentage(widget: QWidget, percentage: int):
+    """
+    Resize and reposition a QWidget to the center of its screen's available geometry
+    (excluding taskbars and other sidebars) with a specified percentage of the screen size.
+
+    :param widget: The QWidget to be resized and repositioned.
+    :param percentage: An integer between 10 and 100 representing the percentage of the screen size.
+    """
+    # Check if the percentage is within the valid range
+    if not (10 <= percentage <= 100):
+        raise ValueError("Percentage must be between 10 and 100")
+
+    # Get the available screen geometry where the widget is located (excluding taskbars and other sidebars)
+    available_geometry = widget.screen().availableGeometry()
+
+    # Calculate the new size of the widget based on the available screen size and percentage
+    new_width = int(available_geometry.width() * (percentage / 100))
+    new_height = int(available_geometry.height() * (percentage / 100))
+
+    # Calculate the new position to center the widget on the available screen area
+    new_x = available_geometry.x() + (available_geometry.width() - new_width) // 2
+    new_y = available_geometry.y() + (available_geometry.height() - new_height) // 2
+
+    # Resize and move the widget
+    widget.resize(new_width, new_height)
+    widget.move(new_x, new_y)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 #                                                   InfoDialog

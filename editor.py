@@ -5,10 +5,9 @@ from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox
     QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog, QToolTip, \
     QCalendarWidget, QDateTimeEdit
 
-from Utility.DateTimePicker import DateTimePicker
-from Utility.HistoryTime import DEFAULT_DATE_TIME_FORMAT
 from core import *
 from Utility.ui_utility import *
+from Utility.DateTimePicker import DateTimePicker
 
 
 # ---------------------------------------------- class HistoryRecordEditor ---------------------------------------------
@@ -176,9 +175,6 @@ class HistoryRecordEditor(QWidget):
         layout = create_new_tab(self.__tab_main, 'Label Tag Editor')
         layout.addWidget(self.__table_tags)
 
-        self.setWindowTitle('History Record Editor')
-        self.setMinimumSize(1024, 768)
-
     def config_ui(self):
         self.__line_time.textChanged.connect(self.on_line_time_changed)
 
@@ -244,47 +240,33 @@ class HistoryRecordEditor(QWidget):
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
 
-    def edit_record(self, source: str, edit_record_uuid: str = '') -> bool:
+    def edit_source(self, source: str, edit_record_uuid: str = '') -> bool:
         """
         Edit or create a record in a source.
             source - The source the contains the edit record.
                      If source is empty or None, editor will ask to create a new source when saving record editing.
-            edit_record_uuid - The uuid of a record that to be edited.
+            edit_record_uuid - The uuid of a record that to be selected (edited).
+                               If the specified uuid cannot be found in this source, editor will select the first record.
                                If current_uuid is None or '', that means create a new record.
         """
         if source and source not in self.__history.get_source_list():
             self.__history.load_source(source)
-        records = self.__history.get_record_by_source(source)
 
         self.__set_current_source(source)
         self.__current_record = None
 
         if edit_record_uuid:
+            records = self.__history.get_record_by_source(source)
             matching_records = list(filter(lambda record: record.uuid() == edit_record_uuid, records))
             if matching_records:
                 self.__current_record = matching_records[0]
-
-        if self.__current_record is None:
+            else:
+                self.__current_record = None
+        else:
             self.__current_record = HistoryRecord()
 
         self.update_combo_records()
-        self.record_to_ui(self.__current_record)
-
-        return True
-
-    def edit_source(self, source: str) -> bool:
-        """
-        Open and browse/edit a source. It will open a source and show the first record as default.
-        If this source has no record. I will create a new one by default.
-            source - Unlike edit_record(). This parameter cannot be empty or None.
-        """
-        if source and source not in self.__history.get_source_list():
-            self.__history.load_source(source)
-
-        self.__set_current_source(source)
-        self.__current_record = None
-
-        self.update_combo_records()
+        # self.record_to_ui(self.__current_record)
 
         return True
 
@@ -700,6 +682,10 @@ class HistoryEditorDialog(QDialog):
         self.__current_depot = self.history_browser.get_current_depot()
         self.history_editor.set_current_depot(self.__current_depot)
 
+        # self.setMinimumSize(1200, 800)
+        self.setWindowTitle('History Record Editor')
+        resize_widget_to_screen_percentage(self, 80)
+
     # def showEvent(self, event):
     #     self.setFocus()
     #     event.accept()
@@ -734,7 +720,7 @@ class HistoryEditorDialog(QDialog):
         self.history_editor.set_current_depot(depot)
 
     def on_select_record(self, record: str):
-        self.history_editor.edit_record(record)
+        self.history_editor.edit_source(record, 'xxx')
 
 
 # ------------------------------------------------ File Entry : main() -------------------------------------------------
