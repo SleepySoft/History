@@ -3,7 +3,7 @@ import traceback
 from PyQt5.QtCore import QPoint, QDateTime
 from PyQt5.QtWidgets import QLineEdit, QAbstractItemView, QFileDialog, QCheckBox, QWidget, QLabel, QTextEdit, \
     QTabWidget, QComboBox, QGridLayout, QRadioButton, QListWidget, QListWidgetItem, QInputDialog, QToolTip, \
-    QCalendarWidget, QDateTimeEdit
+    QCalendarWidget, QDateTimeEdit, QSplitter
 
 from core import *
 from Utility.ui_utility import *
@@ -670,9 +670,15 @@ class HistoryEditorDialog(QDialog):
         self.history_browser = HistoryRecordBrowser(self)
         self.history_browser.add_agent(browser_agent if browser_agent is not None else self)
 
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self.history_browser)
+        splitter.addWidget(self.history_editor)
+
+        splitter.setStretchFactor(0, 3)  # history_browser
+        splitter.setStretchFactor(1, 7)  # history_editor
+
         layout = QHBoxLayout()
-        layout.addWidget(self.history_browser, 1)
-        layout.addWidget(self.history_editor, 3)
+        layout.addWidget(splitter)
 
         self.setLayout(layout)
         self.setWindowFlags(int(self.windowFlags()) |
