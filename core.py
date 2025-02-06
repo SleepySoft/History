@@ -349,7 +349,9 @@ class LabelTag:
         new_line = '; ' if compact else '\n'
         if labels is None:
             labels = list(self.__label_tags.keys())
-        for label in labels:
+
+        # 20250206: Use sorted to keep the label's order in each dump.
+        for label in sorted(labels):
             tags = self.__label_tags.get(label)
             tags_text = LabelTagParser.tags_to_text(tags, True)
             if tags_text != '':
@@ -532,19 +534,19 @@ class HistoryRecord(LabelTag):
     def period_adapt(self, since: float, until: float):
         return (self.__since <= until) and (self.__until >= since)
 
-    @staticmethod
-    def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
-        """
-        Check label tags error.
-        :param label:
-        :param tags:
-        :return: Error string list. The list is empty if there's no error occurs.
-        """
-        if label == 'time':
-            time_list, error_list = HistoryTime.standardize(','.join(tags))
-            return error_list
-        else:
-            return []
+    # @staticmethod
+    # def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
+    #     """
+    #     Check label tags error.
+    #     :param label:
+    #     :param tags:
+    #     :return: Error string list. The list is empty if there's no error occurs.
+    #     """
+    #     if label == 'time':
+    #         time_list, error_list = HistoryTime.standardize(','.join(tags))
+    #         return error_list
+    #     else:
+    #         return []
 
     def dump_record(self, compact: bool = False) -> str:
         new_line = '; ' if compact else '\n'
@@ -574,14 +576,14 @@ class HistoryRecord(LabelTag):
         # ---------------------- Dump common labels ----------------------
         text += super(HistoryRecord, self).dump_text(dump_list, compact)
 
+        # If it's an index. We should save the source.
         if self.__focus_label == 'index':
-            text += LabelTagParser.label_tags_to_text('since', HistoryTime.tick_to_decimal_year(self.since()), new_line)
-            text += LabelTagParser.label_tags_to_text('until', HistoryTime.tick_to_decimal_year(self.until()), new_line)
+            text += LabelTagParser.label_tags_to_text('since', HistoryTime.tick_to_years(self.since())[0], new_line)
+            text += LabelTagParser.label_tags_to_text('until', HistoryTime.tick_to_years(self.until())[0], new_line)
             text += LabelTagParser.label_tags_to_text('source', self.source(), new_line)
 
-        # If the focus label missing, add it with 'end' tag
+        # If the focus label missing or its tag is empty, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
-            # text += self.__focus_label + ': end' + new_line
             text += LabelTagParser.label_tags_to_text(self.__focus_label, 'end', new_line)
 
         return text
@@ -631,37 +633,49 @@ class HistoryRecord(LabelTag):
         # return error_list
 
     def __get_sorted_labels(self) -> [str]:
-        dump_list = []
-        label_list = self.get_labels()
+        priority_labels = {'time', 'people', 'location', 'organization'}
+        tail_labels = {'title', 'brief', 'event'}
+        existing_labels = set(self.get_labels())
 
-        # Sort the labels and put the focus label at the tail of list
+        sorted_priority_labels = sorted(priority_labels & existing_labels)
+        remaining_labels = sorted(existing_labels - priority_labels - tail_labels)
+        sorted_tail_labels = sorted(tail_labels & existing_labels)
 
-        if 'time' in label_list:
-            dump_list.append('time')
-            label_list.remove('time')
-        if 'people' in label_list:
-            dump_list.append('people')
-            label_list.remove('people')
-        if 'location' in label_list:
-            dump_list.append('location')
-            label_list.remove('location')
-        if 'organization' in label_list:
-            dump_list.append('organization')
-            label_list.remove('organization')
+        sorted_labels = sorted_priority_labels + remaining_labels + sorted_tail_labels
+        return sorted_labels
 
-        dump_list.extend(sorted(label_list))
-
-        if 'title' in dump_list:
-            dump_list.remove('title')
-            dump_list.append('title')
-        if 'brief' in label_list:
-            dump_list.remove('brief')
-            dump_list.append('brief')
-        if 'event' in label_list:
-            dump_list.remove('event')
-            dump_list.append('event')
-
-        return dump_list
+    # def __get_sorted_labels(self) -> [str]:
+    #     dump_list = []
+    #     label_list = self.get_labels()
+    #
+    #     # Sort the labels and put the focus label at the tail of list
+    #
+    #     if 'time' in label_list:
+    #         dump_list.append('time')
+    #         label_list.remove('time')
+    #     if 'people' in label_list:
+    #         dump_list.append('people')
+    #         label_list.remove('people')
+    #     if 'location' in label_list:
+    #         dump_list.append('location')
+    #         label_list.remove('location')
+    #     if 'organization' in label_list:
+    #         dump_list.append('organization')
+    #         label_list.remove('organization')
+    #
+    #     dump_list.extend(sorted(label_list))
+    #
+    #     if 'title' in dump_list:
+    #         dump_list.remove('title')
+    #         dump_list.append('title')
+    #     if 'brief' in label_list:
+    #         dump_list.remove('brief')
+    #         dump_list.append('brief')
+    #     if 'event' in label_list:
+    #         dump_list.remove('event')
+    #         dump_list.append('event')
+    #
+    #     return dump_list
 
     # ----------------------------------------------------- print ------------------------------------------------------
 
