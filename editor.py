@@ -174,6 +174,9 @@ class HistoryRecordEditor(QWidget):
         layout.addWidget(self.__table_tags)
 
     def config_ui(self):
+        self.__text_brief.setAcceptRichText(False)
+        self.__text_record.setAcceptRichText(False)
+
         self.__line_time.textChanged.connect(self.on_line_time_changed)
 
         self.__button_auto_time.clicked.connect(self.on_button_auto_time)
