@@ -117,11 +117,6 @@ class HistoryRecordEditor(QWidget):
         property_layout.addWidget(self.__label_uuid, row, 1)
 
         row += 1
-        property_layout.addWidget(QLabel('Event Tags'), row, 0)
-        property_layout.addWidget(self.__line_default_tags, row, 1, 1, 2)
-        property_layout.addWidget(self.__check_default_tags, row, 3)
-
-        row += 1
         # property_layout.addWidget(QLabel('Event Time'), 1, 0)
         property_layout.addWidget(self.__radio_time, row, 0)
         layout = QHBoxLayout()
@@ -151,6 +146,11 @@ class HistoryRecordEditor(QWidget):
         property_layout.addWidget(self.__line_organization, row, 1)
         property_layout.addWidget(self.__button_auto_organization, row, 2)
         property_layout.addWidget(self.__check_organization, row, 3)
+
+        # row += 1
+        # property_layout.addWidget(QLabel('Event Tags'), row, 0)
+        # property_layout.addWidget(self.__line_default_tags, row, 1, 1, 2)
+        # property_layout.addWidget(self.__check_default_tags, row, 3)
 
         row += 1
         self.__radio_record.setChecked(True)
@@ -190,7 +190,6 @@ class HistoryRecordEditor(QWidget):
         self.__combo_records.currentIndexChanged.connect(self.on_combo_records)
 
     def update_combo_records(self):
-        index = -1
         self.__combo_records.clear()
 
         records = self.__history.get_record_by_source(self.__source)
@@ -201,6 +200,9 @@ class HistoryRecordEditor(QWidget):
             matching_records = list(filter(lambda r: r.uuid() == self.__current_record.uuid(), sorted_records))
             if not matching_records:
                 sorted_records.append(self.__current_record)
+
+        # If not specify current_record, it will select the 1st item by default.
+        index = -1 if self.__current_record else 0
 
         for i in range(0, len(sorted_records)):
             record = sorted_records[i]
@@ -322,10 +324,13 @@ class HistoryRecordEditor(QWidget):
 
     def on_button_del(self):
         if self.__current_record is not None:
-            records = self.__history.pop(lambda _, r: r.uuid() == self.__current_record.uuid())
-            print(f'Popped records: {records}')
+            self.__history.remove_record(self.__current_record)
             self.__current_record = None
             self.update_combo_records()
+
+            # Save the source
+            for agent in self.__operation_agents:
+                agent.on_apply()
 
     def on_button_apply(self):
         if not self.__source_valid():
@@ -358,14 +363,23 @@ class HistoryRecordEditor(QWidget):
             agent.on_cancel()
 
     def on_combo_records(self):
-        print(f'ComboBox select - {self.__combo_records.currentIndex()}')
+        sel_index = self.__combo_records.currentIndex()
+        print(f'ComboBox select - {sel_index}')
+
+        if sel_index < 0:
+            # Invalid selection. Will happen when, like clear() the combo box.
+            return
 
         _uuid = self.__combo_records.currentData()
         if _uuid is None:
             # When we add first item. The current index changed (-1 -> 0).
             # The function will be invoked, But the item data has not been added yet.
             return
+        if self.__current_record and _uuid == self.__current_record.uuid():
+            # No change. Or it's the new created record.
+            return
 
+        # Real selection changed. Get record from history.
         record = self.__history.get_record_by_uuid(_uuid)
 
         if record is None:
