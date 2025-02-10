@@ -144,19 +144,19 @@ def time_text_to_ticks(time_text: str):
     time_ticks = []
     sub_time_texts = __split_natural_language_time_text(time_text)
 
-    print('------------------------------------------')
+    # print('------------------------------------------')
     for sub_time_text in sub_time_texts:
         # Try to convert to datetime
         dt = time_str_to_datetime(sub_time_text)
         if dt is not None:
             tick = datetime_to_tick(dt)
-            print(f'{sub_time_text} (datetime) -> {tick}')
+            # print(f'{sub_time_text} (datetime) -> {tick}')
         else:
             tick = __single_natural_language_time_to_tick(sub_time_text)
-            print(f'{sub_time_text} -> {tick}')
+            # print(f'{sub_time_text} -> {tick}')
         if tick is not None:
             time_ticks.append(tick)
-    print('------------------------------------------')
+    # print('------------------------------------------')
     return time_ticks
 
 

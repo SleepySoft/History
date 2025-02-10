@@ -1,9 +1,21 @@
-import math
+import io
 import sys
+import math
 import traceback
 
 
 # ----------------------------------------------------- Functions ------------------------------------------------------
+
+def suppress_print(func):
+    def wrapper(*args, **kwargs):
+        original_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            result = func(*args, **kwargs)
+        finally:
+            sys.stdout = original_stdout
+        return result
+    return wrapper
 
 def str_to_int(text: str, default: int = 0):
     try:

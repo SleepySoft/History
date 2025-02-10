@@ -367,7 +367,7 @@ class HistoryRecordEditor(QWidget):
 
     def on_combo_records(self):
         sel_index = self.__combo_records.currentIndex()
-        print(f'ComboBox select - {sel_index}')
+        # print(f'ComboBox select - {sel_index}')
 
         if sel_index < 0:
             # Invalid selection. Will happen when, like clear() the combo box.
@@ -585,55 +585,50 @@ class HistoryRecordBrowser(QWidget):
 
     def config_ui(self):
         self.setMinimumWidth(200)
-        self.update_combo_depot()
+        self.__update_combo_depot()
         self.__combo_depot.currentIndexChanged.connect(self.on_combo_depot_changed)
-        self.__list_record.selectionModel().selectionChanged.connect(self.on_list_record_changed)
+        # self.__list_record.selectionModel().selectionChanged.connect(self.on_list_record_changed)
+        self.__list_record.selectionModel().currentRowChanged.connect(self.on_list_record_changed)
         self.__button_rename.clicked.connect(self.on_button_rename)
 
     def add_agent(self, agent):
         self.__operation_agents.append(agent)
 
     def refresh(self):
-        self.update_list_record(self.__current_depot)
+        self.__update_list_record(self.__current_depot)
 
     def get_current_depot(self):
         return self.__current_depot
-
-    def update_combo_depot(self):
-        depots = HistoryRecordBrowser.enumerate_local_depot()
-        if len(depots) == 0:
-            return
-        self.__ignore_combo = True
-        for depot in depots:
-            self.__combo_depot.addItem(os.path.basename(depot), depot)
-        self.__ignore_combo = False
-
-        self.__combo_depot.setCurrentIndex(0)
-        self.on_combo_depot_changed()
-
-    def update_list_record(self, depot: str):
-        record_dir_file = HistoryRecordBrowser.enumerate_depot_record(depot)
-
-        self.__list_record.clear()
-        for record_path, record_file in record_dir_file:
-            item = QListWidgetItem()
-            item.setText(record_file)
-            item.setData(QtCore.Qt.UserRole, path.join(record_path, record_file))
-            self.__list_record.addItem(item)
 
     def on_combo_depot_changed(self):
         if self.__ignore_combo:
             return
         depot = self.__combo_depot.currentText()
-        self.update_list_record(depot)
+        self.__update_list_record(depot)
         self.__current_depot = depot
 
         for agent in self.__operation_agents:
             agent.on_select_depot(depot)
 
     def on_list_record_changed(self):
+        index = self.__list_record.currentRow()
         item = self.__list_record.currentItem()
+
+        print(f'Record list, current row: {index}')
+
+        if not item:
+            return
+
+        # items = self.__list_record.selectedItems()
+        # if not items:
+        #     return
+        # item = items[0]
+
         record_path = item.data(QtCore.Qt.UserRole)
+        if record_path == self.__current_file:
+            print('Record selection has no changed. Ignore...')
+            return
+
         self.__current_file = record_path
 
         for agent in self.__operation_agents:
@@ -658,6 +653,37 @@ class HistoryRecordBrowser(QWidget):
             QMessageBox.information(self, 'Rename', tip + 'Failed.', QMessageBox.Ok)
         finally:
             pass
+
+    def __update_combo_depot(self):
+        depots = HistoryRecordBrowser.enumerate_local_depot()
+        if len(depots) == 0:
+            return
+        self.__ignore_combo = True
+        for depot in depots:
+            self.__combo_depot.addItem(os.path.basename(depot), depot)
+        self.__ignore_combo = False
+
+        self.__combo_depot.setCurrentIndex(0)
+        self.on_combo_depot_changed()
+
+    def __update_list_record(self, depot: str):
+        record_dir_file = HistoryRecordBrowser.enumerate_depot_record(depot)
+
+        current_item = None
+        self.__list_record.clear()
+
+        for record_path, record_file in record_dir_file:
+            source = path.join(record_path, record_file)
+            item = QListWidgetItem()
+            item.setText(record_file)
+            item.setData(QtCore.Qt.UserRole, source)
+            self.__list_record.addItem(item)
+
+            if source == self.__current_file:
+                current_item = item
+
+        if current_item is not None:
+            self.__list_record.setCurrentItem(current_item)
 
     @staticmethod
     def enumerate_local_depot() -> list:

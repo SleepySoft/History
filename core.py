@@ -41,7 +41,7 @@ class TokenParser:
         self.__wrapper_index = -1
 
     # ========================================== Config parser ==========================================
-
+    @suppress_print
     def config(self, tokens: list, wrappers: list, escape_symbols: list):
         """
         Function to set tokens, wrappers and escape symbols.
@@ -198,6 +198,7 @@ class LabelTagParser:
     def get_label_tags(self) -> list:
         return self.__label_tags
 
+    @suppress_print
     def parse(self, text: str) -> bool:
         parser = TokenParser()
         parser.config(LABEL_TAG_TOKENS, LABEL_TAG_WRAPPERS, LABEL_TAG_ESCAPES_SYMBOLS)

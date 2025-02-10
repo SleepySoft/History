@@ -104,7 +104,7 @@ def cn_num_to_digit(cn_num: str):
     if digit_missing:
         sum_num += unit_l1 * unit_l2
 
-    print(cn_num + ' -> ' + str(sum_num))
+    # print(cn_num + ' -> ' + str(sum_num))
     return sum_num
 
 
