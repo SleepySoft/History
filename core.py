@@ -351,8 +351,7 @@ class LabelTag:
         if labels is None:
             labels = list(self.__label_tags.keys())
 
-        # 20250206: Use sorted to keep the label's order in each dump.
-        for label in sorted(labels):
+        for label in labels:
             tags = self.__label_tags.get(label)
             tags_text = LabelTagParser.tags_to_text(tags, True)
             if tags_text != '':
@@ -557,14 +556,14 @@ class HistoryRecord(LabelTag):
         if self.__focus_label is None or self.__focus_label == '':
             self.__focus_label = 'event'
 
+        # uuid should not in the common dump list
+        if 'uuid' in dump_list:
+            dump_list.remove('uuid')
+
         # Move the focus label to the tail.
         if self.__focus_label in dump_list:
             dump_list.remove(self.__focus_label)
         dump_list.append(self.__focus_label)
-
-        # uuid should not in the common dump list
-        if 'uuid' in dump_list:
-            dump_list.remove('uuid')
 
         # Extra: The start label of HistoricalRecord
         text = LabelTagParser.label_tags_to_text('[START]', self.__focus_label, new_line)
@@ -574,14 +573,15 @@ class HistoryRecord(LabelTag):
             self.__uuid = str(uuid.uuid4())
         text += LabelTagParser.label_tags_to_text('uuid', self.__uuid, new_line)
 
-        # ---------------------- Dump common labels ----------------------
-        text += super(HistoryRecord, self).dump_text(dump_list, compact)
-
         # If it's an index. We should save the source.
         if self.__focus_label == 'index':
             text += LabelTagParser.label_tags_to_text('since', HistoryTime.tick_to_years(self.since())[0], new_line)
             text += LabelTagParser.label_tags_to_text('until', HistoryTime.tick_to_years(self.until())[0], new_line)
             text += LabelTagParser.label_tags_to_text('source', self.source(), new_line)
+
+        # ---------------------- Dump common labels ----------------------
+
+        text += super(HistoryRecord, self).dump_text(dump_list, compact)
 
         # If the focus label missing or its tag is empty, add it with 'end' tag
         if self.__focus_label not in dump_list or self.is_label_empty(self.__focus_label):
