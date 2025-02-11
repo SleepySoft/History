@@ -965,20 +965,20 @@ class History:
 
     # --------------------------------------- Management ---------------------------------------
 
-    def remove_record(self, record: HistoryRecord):
-        pop_records = self.pop(lambda _, r: r.uuid() == record.uuid())
-        print(f'Removed records count: {len(pop_records)}')
+    def remove_record(self, record_uuid: str):
+        pop_records = self.pop(lambda _, r: r.uuid() == record_uuid)
+        print('Removed records: \n' + '\n'.join([r.uuid() for r in pop_records]))
 
     def remove_records(self, records: [HistoryRecord]):
         for record in records:
-            self.remove_record(record)
+            self.remove_record(record.uuid())
 
     def upsert_records(self, source: str, records: [HistoryRecord]):
         if isinstance(records, HistoryRecord):
             records = [records]
         for record in records:
             # Remove exists records, which means upsert is doing a replacement update.
-            self.remove_record(record)
+            self.remove_record(record.uuid())
 
             # Append to the end of records list. Because records will be sorted by its time before layout.
             # So we don't care about the order of records in upsert.
@@ -986,6 +986,8 @@ class History:
                 self.__source_records_table[source] = [record]
             else:
                 self.__source_records_table[source].append(record)
+
+            print(f'Add record {record.uuid()}')
 
     def change_source(self, old_source: str, new_source: str) -> bool:
         if old_source in self.__source_records_table and new_source not in self.__source_records_table:

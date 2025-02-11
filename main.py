@@ -261,19 +261,19 @@ class HistoryUi(QMainWindow):
 
         action = QAction('&Historical Record Editor', self)
         action.setShortcut('Ctrl+R')
-        action.setStatusTip('Open Historical Record Editor')
+        action.setStatusTip('Open Editor')
         action.triggered.connect(self.on_menu_record_editor)
         self.__menu_view.addAction(action)
 
         action = QAction('&History Filter Editor', self)
         action.setShortcut('Ctrl+R')
-        action.setStatusTip('Open History Filter Editor')
+        action.setStatusTip('Open Filter')
         action.triggered.connect(self.on_menu_filter_editor)
         self.__menu_view.addAction(action)
 
         action = QAction('&Axis Appearance Setting', self)
         action.setShortcut('Ctrl+T')
-        action.setStatusTip('Open Axis Appearance Setting')
+        action.setStatusTip('Axis Appearance Setting')
         action.triggered.connect(self.on_menu_thread_editor)
         self.__menu_view.addAction(action)
 
@@ -281,13 +281,13 @@ class HistoryUi(QMainWindow):
 
         help_action = QAction('&Help', self)
         help_action.setShortcut('Ctrl+H')
-        help_action.setStatusTip('Open help Window')
+        help_action.setStatusTip('Help')
         help_action.triggered.connect(self.on_menu_help)
         self.__menu_help.addAction(help_action)
 
         about_action = QAction('&About', self)
         about_action.setShortcut('Ctrl+B')
-        about_action.setStatusTip('Open about Window')
+        about_action.setStatusTip('About')
         about_action.triggered.connect(self.on_menu_about)
         self.__menu_help.addAction(about_action)
 

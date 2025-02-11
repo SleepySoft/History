@@ -79,6 +79,7 @@ class HistoryRecordEditor(QWidget):
         self.__table_tags = EasyQTableWidget()
 
         self.__button_new = QPushButton('New Event')
+        self.__button_open_file = QPushButton('Open File')
         self.__button_new_file = QPushButton('New File')
         self.__button_del = QPushButton('Del Event')
         self.__button_apply = QPushButton('Apply')
@@ -95,6 +96,7 @@ class HistoryRecordEditor(QWidget):
         line = QHBoxLayout()
         # line.addWidget(QLabel('Event Source'), 0)
         line.addWidget(self.__label_source, 1)
+        line.addWidget(self.__button_open_file, 0)
         line.addWidget(self.__button_new_file, 0)
         root_layout.addLayout(line)
 
@@ -185,7 +187,8 @@ class HistoryRecordEditor(QWidget):
         self.__button_auto_organization.clicked.connect(self.on_button_auto_organization)
 
         self.__button_new.clicked.connect(self.on_button_new)
-        self.__button_new_file.clicked.connect(self.on_button_file)
+        self.__button_open_file.clicked.connect(self.on_button_open_file)
+        self.__button_new_file.clicked.connect(self.on_button_new_file)
         self.__button_del.clicked.connect(self.on_button_del)
         self.__button_apply.clicked.connect(self.on_button_apply)
         self.__button_cancel.clicked.connect(self.on_button_cancel)
@@ -322,12 +325,23 @@ class HistoryRecordEditor(QWidget):
     def on_button_new(self):
         self.create_new_record()
 
-    def on_button_file(self):
+    def on_button_open_file(self):
+        depot_root = HistoryRecordLoader.get_local_depot_root()
+        fname, _ = QFileDialog.getOpenFileName(self,
+                                               'Select History Files',
+                                               depot_root,
+                                               'History Files (*.his)')
+        if fname:
+            self.edit_source(fname, 'xxx')
+            # Open single file. Current depot set empty.
+            self.set_current_depot('')
+
+    def on_button_new_file(self):
         self.create_new_file()
 
     def on_button_del(self):
         if self.__current_record is not None:
-            self.__history.remove_record(self.__current_record)
+            self.__history.remove_record(self.__current_record.uuid())
             self.__current_record = None
             self.update_combo_records()
 
@@ -353,6 +367,10 @@ class HistoryRecordEditor(QWidget):
 
         if not self.ui_to_record(new_record):
             print('Update data from UI FAIL.')
+            return
+
+        if not new_record.time():
+            print('Empty time. Cannot save.')
             return
 
         self.__history.upsert_records(self.__source, new_record)
@@ -564,6 +582,7 @@ class HistoryRecordBrowser(QWidget):
         super(HistoryRecordBrowser, self).__init__(parent)
 
         self.__ignore_combo = False
+        self.__ignore_list_change = False
         self.__current_file = ''
         self.__current_depot = 'default'
         self.__operation_agents = []
@@ -611,6 +630,9 @@ class HistoryRecordBrowser(QWidget):
             agent.on_select_depot(depot)
 
     def on_list_record_changed(self):
+        if self.__ignore_list_change:
+            return
+
         index = self.__list_record.currentRow()
         item = self.__list_record.currentItem()
 
@@ -669,6 +691,8 @@ class HistoryRecordBrowser(QWidget):
     def __update_list_record(self, depot: str):
         record_dir_file = HistoryRecordBrowser.enumerate_depot_record(depot)
 
+        self.__ignore_list_change = True
+
         current_item = None
         self.__list_record.clear()
 
@@ -684,6 +708,8 @@ class HistoryRecordBrowser(QWidget):
 
         if current_item is not None:
             self.__list_record.setCurrentItem(current_item)
+
+        self.__ignore_list_change = False
 
     @staticmethod
     def enumerate_local_depot() -> list:
