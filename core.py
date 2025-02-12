@@ -549,6 +549,17 @@ class HistoryRecord(LabelTag):
     #         return []
 
     def dump_record(self, compact: bool = False) -> str:
+        """
+        Note that the focus label MUST be the last label of a History record.
+        One History record should look like:
+            [START]: focus_label
+            other_label: content
+            other_label: content
+            .
+            .
+            .
+            focus_label: content or 'end'
+        """
         new_line = '; ' if compact else '\n'
         dump_list = self.__get_sorted_labels()
 
