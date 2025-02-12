@@ -52,8 +52,8 @@ class HistoryRecordEditor(QWidget):
         self.__line_organization = QLineEdit()
         self.__line_default_tags = QLineEdit()
 
+        self.__button_save_and_new = QPushButton('Save and New', self)
         self.__button_calendar = QPushButton('Calendar', self)
-        self.__button_calendar.clicked.connect(self.on_button_pick_date_time)
 
         self.__button_auto_time = QPushButton('Auto Detect')
         self.__button_auto_location = QPushButton('Auto Detect')
@@ -181,6 +181,9 @@ class HistoryRecordEditor(QWidget):
 
         self.__line_time.textChanged.connect(self.on_line_time_changed)
 
+        self.__button_save_and_new.clicked.connect(self.on_button_save_and_new)
+        self.__button_calendar.clicked.connect(self.on_button_pick_date_time)
+
         self.__button_auto_time.clicked.connect(self.on_button_auto_time)
         self.__button_auto_location.clicked.connect(self.on_button_auto_location)
         self.__button_auto_people.clicked.connect(self.on_button_auto_people)
@@ -239,16 +242,6 @@ class HistoryRecordEditor(QWidget):
         #     else:
         #         print('Cannot find the current record in combobox - empty record list.')
 
-    def on_button_pick_date_time(self):
-        raw_time_str = self.__line_time.text()
-        history_ticks = HistoryTime.time_text_to_ticks(raw_time_str)
-        original_time = HistoryTime.tick_to_datetime(history_ticks[0]) if len(history_ticks) > 0 else None
-
-        dt, ok = DateTimePicker.pickDateTime(original_time)
-        if ok:
-            time_str = HistoryTime.format_datetime(dt)
-            self.__line_time.setText(time_str)
-
     # ---------------------------------------------------- Features ----------------------------------------------------
 
     def add_agent(self, agent):
@@ -299,6 +292,9 @@ class HistoryRecordEditor(QWidget):
         print('Editor current source: ' + source)
 
     # ---------------------------------------------------- UI Event ----------------------------------------------------
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_S and event.modifiers() == Qt.ControlModifier:
+            self.on_button_apply()
 
     def on_line_time_changed(self):
         raw_time_str = self.__line_time.text()
@@ -309,6 +305,20 @@ class HistoryRecordEditor(QWidget):
         self.__line_time.set_shadow_text(', '.join(history_time_strs))
 
     NOT_SUPPORT_TEMPLATE = 'In feature, we will use NLP or LLM to recognize the %s information from main text'
+
+    def on_button_save_and_new(self):
+        self.on_button_apply()
+        self.on_button_new()
+
+    def on_button_pick_date_time(self):
+        raw_time_str = self.__line_time.text()
+        history_ticks = HistoryTime.time_text_to_ticks(raw_time_str)
+        original_time = HistoryTime.tick_to_datetime(history_ticks[0]) if len(history_ticks) > 0 else None
+
+        dt, ok = DateTimePicker.pickDateTime(original_time)
+        if ok:
+            time_str = HistoryTime.format_datetime(dt)
+            self.__line_time.setText(time_str)
 
     def on_button_auto_time(self):
         QMessageBox.information(self, 'Not implemented', HistoryRecordEditor.NOT_SUPPORT_TEMPLATE % 'time')
@@ -398,6 +408,7 @@ class HistoryRecordEditor(QWidget):
             return
         if self.__current_record and _uuid == self.__current_record.uuid():
             # No change. Or it's the new created record.
+            self.record_to_ui(self.__current_record)
             return
 
         # Real selection changed. Get record from history.

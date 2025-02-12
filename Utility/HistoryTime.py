@@ -95,7 +95,7 @@ REPLACE_CHAR = [
     ('元月', '1月'),
     ('正月', '1月'),
     ('世纪', '00'),
-    ('至今', datetime.datetime.now().strftime('YY-mm-dd HH:MM:SS')),
+    ('至今', datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')),
 ]
 
 PREFIX_CE = [
