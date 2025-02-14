@@ -117,6 +117,7 @@ class HistoryRecordEditor(QWidget):
         row = 0
         property_layout.addWidget(QLabel('Event ID'), row, 0)
         property_layout.addWidget(self.__label_uuid, row, 1)
+        property_layout.addWidget(self.__button_save_and_new, row, 2)
 
         row += 1
         # property_layout.addWidget(QLabel('Event Time'), 1, 0)
@@ -379,15 +380,13 @@ class HistoryRecordEditor(QWidget):
             print('Update data from UI FAIL.')
             return
 
-        if not new_record.time():
-            print('Empty time. Cannot save.')
-            return
-
         self.__history.upsert_records(self.__source, new_record)
         self.__current_record = new_record
 
         for agent in self.__operation_agents:
             agent.on_apply()
+
+        self.update_combo_records()
 
     def on_button_cancel(self):
         for agent in self.__operation_agents:
@@ -471,9 +470,12 @@ class HistoryRecordEditor(QWidget):
         focus_label = ''
         input_valid = False
 
+        if not input_time.strip():
+            QMessageBox.information(None, 'Input check', 'Time field is required.', QMessageBox.Ok)
+            return False
+
         if focus_time:
             focus_label = 'time'
-            input_valid = (len(input_time.strip()) != 0)
         if focus_location:
             focus_label = 'location'
             input_valid = (len(input_location.strip()) != 0)
@@ -489,8 +491,8 @@ class HistoryRecordEditor(QWidget):
                            len(input_brief.strip()) != 0 or
                            len(input_event.strip()) != 0)
         if not input_valid:
-            tips = 'The focus label you select is: ' + focus_label + ".\n\nBut you didn't put content in it."
-            QMessageBox.information(None, 'Save', tips, QMessageBox.Ok)
+            tips = f"The focus label you select is: {focus_label}.\n\nBut you didn't put content in it."
+            QMessageBox.information(None, 'Input check', tips, QMessageBox.Ok)
             return False
 
         record.set_label_tags('time',         input_time.split(','))
