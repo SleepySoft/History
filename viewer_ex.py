@@ -564,11 +564,13 @@ class TimeAxis(QWidget):
     class Scale:
         def __init__(self,
                      main_scale_offset: (int, int, int, int, int, int),
-                     sub_scale_offset: (int, int, int, int, int, int)):
+                     sub_scale_offset: (int, int, int, int, int, int),
+                     scale_per_page):
             assert len(main_scale_offset) == 6
             assert len(sub_scale_offset) == 6
             self.main_scale_offset = main_scale_offset
             self.sub_scale_offset = sub_scale_offset
+            self.scale_per_page = scale_per_page
             self.current_tick = 0
 
         def rough_offset_tick(self):
@@ -628,29 +630,77 @@ class TimeAxis(QWidget):
             return date_time_text
 
     STEP_LIST = [
-        Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0)),
-        Scale((5000, 0, 0, 0, 0, 0), (500, 0, 0, 0, 0, 0)),
-        Scale((2500, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0)),
-        Scale((2000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0)),
+        # 10000 yeas ++
+        Scale((10000000, 0, 0, 0, 0, 0), (1000000, 0, 0, 0, 0, 0), 10),
+        Scale((1000000, 0, 0, 0, 0, 0), (100000, 0, 0, 0, 0, 0), 10),
+        Scale((100000, 0, 0, 0, 0, 0), (10000, 0, 0, 0, 0, 0), 10),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 10),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 9),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 8),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 7),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 6),
+        Scale((10000, 0, 0, 0, 0, 0), (2000, 0, 0, 0, 0, 0), 5),
+        Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0), 4),
+        Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0), 3),
+        Scale((10000, 0, 0, 0, 0, 0), (1000, 0, 0, 0, 0, 0), 2),
 
-        Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0)),
-        Scale((500, 0, 0, 0, 0, 0), (50, 0, 0, 0, 0, 0)),
-        Scale((250, 0, 0, 0, 0, 0), (25, 0, 0, 0, 0, 0)),
-        Scale((200, 0, 0, 0, 0, 0), (20, 0, 0, 0, 0, 0)),
+        # 1000 years -> 20000 years
+        Scale((1000, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0), 20),
+        Scale((1000, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0), 18),
+        Scale((1000, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0), 16),
+        Scale((1000, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0), 14),
+        Scale((1000, 0, 0, 0, 0, 0), (250, 0, 0, 0, 0, 0), 12),
+        Scale((1000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0), 10),
+        Scale((1000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0), 9),
+        Scale((1000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0), 8),
+        Scale((1000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0), 7),
+        Scale((1000, 0, 0, 0, 0, 0), (200, 0, 0, 0, 0, 0), 6),
+        Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0), 5),
+        Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0), 4),
+        Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0), 3),
+        Scale((1000, 0, 0, 0, 0, 0), (50, 0, 0, 0, 0, 0), 2),
+        # Scale((1000, 0, 0, 0, 0, 0), (100, 0, 0, 0, 0, 0), 1),        // The seam (The same scale, rising magnitude)
 
-        Scale((100, 0, 0, 0, 0, 0), (10, 0, 0, 0, 0, 0)),
-        Scale((50, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0)),
-        Scale((25, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0)),
-        Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0)),
-        Scale((5, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0)),
+        # 100 years -> 1000 years
+        Scale((100, 0, 0, 0, 0, 0), (20, 0, 0, 0, 0, 0), 10),
+        Scale((100, 0, 0, 0, 0, 0), (20, 0, 0, 0, 0, 0), 8),
+        Scale((100, 0, 0, 0, 0, 0), (10, 0, 0, 0, 0, 0), 5),
+        Scale((100, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0), 2),
+        # Scale((100, 0, 0, 0, 0, 0), (5, 0, 0, 0, 0, 0), 1),           // The seam (The same scale, rising magnitude)
 
-        Scale((1, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0)),
-        Scale((0, 6, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0)),
-        Scale((0, 3, 0, 0, 0, 0), (0, 0, 15, 0, 0, 0)),
-        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0)),
-        Scale((0, 0, 10, 0, 0, 0), (0, 0, 1, 0, 0, 0)),
+        # 10 years -> 100 years
+        Scale((10, 0, 0, 0, 0, 0), (2, 0, 0, 0, 0, 0), 10),
+        Scale((10, 0, 0, 0, 0, 0), (2, 0, 0, 0, 0, 0), 8),
+        Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0), 5),
+        Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0), 2),
+        # Scale((10, 0, 0, 0, 0, 0), (1, 0, 0, 0, 0, 0), 1),            // The seam (The same scale, rising magnitude)
 
-        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 2, 0, 0)),
+        # 1 year -> 10 years
+        Scale((1, 0, 0, 0, 0, 0), (0, 4, 0, 0, 0, 0), 10),
+        Scale((1, 0, 0, 0, 0, 0), (0, 4, 0, 0, 0, 0), 8),
+        Scale((1, 0, 0, 0, 0, 0), (0, 2, 0, 0, 0, 0), 5),
+        Scale((1, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0), 2),
+        # Scale((1, 0, 0, 0, 0, 0), (0, 1, 0, 0, 0, 0), 1),             // The seam (The same scale, rising magnitude)
+
+        # 2 months -> 12 months (1 year)
+        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0), 12),
+        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0), 8),
+        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0), 6),
+        Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0), 4),
+        # Scale((0, 1, 0, 0, 0, 0), (0, 0, 7, 0, 0, 0), 2),             // The seam (The same scale, rising magnitude)
+
+        # 4 weeks -> 8 weeks (2 months)
+        Scale((0, 0, 7, 0, 0, 0), (0, 0, 1, 0, 0, 0), 8),
+        Scale((0, 0, 7, 0, 0, 0), (0, 0, 1, 0, 0, 0), 6),
+        Scale((0, 0, 7, 0, 0, 0), (0, 0, 1, 0, 0, 0), 4),
+        # Scale((0, 0, 7, 0, 0, 0), (0, 0, 1, 0, 0, 0), 2),             // The seam (The same scale, rising magnitude)
+
+        # 1 day -> 14 days (2 week)
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 4, 0, 0), 14),
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 4, 0, 0), 7),
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 4, 0, 0), 5),
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 2, 0, 0), 2),
+        Scale((0, 0, 1, 0, 0, 0), (0, 0, 0, 1, 0, 0), 1),
     ]
     # SUB_STEP_COUNT = [
     #     10, 10, 10,
@@ -702,7 +752,7 @@ class TimeAxis(QWidget):
         self.__main_scale_limit_upper = TimeAxis.STEP_LIST[0].rough_offset_tick()
         self.__main_scale_limit_lower = TimeAxis.STEP_LIST[-1].rough_offset_tick()
 
-        self.__scale_per_page = 10
+        # self.__scale_per_page = 10
         self.__pixel_per_scale = 0
         self.__page_tick = 0
         self.__tick_per_pixel = 0
@@ -802,7 +852,8 @@ class TimeAxis(QWidget):
         return self.__pixel_per_scale
 
     def get_scale_per_page(self) -> int:
-        return self.__scale_per_page
+        # return self.__scale_per_page
+        return self.__scale.scale_per_page
 
     # ------------------------ Operation -------------------------
 
@@ -1041,7 +1092,8 @@ class TimeAxis(QWidget):
         page_pixel = self.__coordinate_metrics.get_longitudinal_length()
         if page_pixel == 0:
             return
-        scale_pixel = page_pixel / self.__scale_per_page
+        # scale_pixel = page_pixel / self.__scale_per_page
+        scale_pixel = page_pixel / self.__scale.scale_per_page
         scale_pixel = max(scale_pixel, TimeAxis.MAIN_SCALE_MIN_PIXEL)
         scale_count = self.__coordinate_metrics.get_longitudinal_length() / scale_pixel
         rough_scale_tick = self.__scale.rough_offset_tick()
@@ -1292,8 +1344,13 @@ class TimeAxis(QWidget):
             self.__optimise_pixel[y_main] = paint_tick
             main_scale_text = self.__scale.format_main_scale_text(paint_tick)
 
+            font_metrics = QFontMetrics(qp.font())
+            text_width = font_metrics.width(main_scale_text)
+            text_height = font_metrics.height()
+            offset = text_width + 20
+
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
-            qp.drawText(main_scale_end - 100, y_main, main_scale_text)
+            qp.drawText(main_scale_end - offset, y_main + math.ceil(text_height / 2), main_scale_text)
 
             # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
