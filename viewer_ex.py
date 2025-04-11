@@ -1274,6 +1274,10 @@ class TimeAxis(QWidget):
         paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
         assert paint_tick <= tick_since
 
+        font = qp.font()
+        font_metrics = QFontMetrics(font)
+        text_height = font_metrics.height()
+
         while paint_tick < tick_until:
             next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
@@ -1281,8 +1285,12 @@ class TimeAxis(QWidget):
             self.__optimise_pixel[x_main] = paint_tick
             main_scale_text = self.__scale.format_main_scale_text(paint_tick)
 
+            text_width = font_metrics.width(main_scale_text)
+            text_x = x_main - (text_width // 2)  # 水平居中
+            text_y = main_scale_end + (text_height // 2)  # 垂直居中
+
             qp.drawLine(x_main, main_scale_start, x_main, main_scale_end)
-            qp.drawText(x_main, main_scale_end + 20, main_scale_text)
+            qp.drawText(text_x, text_y, main_scale_text)
 
             # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
@@ -1337,6 +1345,9 @@ class TimeAxis(QWidget):
         paint_tick = self.__scale.estimate_closest_scale(int(tick_since))
         assert paint_tick <= tick_since
 
+        font_metrics = QFontMetrics(qp.font())
+        text_height = font_metrics.height()
+
         while paint_tick < tick_until:
             next_paint_tick = self.__scale.next_main_scale(paint_tick)
 
@@ -1344,13 +1355,18 @@ class TimeAxis(QWidget):
             self.__optimise_pixel[y_main] = paint_tick
             main_scale_text = self.__scale.format_main_scale_text(paint_tick)
 
-            font_metrics = QFontMetrics(qp.font())
             text_width = font_metrics.width(main_scale_text)
-            text_height = font_metrics.height()
-            offset = text_width + 20
+
+            text_rect = QRect(
+                main_scale_end - text_width - 30,  # X起点
+                y_main - text_height // 2,  # Y起点
+                text_width,  # 宽度
+                text_height  # 高度
+            )
 
             qp.drawLine(main_scale_start, y_main, main_scale_end, y_main)
-            qp.drawText(main_scale_end - offset, y_main + math.ceil(text_height / 2), main_scale_text)
+            # qp.drawText(main_scale_end - x_offset, y_main + y_offset, main_scale_text)
+            qp.drawText(text_rect, Qt.AlignLeft, main_scale_text)
 
             # print("Main: " + str(HistoryTime.seconds_to_date_time(paint_tick)))
 
