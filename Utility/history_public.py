@@ -45,7 +45,7 @@ def compare_intersection(list1, list2) -> bool:
     return len(list(set(list1).intersection(set(list2)))) > 0
 
 
-def check_normalize_expects(expects: list) -> list or None:
+def check_normalize_expects(expects: list) -> list | None:
     """
     Make expects as a list.
     :param expects: The parameter that need to be normalized

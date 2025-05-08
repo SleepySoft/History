@@ -142,7 +142,7 @@ class HistoryTime:
         return HistoryTime.date_time_to_seconds(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
     @staticmethod
-    def time_str_to_datetime(text: str) -> datetime.datetime or None:
+    def time_str_to_datetime(text: str) -> datetime.datetime | None:
         if isinstance(text, datetime.datetime):
             return text
         # noinspection PyBroadException

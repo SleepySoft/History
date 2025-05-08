@@ -141,13 +141,13 @@ class TimeThreadBase:
         for item in self.__paint_items:
             item.arrange_item(self.get_thread_metrics())
 
-    def add_axis_items(self, items: AxisItem or [AxisItem]):
+    def add_axis_items(self, items: AxisItem | list[AxisItem]):
         if isinstance(items, AxisItem):
             self.__axis_items.append(items)
         else:
             self.__axis_items.extend(items)
 
-    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
+    def axis_item_from_point(self, point: QPoint) -> AxisItem | None:
         if not self.get_thread_metrics().contains(point):
             return None
         for item in self.__axis_items:
@@ -920,7 +920,7 @@ class TimeAxis(QWidget):
         else:
             return ALIGN_LEFT if pos.x() <= self.__axis_mid else ALIGN_RIGHT
 
-    def thread_from_point(self, pos: QPoint) -> TimeThreadBase or None:
+    def thread_from_point(self, pos: QPoint) -> TimeThreadBase | None:
         for thread in self.__left_history_threads:
             if thread.get_thread_metrics().contains(pos):
                 return thread
@@ -1011,7 +1011,7 @@ class TimeAxis(QWidget):
 
     # ----------------------------------------------------- Action -----------------------------------------------------
 
-    def popup_editor_for_index(self, index: HistoryRecord or None):
+    def popup_editor_for_index(self, index: HistoryRecord |	 None):
         if index is None:
             print('None index.')
             return
@@ -1472,7 +1472,7 @@ class TimeAxis(QWidget):
         # self.__main_scale = max(self.__main_scale, self.__main_scale_limit_lower)
         # self.__main_scale = min(self.__main_scale, self.__main_scale_limit_upper)
 
-    def axis_item_from_point(self, point: QPoint) -> AxisItem or None:
+    def axis_item_from_point(self, point: QPoint) -> AxisItem | None:
         thread = self.thread_from_point(point)
         if thread is not None:
             return thread.axis_item_from_point(point)

@@ -332,7 +332,7 @@ class LabelTag:
         tags_text = LabelTagParser.tags_to_text(tags)
         return tags_text == ''
 
-    def add_tags(self, label: str, tags: str or [str]):
+    def add_tags(self, label: str, tags: str | list[str] | tuple[str]):
         if not isinstance(tags, (list, tuple)):
             tags = [tags]
         if label not in self.__label_tags.keys():
@@ -491,7 +491,7 @@ class HistoryRecord(LabelTag):
     def set_focus_label(self, label: str):
         self.__focus_label = label
 
-    def set_label_tags(self, label: str, tags: str or [str]):
+    def set_label_tags(self, label: str, tags: str | list[str] | tuple[str]):
         if isinstance(tags, str):
             tags = [tags]
         tags = [tag.strip() for tag in tags]
@@ -535,7 +535,7 @@ class HistoryRecord(LabelTag):
         return (self.__since <= until) and (self.__until >= since)
 
     # @staticmethod
-    # def check_label_tags(self, label: str, tags: str or [str]) -> [str]:
+    # def check_label_tags(self, label: str, tags: str | list[str]) -> [str]:
     #     """
     #     Check label tags error.
     #     :param label:
@@ -728,7 +728,7 @@ class HistoryRecordLoader:
     # ---------------------------------------- Save ----------------------------------------
 
     @staticmethod
-    def to_source(source: str, records: HistoryRecord or [HistoryRecord]) -> ERROR_CODE_TYPE:
+    def to_source(source: str, records: HistoryRecord | list[HistoryRecord]) -> ERROR_CODE_TYPE:
         if source == HistoryRecordLoader.INVALID_SOURCE:
             return HistoryRecordLoader.E_SOURCE_INVALID
         if HistoryRecordLoader.is_web_url(source):
@@ -738,14 +738,14 @@ class HistoryRecordLoader:
         return HistoryRecordLoader.E_SUCCESS
 
     # @staticmethod
-    # def to_local_depot(records: HistoryRecord or [HistoryRecord], depot: str, source: str) -> bool:
+    # def to_local_depot(records: HistoryRecord | list[HistoryRecord], depot: str, source: str) -> bool:
     #     base_name = os.path.basename(source)
     #     depot_path = HistoryRecordLoader.join_local_depot_path(depot)
     #     source = path.join(depot_path, base_name)
     #     return HistoryRecordLoader.to_local_source(records, source)
 
     @staticmethod
-    def to_local_source(source: str, records: HistoryRecord or [HistoryRecord]) -> ERROR_CODE_TYPE:
+    def to_local_source(source: str, records: HistoryRecord | list[HistoryRecord]) -> ERROR_CODE_TYPE:
         if not records:
             return HistoryRecordLoader.E_SOURCE_INVALID
         if not isinstance(records, (list, tuple)):
@@ -934,7 +934,7 @@ class HistoryRecordIndexer:
         return indexes
 
     @staticmethod
-    def index_records(records: list or dict) -> list or dict:
+    def index_records(records: list | dict) -> list | dict:
         if isinstance(records, (list, set, tuple)):
             indexes = [r.to_index() for r in records]
         elif isinstance(records, dict):
@@ -1059,7 +1059,7 @@ class History:
 
     # --------------------------------------- Select ---------------------------------------
 
-    def get_record_by_uuid(self, _uuid: str) -> HistoryRecord or None:
+    def get_record_by_uuid(self, _uuid: str) -> HistoryRecord | None:
         collection = self.filter(lambda _, r: r.uuid() == _uuid)
         records = [item for sublist in collection.values() for item in sublist]
         return records[0] if len(records) > 0 else None
@@ -1070,13 +1070,13 @@ class History:
     def get_records_by_sources(self, sources: list) -> dict:
         return { s: self.__source_records_table.get(s, []) for s in sources }
 
-    def get_indices_by_sources(self, sources: str or list) -> dict:
+    def get_indices_by_sources(self, sources: str | list) -> dict:
         if not isinstance(sources, (list, set, tuple)):
             sources = [sources]
         return HistoryRecordIndexer.index_records(self.get_records_by_sources(sources))
 
-    def select_records(self, _uuid: str or [str] = None,
-                       sources: str or [str] = None, focus_label: str = '',
+    def select_records(self, _uuid: str | list[str] = None,
+                       sources: str | list[str] = None, focus_label: str = '',
                        include_label_tags: dict = None, include_all: bool = True,
                        exclude_label_tags: dict = None, exclude_any: bool = True) ->[HistoryRecord]:
 

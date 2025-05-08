@@ -509,7 +509,7 @@ class HistoryRecordEditor(QWidget):
 
         return True
 
-    def record_to_ui(self, record: HistoryRecord or str):
+    def record_to_ui(self, record: HistoryRecord | str):
         self.clear_ui()
 
         self.__label_uuid.setText(LabelTagParser.tags_to_text(record.uuid()))

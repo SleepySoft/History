@@ -72,23 +72,23 @@ class AxisMapping:
     assert m.b_to_a(3000) == 40         # 相应的B范围内的值3000映射到A范围内40
     """
     def __init__(self,
-                 range_a_lower: float or int = 0, range_a_upper: float or int = 0,
-                 range_b_lower: float or int = 0, range_b_upper: float or int = 0):
+                 range_a_lower: float | int = 0, range_a_upper: float | int = 0,
+                 range_b_lower: float | int = 0, range_b_upper: float | int = 0):
         self.__al = range_a_lower
         self.__ar = range_a_upper - range_a_lower
         self.__bl = range_b_lower
         self.__br = range_b_upper - range_b_lower
 
-    def set_range_a(self, lower: float or int, upper: float or int):
+    def set_range_a(self, lower: float | int, upper: float | int):
         self.__al = lower
         self.__ar = upper - lower
 
-    def set_range_b(self, lower: float or int, upper: float or int):
+    def set_range_b(self, lower: float | int, upper: float | int):
         self.__bl = lower
         self.__br = upper - lower
 
-    def set_range_ref(self, ref_a: float or int, ref_b: float or int,
-                      origin_a: float or int = 0, origin_b: float or int = 0):
+    def set_range_ref(self, ref_a: float | int, ref_b: float | int,
+                      origin_a: float | int = 0, origin_b: float | int = 0):
         """
         通过参考长度和原点来配置映射。
         :param ref_a: 范围A的参考长度
@@ -111,7 +111,7 @@ class AxisMapping:
         return 0.0 if self.is_digit_zero(self.__br) else (value_b - self.__bl) * self.__ar / self.__br + self.__al
 
     @staticmethod
-    def is_digit_zero(digit: float or int):
+    def is_digit_zero(digit: float | int):
         return math.isclose(digit, 0, abs_tol=1e-9)
 
 

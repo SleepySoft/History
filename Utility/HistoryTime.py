@@ -160,7 +160,7 @@ def time_text_to_ticks(time_text: str):
     return time_ticks
 
 
-def time_str_to_datetime(text: str) -> datetime.datetime or None:
+def time_str_to_datetime(text: str) -> datetime.datetime | None:
     """
     Try to convert standard time format (only standard time format) to python datetime.
     Support format lists in SUPPORT_DATE_TIME_STR_FORMAT.
@@ -209,7 +209,7 @@ def format_datetime(dt: datetime.datetime, show_date: bool = True, show_time: bo
     return f'[{text}]' if show_date or show_time else text
 
 
-def tick_to_datetime(tick: TICK) -> datetime.datetime or None:
+def tick_to_datetime(tick: TICK) -> datetime.datetime | None:
     """
     Convert History TICK to python datetime. If the date time is out of the datetime range. Return None.
     :param tick: The History TICK
@@ -278,7 +278,7 @@ def __get_first_item_except(items: list, expect: str):
     return items[0].replace(expect, '') if len(items) > 0 else ''
 
 
-def __single_natural_language_time_to_tick(time_text: str) -> TICK or None:
+def __single_natural_language_time_to_tick(time_text: str) -> TICK | None:
     """
     Convert natural language time description to TICK.
     Note that this analysis process does not apply to datetime format strings.
