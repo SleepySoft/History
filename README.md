@@ -8,6 +8,35 @@ sleepy_history##163.com
   
 # Readme CN   
 
+## 更新与通知
+
+首先感谢大家的支持。
+
+这个项目有很长一段时间没更新了，原因一方面是生活太忙，另一方面是我在等待。
+因为我知道我虽然“实现”了一个看起来不错的时间轴， 但其机制并非严谨的、标准的。因此进一步的改进也不过是在一个不稳固的地基上堆叠建筑。
+
+另一方面，我数年前在代码中留下了这么一句话：
+
+![img-nlp-comments.png](Doc/img-nlp-comments.png)
+
+而现在，终于到了可以兑现的时候。
+
+当然，现在的我依然被困在工作和生活中，时间很少。并且我同时还在开发 [这个项目](https://github.com/SleepySoft/IntelligenceIntegrationSystem)
+
+
+在工作和生活的间隙中我一直在思考，如何做一个真正可以在商业和学术上使用的标准历史时间轴，以及如何借助LLM让大家无阻力的构造自己的历史知识体系。
+
+下面这个工程就是接下来要做的事情的一个demo：[https://github.com/SleepySoft/UniversalHistory](https://github.com/SleepySoft/UniversalHistory)
+
+它采用 **儒略日数（英语：Julian Day Number，JDN）** 做为时间轴的基准，
+通过 **外推格里高利历 (Proleptic Gregorian)** 实现JDN到年月日的转化，再通过可扩展的桥接层来适配/转换为诸如农历和各种年号纪元。
+
+~~同时借助AI我也轻松地实现了绘制时的坐标变换，从而解决了我一直耿耿于怀的横纵向坐标轴统一绘制的问题。~~
+
+
+总之慢慢做吧。。。对了，数据是可以完全兼容的，所以现在的软件请放心使用，软件版本的升级并不会带来沉没成本。
+
+
 ## 使用说明
 
 [说明视频](https://www.bilibili.com/video/BV1bK421b7RW/?vd_source=15382cb163db3fd3ce2d2dd6b97e422a)
